@@ -1,7 +1,8 @@
 from .operators import operators
-from .render import render
-from .panels import panels
+from . import render
+from . import panels
 import bpy
+
 bl_info = {
     "name": "Ranato",
     "description": "Blender implementation of Algebraic Smooth Occluding Contours paper",

@@ -6,14 +6,23 @@ from bpy.types import Panel
 
 # https://docs.blender.org/api/current/bpy.types.Panel.html
 
+# Referencing below to see how Render Engine interacts with Panel
+# (and changing it all so that the panel only appears when user activates Ranato)
+# https://github.com/bnpr/Malt/blob/725f509ab25be736cb592cf1e9d5258ed4271e8a/BlenderMalt/MaltMaterial.py#L98
+
 
 class RanatoPanel(Panel):
     """Creates a Panel in the scene context of the properties editor"""
-    bl_label = "Ranato"
+    bl_label = "Ranato Settings"
     bl_idname = "RENDER_PT_layout"
     bl_space_type = 'PROPERTIES'
     bl_region_type = 'WINDOW'
     bl_context = "render"
+
+    COMPAT_ENGINES = {'RANATO'}
+
+    # def __del__(self):
+    #     print("What")
 
     def draw(self, context):
         # Objects also include non-meshes
