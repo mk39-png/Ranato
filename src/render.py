@@ -2,20 +2,19 @@ import bpy
 import array
 import gpu
 
-
 # Utilized for the shader.
 from random import random
 from mathutils import Vector
 from gpu_extras.batch import batch_for_shader
 from gpu_extras.presets import draw_texture_2d
-# import gpu.state
-
 
 # https://docs.blender.org/api/current/bpy.types.RenderEngine.html
+
+
 class RanatoRenderEngine(bpy.types.RenderEngine):
     # These three members are used by blender to set up the
     # RenderEngine; define its internal name, visible name and capabilities.
-    bl_idname = "CUSTOM"
+    bl_idname = "RANATO"
     bl_label = "RaNaTo"
     bl_use_preview = True
 
@@ -31,15 +30,17 @@ class RanatoRenderEngine(bpy.types.RenderEngine):
         self.draw_data = None
         self.bl_use_eevee_viewport = True  # used for the "Materials" view of Blender
         # self.bl_use_gpu_context = True # what does this do?
+        # TODO: within the init, it seems like I should also setup the Space3dView things
 
     # TODO: there's an error here with how 'super' object has no attribute '__del__'
     # When the render engine instance is destroy, this is called. Clean up any
     # render engine data here, for example stopping running render threads.
-    def __del__(self):
-        super().__del__()
+    # def __del__(self):
+        # super().__del__()
 
     # This is the method called by Blender for both final renders (F12) and
     # small preview for materials, world and lights.
+
     def render(self, depsgraph):
         scene = depsgraph.scene
         scale = scene.render.resolution_percentage / 100.0
@@ -162,12 +163,6 @@ class RanatoRenderEngine(bpy.types.RenderEngine):
         gpu.state.blend_set('ALPHA_PREMULT')
         self.bind_display_space_shader(scene)
 
-        # Draw data... waht else does that do?
-        # Because it seems like it'll need vertex data...
-        # Of all the meshes in the scene.
-        # And to quickly calculate lighting based on the position of the lights in the scene.
-        # But other than that... yeah!
-
         # TODO: this is only called once... when draw_data doesn't exist...
         # Or really when it needs to be updated...
         # Draw needs to take in stuff about the scene...
@@ -176,6 +171,8 @@ class RanatoRenderEngine(bpy.types.RenderEngine):
         if not self.draw_data or self.draw_data.dimensions != dimensions:
             self.draw_data = CustomDrawData(dimensions, depsgraph)
 
+        # # TODO: now, blender is supposed to draw its stuff on top...
+        # # But whenever we select any objects... Blender crashes.
         self.draw_data.draw()
 
         self.unbind_display_space_shader()
@@ -193,7 +190,18 @@ class RanatoRenderEngine(bpy.types.RenderEngine):
 # While, the RanatoRenderEngine is the Blender side of the engine.
 
 # TODO: put this inside a different file???
-# Becuase
+# TODO: MOVE THIS SOMEWHERE ELSE....
+# This whole "custom draw data" messes everything up and makes life a lot miserable for us.
+
+#
+# Instead, use Blender's built-in way of drawing the scene with whatever using Space(bpy_struct) and draw handler....
+# What does this then mean for us?
+# Well, then the render engine is SPECIFICALLY for generated line art on top of that draw handler...
+# I spent so long trying to brute force the draw handler into here... only for it to crash each time...
+# So... yeah.
+# That's where I'm at right now.
+#
+
 class CustomDrawData:
     # Need the depsgraph for scene meshes to render.
     def __init__(self, dimensions, depsgraph):
@@ -201,8 +209,7 @@ class CustomDrawData:
         self.dimensions = dimensions
         width, height = dimensions
 
-        # TODO: below is gonna be a problem when we update the depsgraph and the below doesn't
-        # end up updating...
+        # TODO: below is gonna be a problem when we update the depsgraph and the below doesn't end up updating...
         # Basically, find a way to update this depsgraph from RanatoRenderEngine class
         self.depsgraph = depsgraph
         # -----------------------------------------------------------------------
@@ -212,8 +219,6 @@ class CustomDrawData:
         #
         # print(depsgraph)
         # # https://blender.stackexchange.com/questions/33272/mesh-coordinates
-        # TODO: I need to put this in a batch!
-        # Or else, everything goes wrong...
         sample_mesh = depsgraph.objects[0].to_mesh(
             preserve_all_data_layers=True, depsgraph=depsgraph)
 
@@ -235,9 +240,6 @@ class CustomDrawData:
         #     print(vert.co)
 
         self.test_coords = sample_mesh.vertices
-        #
-        #
-        # -----------------------------------------------------------------------
 
         # NOTE: these are the default colors, similar to how in CS351 I assigned default colors to the color buffer before placing in
         #       my actual values for said color.
@@ -248,73 +250,6 @@ class CustomDrawData:
         self.texture = gpu.types.GPUTexture(
             (width, height), format='RGBA16F', data=pixels)
 
-        # -----------------------------------------------------------------------
-        #
-        #
-        # Making something to store our viewport frame
-        # https://blender.stackexchange.com/questions/190140/copy-framebuffer-of-3d-view-into-custom-frame-buffer
-        # TODO: oh, I didn't realize we needed to create a literal image to store the frame buffer... which makes sense actually
-        self.image_name = "color_buffer_copy"
-        self.framebuffer = None
-        self.viewport_info = None
-        self.pixel_buffer = None
-
-        # create or update image object to which the framebuffer
-        # data will be copied
-        if not self.image_name in bpy.data.images:
-            self.framebuffer_image = bpy.data.images.new(
-                self.image_name, 32, 32, float_buffer=True)
-        else:
-            self.framebuffer_image = bpy.data.images[self.image_name]
-        #
-        #
-        #
-        # -----------------------------------------------------------------------
-
-        # -----------------------------------------------------------------------
-        #
-        #
-        #
-        # TODO: build up a 2d texture to render onto the screen...
-        # Rendering a 3D scene into a texture! Yes! This was the step I was forgetting...
-        # https://docs.blender.org/api/current/gpu.html#rendering-the-3d-view-into-a-texture
-
-        vert_out = gpu.types.GPUStageInterfaceInfo("my_interface")
-        vert_out.smooth('FLOAT', "v_ArcLength")
-
-        # The stuff below we don't need to pass in during each draw session...
-        shader_info = gpu.types.GPUShaderCreateInfo()
-        shader_info.push_constant('MAT4', "u_ViewProjectionMatrix")
-        shader_info.push_constant('FLOAT', "u_Scale")
-        shader_info.vertex_in(0, 'VEC3', "position")
-        shader_info.vertex_in(1, 'FLOAT', "arcLength")
-        shader_info.vertex_out(vert_out)
-        shader_info.fragment_out(0, 'VEC4', "FragColor")
-
-        shader_info.vertex_source(
-            "void main()"
-            "{"
-            "  v_ArcLength = arcLength;"
-            "  gl_Position = u_ViewProjectionMatrix * vec4(position, 1.0f);"
-            "}"
-        )
-
-        shader_info.fragment_source(
-            "void main()"
-            "{"
-            "  if (step(sin(v_ArcLength * u_Scale), 0.5) == 1) discard;"
-            "  FragColor = vec4(1.0);"
-            "}"
-        )
-
-        self.shader = gpu.shader.create_from_info(shader_info)
-        del vert_out
-        del shader_info
-        #
-        #
-        #
-        # -----------------------------------------------------------------------
-
         # Note: This is just a didactic example.
         # In this case it would be more convenient to fill the texture with:
         # self.texture.clear('FLOAT', value=[0.1, 0.2, 0.1, 1.0])
@@ -323,95 +258,28 @@ class CustomDrawData:
         del self.texture
 
     # NOTE: this draw is called for the viewport render
+    # TODO: for here, we want to utilize the SpaceView3d, actually???
+    # Because that has a lot more things we want that are low level than here....
+    # Though, could try using this...
     def draw(self):
-        # TODO: move these imports outside of the method for pep8 standard.
-
-        # -----------------------------------------------------------------------
-        #
-        #
-        #
         # Because I can't utilize Blender's offscreen texture for storing the frame buffer,
         #   I'll have to store it in the texture specified in __init__()
         # https://blender.stackexchange.com/questions/190140/copy-framebuffer-of-3d-view-into-custom-frame-buffer
         # get currently bound framebuffer
         self.framebuffer = gpu.state.active_framebuffer_get()
 
-        # get information on current viewport
-        self.viewport_info = gpu.state.viewport_get()
-        self.width = self.viewport_info[2]
-        self.height = self.viewport_info[3]
-
-        # Write copied data to image
-        ######################################################
-        # resize image obect to fit the current 3D View size
-        self.framebuffer_image.scale(self.width, self.height)
-
-        # obtain pixels from the framebuffer
-        self.pixelBuffer = self.framebuffer.read_color(
-            0, 0, self.width, self.height, 4, 0, 'FLOAT')
-
-        # write all pixels into the blender image
-        self.pixelBuffer.dimensions = self.width * self.height * 4
-        self.framebuffer_image.pixels.foreach_set(self.pixelBuffer)
-        #
-        #
-        #
-        # -----------------------------------------------------------------------
-
-        # TODO: look into the below and see if they could be used for my purposes
-        # pixels = gpu.types.GPUFrameBuffer.read_color
-        # draw_gpu(region.width, region.height)
-        # width = region.width
-        # height = region.height
-
-        # -----------------------------------------------------------------------
-        #
-        #
-        #
-
-        # -----------------------------------------------------------------------
-        # Inputting vertex coordinates to then put in to the buffer...
-        #
-        #
-        # TODO: use coordinates for 1 object
-
-        coords = [Vector((random(), random(), random())) * 5 for _ in range(5)]
-
-        # TODO: really bad and inefficient way of loading coords...
-        tester = []
-        for coord in self.test_coords:
-            # print(coord.co)
-            tester.append(coord.co)
-        coords = tester
-        #
-        #
-        # -----------------------------------------------------------------------
-
-        arc_lengths = [0]
-        for a, b in zip(coords[:-1], coords[1:]):
-            arc_lengths.append(arc_lengths[-1] + (a - b).length)
-
-        # TODO: below errors out when object gets clicked on.
-        # Probably when switching away from the Render view.
-        # Below explains batches a lot better
-        # https://developer.blender.org/docs/features/gpu/overview/#batch
-        batch = batch_for_shader(self.shader, 'LINE_STRIP',
-                                 {"position": coords, "arcLength": arc_lengths})
-
-        matrix = bpy.context.region_data.perspective_matrix
-        self.shader.uniform_float("u_ViewProjectionMatrix", matrix)
-        self.shader.uniform_float("u_Scale", 10)
-
-        # Below would draw onto the active frame buffer using the shader and loaded parameters
-        batch.draw(self.shader)
-
         # So, below is supposed to do the acutal rendering onto the screen.
-        # draw_texture_2d(self.texture, (0, 0), self.texture.width, self.texture.height)
-        #
-        #
-        # -----------------------------------------------------------------------
+        # Problem is it drawing everything to be a certain color...
+        # we just want to color the vertices...
+        draw_texture_2d(self.texture, (0, 0),
+                        self.texture.width, self.texture.height)
 
 
+# ------------------------------------------------------------------------------
+#
+# BLENDER LOGISTICS SETUP
+#
+# ------------------------------------------------------------------------------
 # RenderEngines also need to tell UI Panels that they are compatible with.
 # We recommend to enable all panels marked as BLENDER_RENDER, and then
 # exclude any panels that are replaced by custom panels registered by the
@@ -423,6 +291,7 @@ def get_panels():
     }
 
     panels = []
+
     for panel in bpy.types.Panel.__subclasses__():
         if hasattr(panel, 'COMPAT_ENGINES') and 'BLENDER_RENDER' in panel.COMPAT_ENGINES:
             if panel.__name__ not in exclude_panels:
@@ -436,15 +305,15 @@ def register():
     bpy.utils.register_class(RanatoRenderEngine)
 
     for panel in get_panels():
-        panel.COMPAT_ENGINES.add('CUSTOM')
+        panel.COMPAT_ENGINES.add('RANATO')
 
 
 def unregister():
     bpy.utils.unregister_class(RanatoRenderEngine)
 
     for panel in get_panels():
-        if 'CUSTOM' in panel.COMPAT_ENGINES:
-            panel.COMPAT_ENGINES.remove('CUSTOM')
+        if 'RANATO' in panel.COMPAT_ENGINES:
+            panel.COMPAT_ENGINES.remove('RANATO')
 
 
 if __name__ == "__main__":
