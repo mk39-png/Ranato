@@ -13,8 +13,6 @@ from gpu_extras.presets import draw_texture_2d
 
 
 # https://docs.blender.org/api/current/bpy.types.RenderEngine.html
-
-
 class RanatoRenderEngine(bpy.types.RenderEngine):
     # These three members are used by blender to set up the
     # RenderEngine; define its internal name, visible name and capabilities.
@@ -34,6 +32,8 @@ class RanatoRenderEngine(bpy.types.RenderEngine):
         self.draw_data = None
         self.bl_use_eevee_viewport = True  # used for the "Materials" view of Blender
         # self.bl_use_gpu_context = True # what does this do?
+        # self.offscreen = gpu.types.GPUOffScreen(512, 256)
+        # TODO: within the init, it seems like I should also setup the Space3dView things
 
     # TODO: there's an error here with how 'super' object has no attribute '__del__'
     # When the render engine instance is destroy, this is called. Clean up any
@@ -43,6 +43,7 @@ class RanatoRenderEngine(bpy.types.RenderEngine):
 
     # This is the method called by Blender for both final renders (F12) and
     # small preview for materials, world and lights.
+
     def render(self, depsgraph):
         scene = depsgraph.scene
         scale = scene.render.resolution_percentage / 100.0
@@ -165,11 +166,21 @@ class RanatoRenderEngine(bpy.types.RenderEngine):
         gpu.state.blend_set('ALPHA_PREMULT')
         self.bind_display_space_shader(scene)
 
-        # Draw data... waht else does that do?
-        # Because it seems like it'll need vertex data...
-        # Of all the meshes in the scene.
-        # And to quickly calculate lighting based on the position of the lights in the scene.
-        # But other than that... yeah!
+        view_matrix = scene.camera.matrix_world.inverted()
+
+        projection_matrix = scene.camera.calc_matrix_camera(
+            context.evaluated_depsgraph_get(), x=512, y=256)
+
+        # so, it would be nice... but nested offscreen drawing isn't supported....
+        # TODO: meaning we would have to implement something similar to what Offscreen does...
+        # self.offscreen.draw_view3d(
+        #     scene,
+        #     context.view_layer,
+        #     context.space_data,
+        #     context.region,
+        #     view_matrix,
+        #     projection_matrix,
+        #     do_color_management=True)
 
         # TODO: this is only called once... when draw_data doesn't exist...
         # Or really when it needs to be updated...
@@ -179,7 +190,7 @@ class RanatoRenderEngine(bpy.types.RenderEngine):
         if not self.draw_data or self.draw_data.dimensions != dimensions:
             self.draw_data = CustomDrawData(dimensions, depsgraph)
 
-        # TOOD: now, blender is supposed to draw its stuff on top...
+        # TODO: now, blender is supposed to draw its stuff on top...
         # But whenever we select any objects... Blender crashes.
         self.draw_data.draw()
 
@@ -198,12 +209,9 @@ class RanatoRenderEngine(bpy.types.RenderEngine):
 # While, the RanatoRenderEngine is the Blender side of the engine.
 
 # TODO: put this inside a different file???
-# Becuase
-
 # TODO: MOVE THIS SOMEWHERE ELSE....
 # This whole "custom draw data" messes everything up and makes life a lot miserable for us.
 
-#
 #
 # Instead, use Blender's built-in way of drawing the scene with whatever using Space(bpy_struct) and draw handler....
 # What does this then mean for us?
@@ -212,8 +220,6 @@ class RanatoRenderEngine(bpy.types.RenderEngine):
 # So... yeah.
 # That's where I'm at right now.
 #
-#
-
 
 class CustomDrawData:
     # Need the depsgraph for scene meshes to render.
@@ -222,8 +228,7 @@ class CustomDrawData:
         self.dimensions = dimensions
         width, height = dimensions
 
-        # TODO: below is gonna be a problem when we update the depsgraph and the below doesn't
-        # end up updating...
+        # TODO: below is gonna be a problem when we update the depsgraph and the below doesn't end up updating...
         # Basically, find a way to update this depsgraph from RanatoRenderEngine class
         self.depsgraph = depsgraph
         # -----------------------------------------------------------------------
@@ -267,76 +272,6 @@ class CustomDrawData:
         self.texture = gpu.types.GPUTexture(
             (width, height), format='RGBA16F', data=pixels)
 
-        # -----------------------------------------------------------------------
-        #
-        #
-        # Making something to store our viewport frame
-        # https://blender.stackexchange.com/questions/190140/copy-framebuffer-of-3d-view-into-custom-frame-buffer
-        # TODO: oh, I didn't realize we needed to create a literal image to store the frame buffer... which makes sense actually
-        self.image_name = "color_buffer_copy"
-        self.framebuffer = None
-        self.viewport_info = None
-        self.pixel_buffer = None
-
-        # create or update image object to which the framebuffer
-        # data will be copied
-        if not self.image_name in bpy.data.images:
-            self.framebuffer_image = bpy.data.images.new(
-                self.image_name, 32, 32, float_buffer=True)
-        else:
-            self.framebuffer_image = bpy.data.images[self.image_name]
-        #
-        #
-        #
-        # -----------------------------------------------------------------------
-
-        # -----------------------------------------------------------------------
-        #
-        #
-        #
-        # TODO: build up a 2d texture to render onto the screen...
-        # Rendering a 3D scene into a texture! Yes! This was the step I was forgetting...
-        # https://docs.blender.org/api/current/gpu.html#rendering-the-3d-view-into-a-texture
-
-        vert_out = gpu.types.GPUStageInterfaceInfo("my_interface")
-
-        # TODO: look specifically into what .smooth() does
-        vert_out.smooth('FLOAT', "v_ArcLength")
-
-        # The stuff below we don't need to pass in during each draw session...
-        shader_info = gpu.types.GPUShaderCreateInfo()
-        shader_info.push_constant('MAT4', "u_ViewProjectionMatrix")
-        shader_info.push_constant('VEC4', "u_Color")  # color of the mesh...
-        shader_info.vertex_in(0, 'VEC3', "position")
-        shader_info.vertex_out(vert_out)
-
-        # TODO: fragment shader to take in an attribute...
-        shader_info.fragment_out(0, 'VEC4', "FragColor")
-
-        shader_info.vertex_source(
-            # TODO: change to """
-            "void main()"
-            "{"
-            "  gl_Position = u_ViewProjectionMatrix * vec4(position, 1.0f);"
-            "}"
-        )
-
-        shader_info.fragment_source(
-            "void main()"
-            "{"
-            # TODO: change FragColor to gl_FragColor
-            "  FragColor = u_Color;"
-            "}"
-        )
-
-        self.shader = gpu.shader.create_from_info(shader_info)
-        del vert_out
-        del shader_info
-        #
-        #
-        #
-        # -----------------------------------------------------------------------
-
         # Note: This is just a didactic example.
         # In this case it would be more convenient to fill the texture with:
         # self.texture.clear('FLOAT', value=[0.1, 0.2, 0.1, 1.0])
@@ -345,6 +280,9 @@ class CustomDrawData:
         del self.texture
 
     # NOTE: this draw is called for the viewport render
+    # TODO: for here, we want to utilize the SpaceView3d, actually???
+    # Because that has a lot more things we want that are low level than here....
+    # Though, could try using this...
     def draw(self):
         # TODO: move these imports outside of the method for pep8 standard.
 
@@ -357,87 +295,22 @@ class CustomDrawData:
         # https://blender.stackexchange.com/questions/190140/copy-framebuffer-of-3d-view-into-custom-frame-buffer
         # get currently bound framebuffer
         self.framebuffer = gpu.state.active_framebuffer_get()
-
-        # get information on current viewport
-        self.viewport_info = gpu.state.viewport_get()
-        self.width = self.viewport_info[2]
-        self.height = self.viewport_info[3]
-
-        # Write copied data to image
-        ######################################################
-        # resize image obect to fit the current 3D View size
-        self.framebuffer_image.scale(self.width, self.height)
-
-        # obtain pixels from the framebuffer
-        self.pixelBuffer = self.framebuffer.read_color(
-            0, 0, self.width, self.height, 4, 0, 'FLOAT')
-
-        # write all pixels into the blender image
-        self.pixelBuffer.dimensions = self.width * self.height * 4
-        self.framebuffer_image.pixels.foreach_set(self.pixelBuffer)
-        #
-        #
-        #
-        # -----------------------------------------------------------------------
-
-        # TODO: look into the below and see if they could be used for my purposes
-        # pixels = gpu.types.GPUFrameBuffer.read_color
-        # draw_gpu(region.width, region.height)
-        # width = region.width
-        # height = region.height
-
-        # -----------------------------------------------------------------------
-        #
-        #
-        #
-
-        # -----------------------------------------------------------------------
-        # Inputting vertex coordinates to then put in to the buffer...
-        #
-        #
-        # TODO: use coordinates for 1 object
-
-        coords = [Vector((random(), random(), random())) * 5 for _ in range(5)]
-
-        # TODO: really bad and inefficient way of loading coords...
-        tester = []
-        for coord in self.test_coords:
-            # print(coord.co)
-            tester.append(coord.co)
-        coords = tester
-        #
-        #
-        # -----------------------------------------------------------------------
-
-        # arc_lengths = [0]
-        # for a, b in zip(coords[:-1], coords[1:]):
-        #     arc_lengths.append(arc_lengths[-1] + (a - b).length)
-
-        # TODO: below errors out when object gets clicked on.
-        # Probably when switching away from the Render view.
-        # Below explains batches a lot better
-        # https://developer.blender.org/docs/features/gpu/overview/#batch
-
-        # NOTE: MUST HAVE THIS AT THE TOP!!
-        batch = batch_for_shader(self.shader, 'TRIS',
-                                 {"position": coords})
-
-        matrix = bpy.context.region_data.perspective_matrix
-        self.shader.uniform_float("u_ViewProjectionMatrix", matrix)
-        color = [0.1, 1.0, 0.1, 1.0]
-        self.shader.uniform_vector_float(
-            0, gpu.types.Buffer("FLOAT", 4, color), 4, 1)
-
-        # Below would draw onto the active frame buffer using the shader and loaded parameters
-        batch.draw(self.shader)
+        # offscreen = gpu.types.GPUOffScreen(512, 256)
+        self.offscreen
 
         # So, below is supposed to do the acutal rendering onto the screen.
-        # draw_texture_2d(self.texture, (0, 0), self.texture.width, self.texture.height)
+        draw_texture_2d(self.texture, (0, 0),
+                        self.texture.width, self.texture.height)
         #
         #
         # -----------------------------------------------------------------------
 
 
+# ------------------------------------------------------------------------------
+#
+# BLENDER LOGISTICS SETUP
+#
+# ------------------------------------------------------------------------------
 # RenderEngines also need to tell UI Panels that they are compatible with.
 # We recommend to enable all panels marked as BLENDER_RENDER, and then
 # exclude any panels that are replaced by custom panels registered by the
