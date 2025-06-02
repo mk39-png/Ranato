@@ -7,6 +7,7 @@ from random import random
 from mathutils import Vector
 from gpu_extras.batch import batch_for_shader
 from gpu_extras.presets import draw_texture_2d
+import numpy as np
 
 # https://docs.blender.org/api/current/bpy.types.RenderEngine.html
 
@@ -15,7 +16,7 @@ class RanatoRenderEngine(bpy.types.RenderEngine):
     # These three members are used by blender to set up the
     # RenderEngine; define its internal name, visible name and capabilities.
     bl_idname = "RANATO"
-    bl_label = "RaNaTo"
+    bl_label = "Ranato"
     bl_use_preview = True
 
     # Init is called whenever a new render engine instance is created. Multiple
@@ -36,7 +37,7 @@ class RanatoRenderEngine(bpy.types.RenderEngine):
     # When the render engine instance is destroy, this is called. Clean up any
     # render engine data here, for example stopping running render threads.
     # def __del__(self):
-        # super().__del__()
+    #     super().__del__()
 
     # This is the method called by Blender for both final renders (F12) and
     # small preview for materials, world and lights.
@@ -94,8 +95,8 @@ class RanatoRenderEngine(bpy.types.RenderEngine):
 
         # OK, now with <bpy_struct, Object("Cube") at 0x000001F9EA42D608, evaluated>
         # We can now use Object
-        sample_mesh = depsgraph.objects[0].to_mesh(
-            preserve_all_data_layers=True, depsgraph=depsgraph)
+        # sample_mesh = depsgraph.objects[0].to_mesh(
+        #     preserve_all_data_layers=True, depsgraph=depsgraph)
 
         # Now, mesh is returned!
         # What can we do with mesh???
@@ -161,18 +162,17 @@ class RanatoRenderEngine(bpy.types.RenderEngine):
 
         # Bind shader that converts from scene linear to display space,
         gpu.state.blend_set('ALPHA_PREMULT')
+
+        # TODO: Why is the binding of the space shader needed?
+        # Binds GLSL fragment shader... to the scene using scene color management properties.
         self.bind_display_space_shader(scene)
 
         # TODO: this is only called once... when draw_data doesn't exist...
-        # Or really when it needs to be updated...
-        # Draw needs to take in stuff about the scene...
-        # This would be the stuff equivalent to CS351 where in main() I would load the meshes into the buffer.
-        # Then draw would just take in parameters and whatnot.
         if not self.draw_data or self.draw_data.dimensions != dimensions:
             self.draw_data = CustomDrawData(dimensions, depsgraph)
 
-        # # TODO: now, blender is supposed to draw its stuff on top...
-        # # But whenever we select any objects... Blender crashes.
+        # TODO: now, blender is supposed to draw its stuff on top...
+        # But whenever we select any objects... Blender crashes.
         self.draw_data.draw()
 
         self.unbind_display_space_shader()
@@ -192,16 +192,6 @@ class RanatoRenderEngine(bpy.types.RenderEngine):
 # TODO: put this inside a different file???
 # TODO: MOVE THIS SOMEWHERE ELSE....
 # This whole "custom draw data" messes everything up and makes life a lot miserable for us.
-
-#
-# Instead, use Blender's built-in way of drawing the scene with whatever using Space(bpy_struct) and draw handler....
-# What does this then mean for us?
-# Well, then the render engine is SPECIFICALLY for generated line art on top of that draw handler...
-# I spent so long trying to brute force the draw handler into here... only for it to crash each time...
-# So... yeah.
-# That's where I'm at right now.
-#
-
 class CustomDrawData:
     # Need the depsgraph for scene meshes to render.
     def __init__(self, dimensions, depsgraph):
@@ -219,10 +209,10 @@ class CustomDrawData:
         #
         # print(depsgraph)
         # # https://blender.stackexchange.com/questions/33272/mesh-coordinates
-        sample_mesh = depsgraph.objects[0].to_mesh(
-            preserve_all_data_layers=True, depsgraph=depsgraph)
+        # sample_mesh = depsgraph.objects[0].to_mesh(
+        #     preserve_all_data_layers=True, depsgraph=depsgraph)
 
-        # me = bpy.context.object.data
+        me = bpy.context.object.data
 
         # for poly in me.polygons:
         #     print("Polygon index: {:d}, length: {:d}".format(
@@ -233,13 +223,11 @@ class CustomDrawData:
         #     for loop_index in range(poly.loop_start, poly.loop_start + poly.loop_total):
         #         print("    Vertex: {:d}".format(
         #             me.loops[loop_index].vertex_index))
-        #
 
         # # So, grabbing the mesh... in local space or what?
         # for vert in sample_mesh.vertices:
         #     print(vert.co)
-
-        self.test_coords = sample_mesh.vertices
+        # self.test_coords = sample_mesh.vertices
 
         # NOTE: these are the default colors, similar to how in CS351 I assigned default colors to the color buffer before placing in
         #       my actual values for said color.
@@ -254,6 +242,57 @@ class CustomDrawData:
         # In this case it would be more convenient to fill the texture with:
         # self.texture.clear('FLOAT', value=[0.1, 0.2, 0.1, 1.0])
 
+        #
+        #
+        # TODO: does this support multiple meshes?
+        # TODO: what is this with the batch shader and whatnot? And will this be rendered ON TOP OF THE BASE image???
+        # mesh = depsgraph.objects[0]
+        # mesh = mesh.find("meshes")
+        # mesh = depsgraph.objects.get("meshes")
+
+        # mesh = depsgraph.objects.find("meshes")
+        mesh = me
+
+        # if mesh != -1:
+        mesh.calc_loop_triangles()
+
+        vertices = np.empty((len(mesh.vertices), 3), 'f')
+        indices = np.empty((len(mesh.loop_triangles), 3), 'i')
+
+        mesh.vertices.foreach_get(
+            "co", np.reshape(vertices, len(mesh.vertices) * 3))
+        mesh.loop_triangles.foreach_get(
+            "vertices", np.reshape(indices, len(mesh.loop_triangles) * 3))
+
+        vertex_colors = [(random(), random(), random(), 1)
+                         for _ in range(len(mesh.vertices))]
+
+        self.shader = gpu.shader.from_builtin('SMOOTH_COLOR')
+        # self.shader.uniform_float("color", (0, 0.5, 0.5, 1.0))
+
+        # # OK, we got this batch... but where?
+        # Apparently, this is recommended since it ensures that all vertex attributes necessary for a
+        # specific shader are provided.
+        # Batches should autmatically be drawn onto the Back Buffer, which then becomes the Front Buffer when all drawing is done
+        self.batch = batch_for_shader(
+            self.shader, 'TRIS',
+            {"pos": vertices, "color": vertex_colors},
+            indices=indices,
+        )
+
+        # TODO: instead of having separate draw method for this class... could just call draw_handler_add....
+        # Then, when delete is called, remove draw_handler!
+        # TODO: The mesh doesn't get update... which is unfortunate!
+        bpy.types.SpaceView3D.draw_handler_add(
+            self.draw, (), 'WINDOW', 'POST_VIEW')
+
+        # self.shader = gpu.shader.from_builtin('UNIFORM_COLOR')
+        # self.batch = batch_for_shader(
+        #     self.shader, 'TRIS', {"pos": vertices}, indices=indices)
+        #
+        #
+        #
+
     def __del__(self):
         del self.texture
 
@@ -266,13 +305,45 @@ class CustomDrawData:
         #   I'll have to store it in the texture specified in __init__()
         # https://blender.stackexchange.com/questions/190140/copy-framebuffer-of-3d-view-into-custom-frame-buffer
         # get currently bound framebuffer
-        self.framebuffer = gpu.state.active_framebuffer_get()
+        # self.framebuffer = gpu.state.active_framebuffer_get()
+        # self.framebuffer.clear(color=(0.0, 0.0, 0.0, 0.0))
 
         # So, below is supposed to do the acutal rendering onto the screen.
         # Problem is it drawing everything to be a certain color...
         # we just want to color the vertices...
-        draw_texture_2d(self.texture, (0, 0),
-                        self.texture.width, self.texture.height)
+
+        # print(gpu.state.active_framebuffer_get())
+
+        gpu.state.depth_test_set('LESS_EQUAL')
+        gpu.state.depth_mask_set(True)
+        # self.shader.bind()
+
+        # Draws to the current framebuffer...
+        self.batch.draw(self.shader)
+        gpu.state.depth_mask_set(False)
+
+        # draw_texture_2d(self.texture, (0, 0),
+        #             self.texture.width, self.texture.height)
+
+        # pixels = gpu.types.Buffer('FLOAT', 512 * 256 * 4, pixels)
+        # width, height = self.dimensions
+
+        # pixels = self.framebuffer.read_color(
+        #     0, 0, width, height, 1, 0, 'UBYTE')
+
+        # pixels2 = width * height * array.array('f', [0.024, 0.922, 0.89, 1.0])
+
+        # pixels_buf = gpu.types.Buffer('FLOAT', width * height * 4, pixels2)
+
+        # # Generate texture for render frame.
+        # # self.texture = gpu.types.GPUTexture(
+        # #     (2000, 2000), format='RGBA16F', data=pixels)
+
+        # self.texture = gpu.types.GPUTexture(
+        #     (width, height), format='RGBA16F', data=pixels_buf)
+
+        # draw_texture_2d(self.texture, (0, 0),
+        #                 self.texture.width, self.texture.height)
 
 
 # ------------------------------------------------------------------------------
@@ -303,6 +374,9 @@ def get_panels():
 def register():
     # Register the RenderEngine
     bpy.utils.register_class(RanatoRenderEngine)
+
+    # handle = bpy.types.SpaceView3D.draw_handler_add(
+    #     RanatoRenderEngine.draw, (), 'WINDOW', 'POST_VIEW')
 
     for panel in get_panels():
         panel.COMPAT_ENGINES.add('RANATO')
