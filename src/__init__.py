@@ -31,3 +31,5 @@ def unregister():
 # to test the add-on without having to install it.
 if __name__ == "__main__":
     register()
+
+    # Seems like we have to execute the panels the viewport render portion...
