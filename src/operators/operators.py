@@ -31,7 +31,28 @@ class SearchEnumOperator(bpy.types.Operator):
     # https://blenderartists.org/t/menu-enumproperty/1446897
     my_search: EnumProperty(items=get_objects)
 
+    # TODO: get the active camera as well...
+    # TODO: get the UV coordinates?
+    # TODO: get the vertex coordinates...
+
+    # Well, I need the Vertex Position, Texture Coordinates, Corner Normals, Face indices into vertex posn vertex tex coord, vertex normal.
+    # https://docs.blender.org/api/current/bpy.types.Depsgraph.html
     def execute(self, context):
+        depsgraph = context.evaluated_depsgraph_get()
+
+        for object_instance in depsgraph.object_instances:
+            # This is an object which is being instanced.
+            obj = object_instance.object
+            # `is_instance` denotes whether the object is coming from instances (as an opposite of
+            # being an emitting object. )
+            if not object_instance.is_instance:
+                print(f"Object {obj.name} at {object_instance.matrix_world}")
+            else:
+                # Instanced will additionally have fields like uv, random_id and others which are
+                # specific for instances. See Python API for DepsgraphObjectInstance for details,
+                print(
+                    f"Instance of {obj.name} at {object_instance.matrix_world}")
+
         self.report({'INFO'}, "Selected:" + self.my_search)
         return {'FINISHED'}
 
@@ -49,6 +70,5 @@ def unregister():
     bpy.utils.unregister_class(SearchEnumOperator)
 
 
-# // Do I really need this?
 if __name__ == "__main__":
     register()
