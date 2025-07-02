@@ -10,35 +10,35 @@ class Interval:
         """Default constructor. Which also has support for constructor where user passes in lower_bound and upper_bound"""
 
         # *****************
-        # Protected Members
+        # Private Members
         # *****************
-        self.m_t0: float = lower_bound
-        self.m_t1: float = upper_bound
-        self.m_bounded_below: bool = False
-        self.m_bounded_above: bool = False
-        self.m_open_below: bool = True
-        self.m_open_above: bool = True
+        self.__m_t0: float = lower_bound
+        self.__m_t1: float = upper_bound
+        self.__m_bounded_below: bool = False
+        self.__m_bounded_above: bool = False
+        self.__m_open_below: bool = True
+        self.__m_open_above: bool = True
 
         # TODO: do I really need reset_bounds after everything above?
         # self.reset_bounds()
 
     # NOTE: I'm including these getters and setters becuase they have more logic beyond simple getting and setting
     def set_lower_bound(self, lower_bound: float,  is_open: bool = False) -> None:
-        self.m_t0 = lower_bound
-        self.m_bounded_below = True
-        self.m_open_below = is_open
+        self.__m_t0 = lower_bound
+        self.__m_bounded_below = True
+        self.__m_open_below = is_open
 
     def set_upper_bound(self, upper_bound: float, is_open: bool = False) -> None:
-        self.m_t1 = upper_bound
-        self.m_bounded_above = True
-        self.m_open_above = is_open
+        self.__m_t1 = upper_bound
+        self.__m_bounded_above = True
+        self.__m_open_above = is_open
 
     def trim_lower_bound(self, trim_amount: float) -> None:
         # Don't trim if the interval is not bounded or has length of order trim
         # amount
         if ((not self.m_bounded_below) or (2.0 * abs(trim_amount) > self.get_length())):
             return
-        self.m_t0 += trim_amount
+        self.__m_t0 += trim_amount
 
     def trim_upper_bound(self, trim_amount: float) -> None:
         # Don't trim if the interval is not bounded or has length of order trim
