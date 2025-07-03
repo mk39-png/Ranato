@@ -4,7 +4,13 @@
 
 from dataclasses import dataclass
 import numpy as np
+
 from interval import Interval
+from polynomial_function import PolynomialFunction
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -102,7 +108,6 @@ class RationalFunction:
     # Methods
     # *******
     # NOTE: this is never used in the ASOC code
-    @property
     def degree(self):
         pass
 
@@ -110,7 +115,40 @@ class RationalFunction:
     def get_dimension(self):
         pass
 
-    def compute_derivative(self):
+    def compute_derivative(self, derivative: np.ndarray):
+        """Compute the derivative of the rational function, which is also a rational function, using the quotient rule.
+
+        Args: 
+            derivative [in] (RationalFunction<2*degree, dimension>): derivative rational function
+        """
+        # Type checking not straightforward to implement with np.ndarray.
+        # Adding this for assurance.
+        assert np.shape(derivative) == (2 * self.m_degree, self.m_dimension)
+
+        # Compute the derivatives of the numerator and denominator polynomials
+        logger.info("Taking derivative of rational function")
+        logger.info("Numerator:\n%s", self.m_denominator_coeffs)
+        logger.info("Denominator:\n%s", self.m_denominator_coeffs)
+        numerator_deriv_coeffs = np.ndarray(
+            shape=(self.m_degree, self.m_dimension))
+
+        # TODO: deal with the whole <degree, dimension> and <degree, 1> being passed in...
+        compute_polynomial_mapping_derivative(
+            self.m_numerator_coeffs, numerator_deriv_coeffs)
+
+        denominator_deriv_coeffs = np.ndarray(shape=(self.m_degree, 1))
+        compute_polynomial_mapping_derivative(
+            self.m_denominator_coeffs, denominator_deriv_coeffs)
+
+        logger.info("Numerator derivative:\n%s", numerator_deriv_coeffs)
+        logger.info("Denominator derivative:\n%s", denominator_deriv_coeffs)
+
+        # TODO: 0 degree case?
+
+        #  Compute the derivative numerator and denominator from the quotient rule
+        term_0 = np.ndarray(shape=(2 * self.m_degree, self.m_dimension))
+        term_1 = np.ndarray(shape=(2 * self.m_degree, self.m_dimension))
+
         pass
 
     def apply_one_form(self):
