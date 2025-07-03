@@ -10,35 +10,35 @@ class Interval:
         """Default constructor. Which also has support for constructor where user passes in lower_bound and upper_bound"""
 
         # *****************
-        # Private Members
+        # Private Members (in the C++ sense...)
         # *****************
-        self.__m_t0: float = lower_bound
-        self.__m_t1: float = upper_bound
-        self.__m_bounded_below: bool = False
-        self.__m_bounded_above: bool = False
-        self.__m_open_below: bool = True
-        self.__m_open_above: bool = True
+        self.m_t0: float = lower_bound
+        self.m_t1: float = upper_bound
+        self.m_bounded_below: bool = False
+        self.m_bounded_above: bool = False
+        self.m_open_below: bool = True
+        self.m_open_above: bool = True
 
         # TODO: do I really need reset_bounds after everything above?
         # self.reset_bounds()
 
     # NOTE: I'm including these getters and setters becuase they have more logic beyond simple getting and setting
     def set_lower_bound(self, lower_bound: float,  is_open: bool = False) -> None:
-        self.__m_t0 = lower_bound
-        self.__m_bounded_below = True
-        self.__m_open_below = is_open
+        self.m_t0 = lower_bound
+        self.m_bounded_below = True
+        self.m_open_below = is_open
 
     def set_upper_bound(self, upper_bound: float, is_open: bool = False) -> None:
-        self.__m_t1 = upper_bound
-        self.__m_bounded_above = True
-        self.__m_open_above = is_open
+        self.m_t1 = upper_bound
+        self.m_bounded_above = True
+        self.m_open_above = is_open
 
     def trim_lower_bound(self, trim_amount: float) -> None:
         # Don't trim if the interval is not bounded or has length of order trim
         # amount
         if ((not self.m_bounded_below) or (2.0 * abs(trim_amount) > self.get_length())):
             return
-        self.__m_t0 += trim_amount
+        self.m_t0 += trim_amount
 
     def trim_upper_bound(self, trim_amount: float) -> None:
         # Don't trim if the interval is not bounded or has length of order trim
@@ -70,19 +70,36 @@ class Interval:
         self.m_open_below = True
         self.m_open_above = True
 
+    def is_bounded_above(self) -> bool:
+        return self.m_bounded_above
+
+    def is_bounded_below(self) -> bool:
+        return self.m_bounded_below
+
+    def is_open_above(self) -> bool:
+        return self.m_open_above
+
+    def is_open_below(self) -> bool:
+        return self.m_open_below
+
     def is_finite(self) -> bool:
-        return (self.m_bounded_above and self.m_bounded_below)
+        return (self.is_bounded_above() and self.is_bounded_below())
 
     def is_compact(self) -> bool:
-        return (self.is_finite() and (not self.m_open_above) and (not self.m_open_below))
+        return (self.is_finite() and (not self.is_open_above()) and (not self.is_open_below()))
+
+    def get_lower_bound(self) -> float:
+        return self.m_t0
+
+    def get_upper_bound(self) -> float:
+        return self.m_t1
 
     def get_center(self) -> float:
         return 0.5 * (self.m_t0 + self.m_t1)
 
     def get_length(self) -> float:
         if (self.is_finite()):
-            # upper_bound - lower_bound
-            return self.m_t1 - self.m_t0
+            return self.get_upper_bound() - self.get_lower_bound()
         else:
             return float("inf")
 
@@ -123,7 +140,7 @@ class Interval:
         if num_points <= 1:
             return points
 
-        # Unbounded below and above
+        # Unbounded
         if not self.is_bounded_above() and not self.is_bounded_below():
             for i in range(num_points):
                 points.append(-num_points / 20.0 + 0.1 * i)
@@ -161,14 +178,14 @@ class Interval:
         t0 = self.get_lower_bound()
         t1 = self.get_upper_bound()
 
-        # Closed interval [t0, t1]
+        # Closed
         if not self.is_open_below() and not self.is_open_above():
             for i in range(num_points):
                 s = i / (num_points - 1)
                 t = (1.0 - s) * t0 + s * t1
                 points.append(t)
 
-        # Open below, closed above ( (t0, t1] )
+        # Open below, closed above
         elif self.is_open_below() and not self.is_open_above():
             for i in range(1, num_points + 1):
                 s = i / num_points
@@ -176,7 +193,7 @@ class Interval:
                 assert t != t0
                 points.append(t)
 
-        # Closed below, open above [t0, t1)
+        # Closed below, open above
         elif not self.is_open_below() and self.is_open_above():
             for i in range(num_points):
                 s = i / num_points
@@ -184,7 +201,7 @@ class Interval:
                 assert t != t1
                 points.append(t)
 
-        # Open interval (t0, t1)
+        # Open
         elif self.is_open_below() and self.is_open_above():
             for i in range(1, num_points + 1):
                 s = i / (num_points + 1)
@@ -193,33 +210,31 @@ class Interval:
 
         return points
 
-    # TODO: maybe add proper getters and setters for m_t0 and m_t1 for readability.
-
     def __repr__(self):
         interval_string = ""
         # Unbounded cases
-        if (not self.m_bounded_above) and (not self.m_bounded_below):
+        if (not self.is_bounded_above()) and (not self.is_bounded_below()):
             interval_string += "(-infty, infty)"
-        elif (not self.m_bounded_below) and (not self.m_open_above):
+        elif (not self.is_bounded_below()) and (not self.is_open_above()):
             interval_string += f"(-infty, {self.m_t1:.17g}]"
-        elif (not self.m_bounded_below) and self.m_open_above:
+        elif (not self.is_bounded_below()) and self.is_open_above():
             return f"(-infty, {self.m_t1:.17g})"
-        elif (not self.m_bounded_above) and (not self.m_open_below):
+        elif (not self.is_bounded_above()) and (not self.is_open_below()):
             return f"[{self.m_t0:.17g}, infty)"
-        elif (not self.m_bounded_above) and self.m_open_below:
+        elif (not self.is_bounded_above()) and self.is_open_below():
             return f"({self.m_t0:.17g}, infty)"
 
         # Bounded cases
         t0: float = self.m_t0
         t1: float = self.m_t1
 
-        if (not self.m_open_below) and (not self.m_open_above):
+        if (not self.is_open_below()) and (not self.is_open_above()):
             interval_string += f"[{t0:.17g}, {t1:.17g}]"
-        elif self.m_open_below and (not self.m_open_above):
+        elif self.is_open_below() and (not self.is_open_above()):
             interval_string += f"({t0:.17g}, {t1:.17g}]"
-        elif (not self.m_open_below) and self.m_open_above:
+        elif (not self.is_open_below()) and self.is_open_above():
             interval_string += f"[{t0:.17g}, {t1:.17g})"
-        elif self.m_open_below and self.m_open_above:
+        elif self.is_open_below() and self.is_open_above():
             interval_string += f"({t0:.17g}, {t1:.17g})"
 
         return interval_string
