@@ -17,7 +17,6 @@ def test_remove_polynomial_trailing_coefficients() -> None:
         # vector with trailing zeros removed.
         if (not float_equal(A_coeffs[last_zero - 1], 0.0)):
             # TODO: double check that the below is equivalent to .head() in Eigen
-
             reduced_coeffs = A_coeffs[1:last_zero]
             return
 
@@ -116,4 +115,4 @@ def test_polynomial_real_roots_quadratic_function_without_roots():
     print("Quadratic function without roots")
     A_coeffs = np.array([1, 0, 1])
     roots = polynomial_real_roots(A_coeffs)
-    assert (roots.size == 0)
+    assert roots.size == 0

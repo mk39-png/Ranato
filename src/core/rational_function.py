@@ -3,16 +3,17 @@
 """
 
 from dataclasses import dataclass
+import logging
 import numpy as np
 
-from interval import Interval
-from polynomial_function import PolynomialFunction
-
-import logging
+# from polynomial_function import PolynomialFunction
+from .polynomial_function import *
+from .interval import Interval
 
 logger = logging.getLogger(__name__)
 
 
+# TODO: instead of a class... why not just make this a dict?
 @dataclass
 class CurveDiscretizationParameters:
     num_samples: int = 5
@@ -27,6 +28,7 @@ class RationalFunction:
 
     # TODO: maybe have the arguments have default values... that are then dependent on degree and dimension...
     # TODO: so that would entail some sort of lambda function?
+    # NOTE: RationalFunction is never called as RationalFunction()... always constructed with the classmethods below.
     def __init__(self, degree: int, dimension: int, numerator_coeffs: np.ndarray, denominator_coeffs: np.ndarray, domain: Interval):
         """Default constructor"""
         # ****************
@@ -38,11 +40,13 @@ class RationalFunction:
         self.m_numerator_coeffs = numerator_coeffs
         self.m_denominator_coeffs = denominator_coeffs
         self.m_domain = domain
-        assert (self.is_valid())
+        assert self.__is_valid()
 
     @classmethod
     def from_zero_function(cls, degree: int, dimension: int):
-        """Default numerator set to constant in R^n"""
+        """Default numerator set to constant 0 in R^n"""
+
+        # XXX: this might be wrong since we want to have a numerator_coeffs with nothing it... no dimension... soon to be replaced.
         numerator_coeffs = np.zeros(
             shape=(degree+1, dimension), dtype='float64')
         denominator_coeffs = np.zeros(
@@ -94,11 +98,13 @@ class RationalFunction:
         """ General constructor over given interval.
 
         Args:
-            numerator_coeffs [in] (np.ndarray): coefficients of the numerator polynomial
-            denominator_coeffs [in] (np.ndarray): coefficients of the denominator polynomial
-            domain [in] (Interval): domain interval for the mapping
+            degree: [in]
+            dimension: [in]
+            numerator_coeffs (np.ndarray): [in] coefficients of the numerator polynomial
+            denominator_coeffs (np.ndarray): [in] coefficients of the denominator polynomial
+            domain (Interval): [in] domain interval for the mapping
 
-        Return:
+        Returns:
             TODO: fill in return value
         """
 
@@ -115,15 +121,19 @@ class RationalFunction:
     def get_dimension(self):
         pass
 
-    def compute_derivative(self, derivative: np.ndarray):
-        """Compute the derivative of the rational function, which is also a rational function, using the quotient rule.
-
-        Args: 
-            derivative [in] (RationalFunction<2*degree, dimension>): derivative rational function
+    def compute_derivative(self, derivative: "RationalFunction") -> None:
         """
-        # Type checking not straightforward to implement with np.ndarray.
-        # Adding this for assurance.
-        assert np.shape(derivative) == (2 * self.m_degree, self.m_dimension)
+        Compute the derivative of the rational function, which is also a rational function, using the quotient rule.
+
+        Args:
+            derivative (RationalFunction<2*degree, dimension>): [in] derivative rational function.
+
+        Returns:
+            None
+        """
+        # TODO: is this right?
+        assert derivative.m_degree == 2 * self.m_degree
+        assert derivative.m_dimension == self.m_dimension
 
         # Compute the derivatives of the numerator and denominator polynomials
         logger.info("Taking derivative of rational function")
@@ -131,14 +141,14 @@ class RationalFunction:
         logger.info("Denominator:\n%s", self.m_denominator_coeffs)
         numerator_deriv_coeffs = np.ndarray(
             shape=(self.m_degree, self.m_dimension))
-
         # TODO: deal with the whole <degree, dimension> and <degree, 1> being passed in...
-        compute_polynomial_mapping_derivative(
-            self.m_numerator_coeffs, numerator_deriv_coeffs)
+        compute_polynomial_mapping_derivative(self.m_degree, self.m_dimension,
+                                              self.m_numerator_coeffs, numerator_deriv_coeffs)
 
-        denominator_deriv_coeffs = np.ndarray(shape=(self.m_degree, 1))
-        compute_polynomial_mapping_derivative(
-            self.m_denominator_coeffs, denominator_deriv_coeffs)
+        denominator_deriv_coeffs = np.ndarray(
+            shape=(self.m_degree, 1))
+        compute_polynomial_mapping_derivative(self.m_degree, 1,
+                                              self.m_denominator_coeffs, denominator_deriv_coeffs)
 
         logger.info("Numerator derivative:\n%s", numerator_deriv_coeffs)
         logger.info("Denominator derivative:\n%s", denominator_deriv_coeffs)
@@ -149,7 +159,28 @@ class RationalFunction:
         term_0 = np.ndarray(shape=(2 * self.m_degree, self.m_dimension))
         term_1 = np.ndarray(shape=(2 * self.m_degree, self.m_dimension))
 
-        pass
+        # XXX: there may be an issue between this and the mapping_product function....
+        compute_polynomial_mapping_scalar_product(
+            self.m_degree, self.m_degree - 1, self.m_dimension, self.m_denominator_coeffs, numerator_deriv_coeffs, term_0)
+        compute_polynomial_mapping_scalar_product(
+            self.m_degree - 1, self.m_degree, self.m_dimension, denominator_deriv_coeffs, self.m_numerator_coeffs, term_1)
+
+        logger.info("First term: \n%s", term_0)
+        logger.info("Second term: \n%s", term_1)
+
+        # TODO: is this supposed to be using self.m_degree? Or is it some other degree? Look at the C++ code to double check.
+        num_coeffs = np.zeros(shape=(2 * self.m_degree + 1, self.m_dimension))
+
+        # XXX: something might go wrong with the slicing...
+        num_coeffs[0:2*self.m_degree, 0:self.m_dimension] = term_0 - term_1
+
+        denom_coeffs = np.ndarray(shape=(2 * self.m_degree + 1, 1))
+        compute_polynomial_mapping_product(
+            self.m_degree, self.m_degree, 1, self.m_denominator_coeffs, self.m_denominator_coeffs, denom_coeffs)
+
+        # TODO: this should then change the derivative argument to reference a new RationalFunction
+        derivative = RationalFunction.from_interval(
+            2 * self.m_degree, self.m_dimension, num_coeffs, denom_coeffs, self.m_domain)
 
     def apply_one_form(self):
         pass
@@ -209,7 +240,8 @@ class RationalFunction:
     # TODO: then have the domain accessible.
     # TODO: do equivalent to "friend class Conic;"
     def __is_valid(self):
-        # Checks columns of m_numerator_coeffs
+        # Checks columns of m_numerator_coeffs.
+        # We want the shape of the coeffs to be
         if (self.m_numerator_coeffs.shape[1] == 0):
             return False
         if (self.m_denominator_coeffs.size == 0):
@@ -220,9 +252,32 @@ class RationalFunction:
     # ******************************
     # Helper functions for operators
     # ******************************
+    # NOTE: this is equivalent to operator() in C++ code
+    def __call__(self, t: float) -> np.ndarray:
+        """
+        Evaluate the rational mapping at domain point t.
+
+        Args:
+            t (float): [in] domain point to evaluate at.
+
+        Returns:
+            evaluated point.
+        """
+        return self.__evaluate(t)
+
+    def __evaluate(self, t: float) -> np.ndarray:
+        Pt = np.ndarray(shape=(1, self.m_dimension))
+        Qt = np.ndarray(shape=(1, 1))
+        evaluate_polynomial_mapping(
+            self.m_degree, self.m_dimension, self.m_numerator_coeffs, t, Pt)
+        evaluate_polynomial_mapping(
+            self.m_degree, 1, self.m_denominator_coeffs, t, Qt)
+
+        return Pt / Qt[0]
 
     # TODO: turn "formatted_rational_function" into a __repr__ for when the rational function is printed in the interpreter
     # TODO: finish a lot of these things for PolynomialFunction and Interval classes
+
     def __repr__(self):
         rational_function_string: str = "RationalFunction 1/()"
         # rational_function_string += formatted_polynomial < degree, 1 > (
