@@ -1,6 +1,6 @@
 # TODO: include logging here?
 import logging
-
+import math
 
 # *******
 # GLOBALS
@@ -14,12 +14,29 @@ FIND_INTERSECTIONS_BEZIER_CLIPPING_PRECISION: float = 1e-7
 DISCRETIZATION_LEVEL: int = 2  # Spline surface discretization level
 
 
-def float_equal_zero():
-    pass
+def float_equal_zero(x: float, eps=FLOAT_EQUAL_PRECISION):
+    """
+    /// @brief  Check if some floating point value is numerically zero.
+    ///
+    /// @param[in] x: value to compare with zero
+    /// @param[in] eps: threshold for equality
+    /// @return true iff x is below 1e-10
+    """
+    return math.isclose(x, 0.0, rel_tol=eps)
 
 
-def float_equal():
-    pass
+# TODO: just use the Math library for this?
+
+def float_equal(x: float, y: float, eps=FLOAT_EQUAL_PRECISION) -> bool:
+    """
+    /// @brief Check if two floating point values are numerically equal
+    ///
+    /// @param[in] x: first value to compare
+    /// @param[in] y: second value to compare
+    /// @param[in] eps: threshold for equality
+    /// @return true iff x - y is numerically zero
+    """
+    return math.isclose(x, y, rel_tol=eps)
 
 
 def vector_equal():
@@ -151,6 +168,8 @@ def copy_to_spatial_vector():
     pass
 
 
+# TODO: don't think we need this since Python prints out vectors just fine.... maybe
+# Unless there's an extra fancy vector type in the C++ code like vector<RationalFunction> or something like that.
 def formatted_vector():
     pass
 
