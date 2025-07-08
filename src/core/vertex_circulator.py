@@ -15,6 +15,8 @@ def contains_edge(face: np.ndarray, vertex_0: int, vertex_1: int) -> bool:
     """
     Return true iff the face contains the edge { vertex_0, vertex_1 }
     """
+    assert face.ndim == 1
+
     return ((contains_vertex(face, vertex_0)) and
             (contains_vertex(face, vertex_1)))
 
@@ -23,6 +25,8 @@ def is_left_face(face: np.ndarray, vertex_0: int, vertex_1: int) -> bool:
     """
     Return true iff the face is to the left of the given edge
     """
+    assert face.ndim == 1
+
     if ((face[0] == vertex_0) and (face[1] == vertex_1)):
         return True
     if ((face[1] == vertex_0) and (face[2] == vertex_1)):
@@ -37,6 +41,8 @@ def is_right_face(face: np.ndarray, vertex_0: int, vertex_1: int) -> bool:
     """
     Return true iff the face is to the right of the given edge
     """
+    assert face.ndim == 1
+
     if ((face[1] == vertex_0) and (face[0] == vertex_1)):
         return True
     if ((face[2] == vertex_0) and (face[1] == vertex_1)):
@@ -51,6 +57,8 @@ def find_next_vertex(face: np.ndarray, vertex: int) -> int:
     """
     Get the index of the vertex in the face ccw from the given vertex
     """
+    assert face.ndim == 1
+
     if (face[0] == vertex):
         return face[1]
     if (face[1] == vertex):
@@ -65,6 +73,8 @@ def find_prev_vertex(face: np.ndarray, vertex: int) -> int:
     """
     Get the index of the vertex in the face clockwise from the given vertex
     """
+    assert face.ndim == 1
+
     if (face[0] == vertex):
         return face[2]
     if (face[1] == vertex):
@@ -79,6 +89,9 @@ def are_adjacent(face_0: np.ndarray, face_1: np.ndarray) -> bool:
     """
     Return true iff the two faces are adjacent
     """
+    assert face_0.ndim == 1
+    assert face_1.ndim == 1
+
     if (contains_edge(face_0, face_1[0], face_1[1])):
         return True
     if (contains_edge(face_0, face_1[1], face_1[2])):
@@ -90,24 +103,22 @@ def are_adjacent(face_0: np.ndarray, face_1: np.ndarray) -> bool:
 
 
 # TODO: Just use list of lists for simplicity rather than trying to replace with NumPy
-def compute_adjacent_faces(F: np.ndarray, all_adjacent_faces: list[list[int]]) -> None:
+def compute_adjacent_faces(F: np.ndarray) -> list[list[int]]:
     """
     Get list of all faces adjacent to each vertex
     """
+    num_vertices = F.max() + 1
+    all_adjacent_faces: list[list[int]] = [[] for _ in range(num_vertices)]
+
     # Initialize adjacent faces list
-    num_vertices: int = F.max() + 1
-
-    # This supposedly allocates space into the vector.
-    all_adjacent_faces.resize(num_vertices)
-
-    # So, this removes all elements inside the list.
-    for i, face in range(len(all_adjacent_faces)):
+    for i, face in enumerate(all_adjacent_faces):
         face.clear()
 
-    # FIXME: try converting all_adjacent_faces to utilize NumPy arrays rather than list of lists...
     for i in range(F.shape[0]):  # rows
         for j in range(F.shape[1]):  # cols
-            all_adjacent_faces[F[i, j]].push_back(i)
+            all_adjacent_faces[F[i, j]].append(i)
+
+    return all_adjacent_faces
 
 
 def compute_vertex_one_ring_first_face(F: np.ndarray, vertex_index: int, adjacent_faces: list[int]) -> int:
@@ -129,9 +140,11 @@ def compute_vertex_one_ring_first_face(F: np.ndarray, vertex_index: int, adjacen
         # Get previous face or return if none exists
         prev_face: int = -1
 
-        for j in range(len(adjacent_faces)):
+        for j, face in enumerate(adjacent_faces):
             f: int = adjacent_faces[j]
-            if (is_right_face(F.row(f), vertex_index, current_vertex)):
+
+            # Grabs row f
+            if (is_right_face(F[f, :], vertex_index, current_vertex)):
                 prev_face = f
                 break
 
@@ -141,7 +154,8 @@ def compute_vertex_one_ring_first_face(F: np.ndarray, vertex_index: int, adjacen
 
         # Get previous face and vertex
         current_face = prev_face
-        current_vertex = find_prev_vertex(F.row(current_face), current_vertex)
+        current_vertex = find_prev_vertex(
+            F[current_face, :], current_vertex)  # Grabs row current_face
 
     # If we have not returned yet, this is an interior vertex, and we return
     # the current face as an arbitrary choice
@@ -151,40 +165,49 @@ def compute_vertex_one_ring_first_face(F: np.ndarray, vertex_index: int, adjacen
 def compute_vertex_one_ring(F: np.ndarray, vertex_index: int, adjacent_faces: list[int], vertex_one_ring: list[int], face_one_ring: list[int]):
     """
     Compute the vertex one ring for a vertex index using adjacent faces.
+
+    Args:
+        F: [in].
+        vertex_index: [in].
+        adjacent_faces: [in].
+        vertex_one_ring: [out].
+        face_one_ring: [out].
+
+    Returns:
+        None
     """
 
-    num_faces = adjacent_faces.size()
-    vertex_one_ring.resize(num_faces + 1)
-    face_one_ring.resize(num_faces)
+    num_faces = len(adjacent_faces)
+    vertex_one_ring = [None] * (num_faces + 1)
+    face_one_ring = [None] * num_faces
 
-    if (adjacent_faces.empty()):
+    if (len(adjacent_faces) == 0):
         return
 
     # Get first face and vertex
     face_one_ring[0] = compute_vertex_one_ring_first_face(
         F, vertex_index, adjacent_faces)
     vertex_one_ring[0] = find_next_vertex(
-        F.row(face_one_ring[0]), vertex_index)
+        F[face_one_ring[0], :], vertex_index)
 
     # Get remaining one ring faces and vertices
     for i in range(1, num_faces):
         # Get next vertex
         vertex_one_ring[i] = find_next_vertex(
-            F.row(face_one_ring[i - 1]), vertex_one_ring[i - 1])
+            F[face_one_ring[i - 1], :], vertex_one_ring[i - 1])
 
         # Get next face
         for j in range(num_faces):
             f: int = adjacent_faces[j]
-            if (is_left_face(F.row(f), vertex_index, vertex_one_ring[i])):
+            if (is_left_face(F[f, :], vertex_index, vertex_one_ring[i])):
                 face_one_ring[i] = f
 
     # Get final vertex(same as first for closed loop)
-    logger.info("Adding last vertex for face {} from vertex {}", F.row(
-        face_one_ring[num_faces - 1]), vertex_one_ring[num_faces - 1])
-
+    logger.info("Adding last vertex for face %s from vertex %s",
+                F[face_one_ring[num_faces - 1], :], vertex_one_ring[num_faces - 1])
     vertex_one_ring[num_faces] = find_next_vertex(
-        F.row(face_one_ring[num_faces - 1]), vertex_one_ring[num_faces - 1])
-    logger.info("Last vertex: {}", vertex_one_ring[num_faces])
+        F[face_one_ring[num_faces - 1], :], vertex_one_ring[num_faces - 1])
+    logger.info("Last vertex: %s", vertex_one_ring[num_faces])
 
 
 class VertexCirculator:
@@ -203,17 +226,17 @@ class VertexCirculator:
         """
         #  Initialize adjacent faces list
         # TODO: what is maxCoeff FYI?
+        # TODO: shouldn't this be called num_faces?
         num_vertices = F.max() + 1
         self.m_all_adjacent_faces = compute_adjacent_faces(F)
 
         # Compute face and vertex one rings
-        # TODO: wait, how does the below work?
-        self.m_all_vertex_one_rings = np.empty(
-            shape=num_vertices, dtype=int)
-        self.m_all_face_one_rings = np.empty(
-            shape=num_vertices, dtype=int)
+        self.m_all_vertex_one_rings = [None] * num_vertices
+        self.m_all_face_one_rings = [None] * num_vertices
 
         for i in range(num_vertices):
+            # TODO: the function below did NOT modify a particular part of the list by reference... which is bad for us.
+            # TODO: meaning, we'll have to return something to store into m_all_vertex_one_rings and m_all_face_one_rings
             compute_vertex_one_ring(F,
                                     i,
                                     self.m_all_adjacent_faces[i],
@@ -224,18 +247,14 @@ class VertexCirculator:
     # Private Members
     # ***************
     m_F:                    np.ndarray[tuple[int, int], np.dtype[np.int_]]
-    m_all_adjacent_faces:   np.ndarray[tuple[int, int], np.dtype[np.int_]]
-    m_all_vertex_one_rings: np.ndarray[tuple[int, int], np.dtype[np.int_]]
-    m_all_face_one_rings:   np.ndarray[tuple[int, int], np.dtype[np.int_]]
-
-    # m_all_adjacent_faces: list[list[int]]
-    # m_all_vertex_one_rings: list[list[int]]
-    # m_all_face_one_rings: list[list[int]]
+    m_all_adjacent_faces:   list[list[int]]
+    m_all_vertex_one_rings: list[list[int]]
+    m_all_face_one_rings:   list[list[int]]
 
     # ***************
     # Public Members
     # ***************
-    def get_one_ring(self, vertex_index: int, vertex_one_ring: np.ndarray, face_one_ring: np.ndarray) -> None:
+    def get_one_ring(self, vertex_index: int, vertex_one_ring: list[int], face_one_ring: list[int]) -> None:
         """
         Get the one ring of a vertex.
 
@@ -255,5 +274,5 @@ class VertexCirculator:
         """
 
         # TODO: maybe just use a list of list of ints rather than a 2D NumPy array...
-        vertex_one_ring = self.m_all_vertex_one_rings[vertex_index, :]
-        face_one_ring = self.m_all_vertex_one_rings[vertex_index, :]
+        vertex_one_ring = self.m_all_vertex_one_rings[vertex_index]
+        face_one_ring = self.m_all_face_one_rings[vertex_index]
