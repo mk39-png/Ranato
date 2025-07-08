@@ -133,7 +133,7 @@ def column_vector_max():
     pass
 
 
-def vector_contains(vec: np.ndarray, item) -> bool:
+def vector_contains(vec: list, item) -> bool:
     return item in vec
 
 

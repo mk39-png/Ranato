@@ -33,7 +33,6 @@ def remove_polynomial_trailing_coefficients(A_coeffs: np.ndarray):
 
     # TODO: assert that A_coeffs is indeed a vector and NOT a matrix.
     assert A_coeffs.ndim == 1
-    # assert reduced_coeffs.ndim == 1
     return np.trim_zeros(A_coeffs, 'b')
 
 
@@ -71,6 +70,7 @@ def evaluate_polynomial(degree: int, polynomial_coeffs: np.ndarray, t: float) ->
 
     """
     assert np.shape(polynomial_coeffs) == (degree + 1, 1)
+
     pass
 
 
@@ -211,9 +211,14 @@ def compute_polynomial_mapping_cross_product(first_degree: int, second_degree: i
 
     # Assemble the cross product from the terms
     # NOTE: must reshape for broadcasting to convert (3, 1) to (3,)
+    # TODO: or just use 3,1
+    # TODO: bpy wrapper class perhaps?"
+    # TODO: Add a wrapper!! Like, for .col() and whatnot.
     product_polynomial_coeffs[:, 0] = A1B2.reshape(-1) - A2B1.reshape(-1)
     product_polynomial_coeffs[:, 1] = A2B0.reshape(-1) - A0B2.reshape(-1)
     product_polynomial_coeffs[:, 2] = A0B1.reshape(-1) - A1B0.reshape(-1)
+
+    # TODO: return product_polynomial_coeffs to be more pythonic! (and update type sig)
 
 
 def compute_polynomial_mapping_dot_product(dimension: int, first_degree: int, second_degree: int, first_polynomial_coeffs: np.ndarray, second_polynomial_coeffs: np.ndarray, product_polynomial_coeffs: np.ndarray) -> None:
