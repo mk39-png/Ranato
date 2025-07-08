@@ -267,11 +267,24 @@ class RationalFunction:
 
     def __evaluate(self, t: float) -> np.ndarray:
         Pt = np.ndarray(shape=(1, self.m_dimension))
-        Qt = np.ndarray(shape=(1, 1))
+
+        # NOTE: using .ndarray rather than just a scalar float because evaluate_polynomial_mappings uses .ndarray
+        Qt = np.ndarray(shape=(1,))
+
+        # NOTE: using evaluate_polynomial_mapping() rather than evaluate_polynomial() for cases where m_dimension > 1
         evaluate_polynomial_mapping(
-            self.m_degree, self.m_dimension, self.m_numerator_coeffs, t, Pt)
+            degree=self.m_degree,
+            dimension=self.m_dimension,
+            polynomial_coeffs=self.m_numerator_coeffs,
+            t=t,
+            polynomial_evaluation=Pt)
+
         evaluate_polynomial_mapping(
-            self.m_degree, 1, self.m_denominator_coeffs, t, Qt)
+            degree=self.m_degree,
+            dimension=1,
+            polynomial_coeffs=self.m_denominator_coeffs,
+            t=t,
+            polynomial_evaluation=Qt)
 
         return Pt / Qt[0]
 

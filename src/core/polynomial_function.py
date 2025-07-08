@@ -48,14 +48,14 @@ def generate_monomials(degree: int, t: float, T: np.ndarray) -> None:
     Returns:
         None
     """
-    assert np.shape(T) == (1, degree + 1)
+    assert np.shape(T) == (degree + 1,)
 
     T[0] = 1.0
 
     for i in range(1, degree + 1):
         # XXX: again, issue with T being (1, 3) rather than (, 3) and that causing a bunch of issues.
         # XXX: As in, T not being a vector with 3 elements but rather some funky matrix.
-        T[0][i] = T[0][i - 1] * t
+        T[i] = T[i - 1] * t
 
 
 def evaluate_polynomial(degree: int, polynomial_coeffs: np.ndarray, t: float) -> float:
@@ -88,13 +88,12 @@ def evaluate_polynomial_mapping(degree: int, dimension: int, polynomial_coeffs: 
         None
     """
     assert polynomial_coeffs.shape == (degree + 1, dimension)
-    assert polynomial_evaluation.shape == (1, dimension)
+    assert polynomial_evaluation.shape == (dimension,)
 
-    T = np.ndarray(shape=(1, degree + 1))
+    T = np.ndarray(shape=(degree + 1,))
     generate_monomials(degree, t, T)
 
-    # TODO: what is this? element-wise multiplication?
-    polynomial_evaluation = T * polynomial_coeffs
+    polynomial_evaluation = T @ polynomial_coeffs
 
 
 def compute_polynomial_mapping_product(first_degree: int, second_degree: int, dimension: int, first_polynomial_coeffs: np.ndarray, second_polynomial_coeffs: np.ndarray, product_polynomial_coeffs: np.ndarray) -> None:
@@ -167,15 +166,20 @@ def compute_polynomial_mapping_scalar_product(first_degree: int, second_degree: 
 
 
 def compute_polynomial_mapping_cross_product(first_degree: int, second_degree: int, first_polynomial_coeffs: np.ndarray, second_polynomial_coeffs: np.ndarray, product_polynomial_coeffs: np.ndarray):
-    """ Generate the polynomial coefficients for the cross product of two
-        vector valued polynomial mappings with range R^3.
+    """
+    Generate the polynomial coefficients for the cross product of two
+    vector valued polynomial mappings with range R^3.
 
-    first_degree: maximum monomial degree of the first polynomial
-    second_degree: maximum monomial degree of the second polynomial
-    first_polynomial_coeffs: coefficients of the first polynomial
-    second_polynomial_coeffs: coefficients of the second polynomial
-    product_polynomial_coeffs [out]: product vector valued polynomial
-    mapping coefficients
+    Args:
+        first_degree: maximum monomial degree of the first polynomial.
+        second_degree: maximum monomial degree of the second polynomial.
+        first_polynomial_coeffs: coefficients of the first polynomial.
+        second_polynomial_coeffs: coefficients of the second polynomial.
+        product_polynomial_coeffs [out]: product vector valued polynomial
+        mapping coefficients.
+
+    Returns:
+        None
     """
     assert np.shape(first_polynomial_coeffs) == (first_degree + 1, 3)
     assert np.shape(second_polynomial_coeffs) == (second_degree + 1, 3)
@@ -213,18 +217,17 @@ def compute_polynomial_mapping_cross_product(first_degree: int, second_degree: i
 
 
 def compute_polynomial_mapping_dot_product(dimension: int, first_degree: int, second_degree: int, first_polynomial_coeffs: np.ndarray, second_polynomial_coeffs: np.ndarray, product_polynomial_coeffs: np.ndarray) -> None:
-    """ 
+    """
     Generate the polynomial coefficients for the cross product of two
     vector valued polynomial mappings with the same range.
 
-    Args: 
+    Args:
         dimension (int): polynomial mapping dimension.
         first_degree (int): maximum monomial degree of the first polynomial.
         second_degree (int): maximum monomial degree of the second polynomial.
         first_polynomial_coeffs (np.ndarray): coefficients of the first polynomial.
         second_polynomial_coeffs (np.ndarray): coefficients of the second polynomial.
-        product_polynomial_coeffs (np.ndarray): [out] product vector valued polynomial.
-            mapping coefficients
+        product_polynomial_coeffs (np.ndarray): [out] product vector valued polynomial mapping coefficients.
 
     Return:
         None
