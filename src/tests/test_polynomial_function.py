@@ -59,6 +59,8 @@ def test_polynomial_mapping_cross_products_elementary_linear_functions():
     assert float_equal(cross_product_coeffs[1, 2], 3.0)
     assert float_equal(cross_product_coeffs[2, 2], 1.0)
 
+    # TODO: now check to see if equivalent to NumPy's polynomial solver...
+
 
 def test_polynomial_mapping_cross_products_general_constant_functions():
     print("General constant functions")

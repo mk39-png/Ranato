@@ -1,6 +1,7 @@
 # TODO: include logging here?
 import logging
 import math
+import numpy as np
 
 # *******
 # GLOBALS
@@ -132,8 +133,8 @@ def column_vector_max():
     pass
 
 
-def vector_contains():
-    pass
+def vector_contains(vec: np.ndarray, item) -> bool:
+    return item in vec
 
 
 def convert_index_vector_to_boolean_array():
@@ -215,9 +216,13 @@ def generate_linspace():
 def arrange():
     pass
 
+#  *******************
+#  Basic mesh topology
+#  *******************
 
-def contains_vertex():
-    pass
+
+def contains_vertex(face: np.ndarray[tuple[int], np.dtype[np.int_]], vertex_index: int) -> bool:
+    return vertex_index in face
 
 
 def find_face_vertex_index():
