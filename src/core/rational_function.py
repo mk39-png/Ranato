@@ -121,19 +121,19 @@ class RationalFunction:
     def get_dimension(self):
         pass
 
-    def compute_derivative(self, derivative: "RationalFunction") -> None:
+    def compute_derivative(self) -> "RationalFunction":
         """
         Compute the derivative of the rational function, which is also a rational function, using the quotient rule.
 
         Args:
-            derivative (RationalFunction<2*degree, dimension>): [in] derivative rational function.
+            None
 
         Returns:
-            None
+            derivative (RationalFunction<2*degree, dimension>): [in] derivative rational function.
         """
         # TODO: is this right?
-        assert derivative.m_degree == 2 * self.m_degree
-        assert derivative.m_dimension == self.m_dimension
+        # assert derivative.m_degree == 2 * self.m_degree
+        # assert derivative.m_dimension == self.m_dimension
 
         # Compute the derivatives of the numerator and denominator polynomials
         logger.info("Taking derivative of rational function")
@@ -175,13 +175,17 @@ class RationalFunction:
         # XXX: something might go wrong with the slicing...
         num_coeffs[0:2*self.m_degree, 0:self.m_dimension] = term_0 - term_1
 
-        denom_coeffs = np.ndarray(shape=(2 * self.m_degree + 1, 1))
-        compute_polynomial_mapping_product(
-            self.m_degree, self.m_degree, 1, self.m_denominator_coeffs, self.m_denominator_coeffs, denom_coeffs)
+        # denom_coeffs = np.ndarray(shape=(2 * self.m_degree + 1, 1))
+        denom_coeffs = compute_polynomial_mapping_product(
+            self.m_degree, self.m_degree, 1, self.m_denominator_coeffs, self.m_denominator_coeffs)
+
+        assert denom_coeffs.shape == (2 * self.m_degree + 1, )
 
         # TODO: this should then change the derivative argument to reference a new RationalFunction
         derivative = RationalFunction.from_interval(
             2 * self.m_degree, self.m_dimension, num_coeffs, denom_coeffs, self.m_domain)
+
+        return derivative
 
     def apply_one_form(self):
         pass
@@ -273,8 +277,8 @@ class RationalFunction:
         return self.__evaluate(t)
 
     def __evaluate(self, t: float) -> np.ndarray:
-        Pt = np.ndarray(shape=(1, self.m_dimension))
-        Qt = np.ndarray(shape=(1,))
+        # Pt = np.ndarray(shape=(1, self.m_dimension))
+        # Qt = np.ndarray(shape=(1,))
 
         # NOTE: using evaluate_polynomial_mapping() rather than evaluate_polynomial() for cases where m_dimension > 1
         # NOTE: keep the modification by reference since that helps showcase what shape Pt and Qt should be.
@@ -282,24 +286,14 @@ class RationalFunction:
                                  dimension=self.m_dimension,
                                  polynomial_coeffs=self.m_numerator_coeffs,
                                  t=t)
-        # evaluate_polynomial_mapping(
-        #     degree=self.m_degree,
-        #     dimension=self.m_dimension,
-        #     polynomial_coeffs=self.m_numerator_coeffs,
-        #     t=t,
-        #     polynomial_evaluation=Pt)
-
-        # evaluate_polynomial_mapping(
-        #     degree=self.m_degree,
-        #     dimension=1,
-        #     polynomial_coeffs=self.m_denominator_coeffs,
-        #     t=t,
-        #     polynomial_evaluation=Qt)
 
         Qt = evaluate_polynomial(degree=self.m_degree,
                                  dimension=1,
                                  polynomial_coeffs=self.m_denominator_coeffs,
                                  t=t)
+
+        assert Pt.shape == (1, self.m_dimension)
+        assert Qt.shape == (1, )
 
         return Pt / Qt[0]
 
