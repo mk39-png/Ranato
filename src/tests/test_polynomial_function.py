@@ -4,6 +4,78 @@ from ..core.polynomial_function import *
 import pytest
 
 
+def test_compute_polynomial_mapping_product_one_dimension() -> None:
+    """
+    Testing ASOC code's implementation with NumPy's .convolve() method.
+    Because we don't need to reimplement everything if NumPy conveniently provides functionality for us.
+    """
+    # Test this with the Kronecker product that is provided by NumPy
+    # NOTE: apparently the dimension is always 1... in the cases that compute_polynomial_mapping_product() is used.
+
+    # first_polynomial_coeffs = np.array([[2, 0, 0], [1, 0, 0]])
+    # second_polynomial_coeffs = np.array([[0, 1, 0], [0, 1, 0]])
+    product_polynomial_coeffs = np.ndarray(shape=(3, 1))
+
+    first_degree = 1
+    second_degree = 1
+    dimension = 1
+    first_polynomial_coeffs = np.array([[2], [1]])
+    second_polynomial_coeffs = np.array([[1], [1]])
+
+    # FIXME: might need reshaping
+    compute_polynomial_mapping_product(1, 1, 1,
+                                       first_polynomial_coeffs, second_polynomial_coeffs, product_polynomial_coeffs)
+    # The above gets [[2], [3], [1]]... which is how it should be before reshaping...
+    # It's generally a PAIN to get working...
+    # what = first_polynomial_coeffs.flatten()
+    # numpy_product_polynomial_coeffs = np.kron(
+    # first_polynomial_coeffs.flatten(), second_polynomial_coeffs.flatten())
+
+    # numpy_product_polynomial_coeffs = np.convolve(
+    # first_polynomial_coeffs.flatten(), second_polynomial_coeffs.flatten())
+
+    # Turns out that convolution likes same sized dimensions
+    numpy_product_polynomial_coeffs = np.convolve(
+        first_polynomial_coeffs, second_polynomial_coeffs)
+
+    assert np.array_equal(product_polynomial_coeffs.flatten(),
+                          numpy_product_polynomial_coeffs)
+
+    # Below is a hardcoded result from previous testing...
+    # XXX: This may be wrong...
+    assert np.array_equal(
+        product_polynomial_coeffs.flatten(), np.array([2, 3, 1]))
+
+
+def test_compute_polynomial_mapping_product_vectorization() -> None:
+    """
+    Testing ASOC code's implementation with NumPy's vectorization, which hopefully allows it to scale to (n,) arrays rather than (n, 1) arrays
+    """
+    # Test this with the Kronecker product that is provided by NumPy
+    # NOTE: apparently the dimension is always 1... in the cases that compute_polynomial_mapping_product() is used.
+    first_polynomial_coeffs = np.array([2, 1])
+    second_polynomial_coeffs = np.array([[1], [1]])
+    product_polynomial_coeffs = np.ndarray(shape=(3, 1))
+
+    first_degree = 1
+    second_degree = 1
+    dimension = 1
+
+    # FIXME: might need reshaping
+    compute_polynomial_mapping_product(first_degree, second_degree, dimension,
+                                       first_polynomial_coeffs, second_polynomial_coeffs, product_polynomial_coeffs)
+
+    numpy_product_polynomial_coeffs = np.kron(
+        first_polynomial_coeffs.flatten(), second_polynomial_coeffs.flatten())
+
+    assert np.array_equal(product_polynomial_coeffs,
+                          numpy_product_polynomial_coeffs)
+
+    # Below is a hardcoded result from previous testing...
+    # XXX: This may be wrong...
+    assert np.array_equal(product_polynomial_coeffs, np.array([2, 3, 1]))
+
+
 def test_remove_polynomial_trailing_coefficients() -> None:
     print("Remove trailing zeros")
 
@@ -118,3 +190,29 @@ def test_polynomial_real_roots_quadratic_function_without_roots():
     A_coeffs = np.array([1, 0, 1])
     roots = polynomial_real_roots(A_coeffs)
     assert roots.size == 0
+
+
+def test_polynomial_real_roots_vs_quadratic_real_roots():
+    """
+    This test is just to see if quadratic_real_roots() and polynomial_real_roots() do the same thing.
+    """
+    print("Quadratic function with roots")
+    A_coeffs = np.array([-1, 0, 1])
+    roots_polynomial = polynomial_real_roots(A_coeffs)
+    roots_quadratic, num_solutions = quadratic_real_roots(A_coeffs)
+
+    assert (roots_polynomial.size == 2)
+    assert (roots_quadratic.size == 2)
+    assert np.array_equal(roots_polynomial, roots_quadratic)
+
+    print("Quadratic function without roots")
+    A_coeffs = np.array([1, 0, 1])
+    roots_polynomial = polynomial_real_roots(A_coeffs)
+    roots_quadratic, num_solutions = quadratic_real_roots(A_coeffs)
+
+    assert roots_polynomial.size == 0
+
+    # TODO: the below assert should fail since the roots_quadratic() just has whatever.
+    # But the num_solutions is 0....
+    # But anyways, polynomial_real_roots and quadratic_real_roots appear to just do the same thing.
+    assert roots_quadratic.size == 0

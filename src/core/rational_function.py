@@ -29,7 +29,7 @@ class RationalFunction:
     # TODO: maybe have the arguments have default values... that are then dependent on degree and dimension...
     # TODO: so that would entail some sort of lambda function?
     # NOTE: RationalFunction is never called as RationalFunction()... always constructed with the classmethods below.
-    def __init__(self, degree: int, dimension: int, numerator_coeffs: np.ndarray, denominator_coeffs: np.ndarray, domain: Interval):
+    def __init__(self, degree: int, dimension: int, numerator_coeffs: np.ndarray, denominator_coeffs: np.ndarray, domain: Interval) -> None:
         """Default constructor"""
         # ****************
         # Member variables
@@ -53,7 +53,7 @@ class RationalFunction:
             shape=(degree+1, 1), dtype='float64')
         denominator_coeffs[0] = 1.0
         domain = Interval()
-        domain.reset_bounds()
+        # domain.reset_bounds()
 
         return cls(degree, dimension, numerator_coeffs, denominator_coeffs, domain)
 
@@ -71,7 +71,7 @@ class RationalFunction:
             shape=(degree+1, 1), dtype='float64')
         denominator_coeffs[0] = 1.0
         domain = Interval()
-        domain.reset_bounds()
+        # domain.reset_bounds()
 
         return cls(degree, dimension, numerator_coeffs, denominator_coeffs, domain)
 
@@ -88,7 +88,7 @@ class RationalFunction:
             TODO: fill in return value
         """
         domain = Interval()
-        domain.reset_bounds()
+        # domain.reset_bounds()
 
         return cls(degree, dimension, numerator_coeffs, denominator_coeffs, domain)
 
@@ -145,8 +145,9 @@ class RationalFunction:
         compute_polynomial_mapping_derivative(self.m_degree, self.m_dimension,
                                               self.m_numerator_coeffs, numerator_deriv_coeffs)
 
-        denominator_deriv_coeffs = np.ndarray(
-            shape=(self.m_degree, 1))
+        # HACK: denominator_deriv_coeffs must be shape (self.m_degree, 1) rather than (self.m_degree,) because compute_polynomial_mapping_derivative() is not designed to work with vectors.
+        denominator_deriv_coeffs = np.ndarray(shape=(self.m_degree, 1))
+
         compute_polynomial_mapping_derivative(self.m_degree, 1,
                                               self.m_denominator_coeffs, denominator_deriv_coeffs)
 
@@ -240,10 +241,16 @@ class RationalFunction:
     # TODO: then have the domain accessible.
     # TODO: do equivalent to "friend class Conic;"
     def __is_valid(self):
-        # Checks columns of m_numerator_coeffs.
-        # We want the shape of the coeffs to be
+        # Making sure that numerator is shape (n,) array
+        # NOTE: m_numerator_coeffs can have multiple dimensions...
+        # It's just the denominator that must be 1 dimensional....
+        # if (self.m_numerator_coeffs.ndim != 1 or self.m_numerator_coeffs.ndim != 1):
+        # return False
+
         if (self.m_numerator_coeffs.shape[1] == 0):
             return False
+
+        # Making sure that denominator is NOT empty.
         if (self.m_denominator_coeffs.size == 0):
             return False
 
@@ -271,19 +278,28 @@ class RationalFunction:
 
         # NOTE: using evaluate_polynomial_mapping() rather than evaluate_polynomial() for cases where m_dimension > 1
         # NOTE: keep the modification by reference since that helps showcase what shape Pt and Qt should be.
-        evaluate_polynomial_mapping(
-            degree=self.m_degree,
-            dimension=self.m_dimension,
-            polynomial_coeffs=self.m_numerator_coeffs,
-            t=t,
-            polynomial_evaluation=Pt)
+        Pt = evaluate_polynomial(degree=self.m_degree,
+                                 dimension=self.m_dimension,
+                                 polynomial_coeffs=self.m_numerator_coeffs,
+                                 t=t)
+        # evaluate_polynomial_mapping(
+        #     degree=self.m_degree,
+        #     dimension=self.m_dimension,
+        #     polynomial_coeffs=self.m_numerator_coeffs,
+        #     t=t,
+        #     polynomial_evaluation=Pt)
 
-        evaluate_polynomial_mapping(
-            degree=self.m_degree,
-            dimension=1,
-            polynomial_coeffs=self.m_denominator_coeffs,
-            t=t,
-            polynomial_evaluation=Qt)
+        # evaluate_polynomial_mapping(
+        #     degree=self.m_degree,
+        #     dimension=1,
+        #     polynomial_coeffs=self.m_denominator_coeffs,
+        #     t=t,
+        #     polynomial_evaluation=Qt)
+
+        Qt = evaluate_polynomial(degree=self.m_degree,
+                                 dimension=1,
+                                 polynomial_coeffs=self.m_denominator_coeffs,
+                                 t=t)
 
         return Pt / Qt[0]
 
