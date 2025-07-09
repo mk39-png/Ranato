@@ -267,11 +267,10 @@ class RationalFunction:
 
     def __evaluate(self, t: float) -> np.ndarray:
         Pt = np.ndarray(shape=(1, self.m_dimension))
-
-        # NOTE: using .ndarray rather than just a scalar float because evaluate_polynomial_mappings uses .ndarray
         Qt = np.ndarray(shape=(1,))
 
         # NOTE: using evaluate_polynomial_mapping() rather than evaluate_polynomial() for cases where m_dimension > 1
+        # NOTE: keep the modification by reference since that helps showcase what shape Pt and Qt should be.
         evaluate_polynomial_mapping(
             degree=self.m_degree,
             dimension=self.m_dimension,

@@ -57,21 +57,24 @@ def generate_monomials(degree: int, t: float, T: np.ndarray) -> None:
         T[i] = T[i - 1] * t
 
 
-def evaluate_polynomial(degree: int, polynomial_coeffs: np.ndarray, t: float) -> float:
+def evaluate_polynomial(degree: int, polynomial_coeffs: np.ndarray, t: float) -> np.ndarray:
     """Evaluate the polynomial with given coefficients at t.
 
     Args:
         degree: maximum monomial degree.
-        polynomial_coeffs [in]: coefficients of the polynomial.
-        t [in]: evaluation point for the polynomial.
+        polynomial_coeffs: [in, const, reference] coefficients of the polynomial.
+        t: [in] evaluation point for the polynomial.
 
     Return:
         evaluation of the polynomial
-
     """
     assert np.shape(polynomial_coeffs) == (degree + 1, 1)
 
-    pass
+    T = np.ndarray(shape=(1, degree + 1))
+    generate_monomials(degree, t, T)
+
+    # XXX: the below is supposed to do matrix multiplication, FYI
+    return T @ polynomial_coeffs
 
 
 def evaluate_polynomial_mapping(degree: int, dimension: int, polynomial_coeffs: np.ndarray, t: float, polynomial_evaluation: np.ndarray) -> None:
@@ -90,7 +93,7 @@ def evaluate_polynomial_mapping(degree: int, dimension: int, polynomial_coeffs: 
     assert polynomial_coeffs.shape == (degree + 1, dimension)
     assert polynomial_evaluation.shape == (dimension,)
 
-    T = np.ndarray(shape=(degree + 1,))
+    T = np.ndarray(shape=(1, degree + 1))
     generate_monomials(degree, t, T)
 
     polynomial_evaluation = T @ polynomial_coeffs
