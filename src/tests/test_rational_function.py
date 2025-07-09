@@ -20,7 +20,7 @@ def test_zero_function() -> None:
     # TODO: problem is the below since the denom and numerator are NOT (n,) shaped....
     F_derivative = RationalFunction.from_zero_function(2, 1)
 
-    F.compute_derivative(F_derivative)
+    F.compute_derivative()
 
     assert float_equal(F_derivative(-1.0)[0], 0.0)
     assert float_equal(F_derivative(0.0)[0], 0.0)
@@ -31,9 +31,9 @@ def test_constant_function() -> None:
     P_coeffs = np.array([1, 0]).reshape(2, 1)
     Q_coeffs = np.array([1, 0]).reshape(2, 1)
     F = RationalFunction.from_real_line(1, 1, P_coeffs, Q_coeffs)
-    F_derivative = RationalFunction.from_zero_function(2, 1)
+    # F_derivative = RationalFunction.from_zero_function(2, 1)
 
-    F.compute_derivative(F_derivative)
+    F_derivative = F.compute_derivative()
 
     assert float_equal(F_derivative(-1.0)[0], 0.0)
     assert float_equal(F_derivative(0.0)[0],  0.0)

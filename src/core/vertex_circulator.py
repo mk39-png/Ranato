@@ -108,7 +108,7 @@ def compute_adjacent_faces(F: np.ndarray) -> list[list[int]]:
     Get list of all faces adjacent to each vertex
     """
     num_vertices = F.max() + 1
-    all_adjacent_faces: list[list[int]] = [[] for _ in range(num_vertices)]
+    all_adjacent_faces: list[list[int]] = [[] for i in range(num_vertices)]
 
     # Initialize adjacent faces list
     for i, face in enumerate(all_adjacent_faces):
@@ -170,11 +170,10 @@ def compute_vertex_one_ring(F: np.ndarray, vertex_index: int, adjacent_faces: li
         F: [in].
         vertex_index: [in].
         adjacent_faces: [in].
-        vertex_one_ring: [out].
-        face_one_ring: [out].
 
     Returns:
-        None
+        vertex_one_ring: [out].
+        face_one_ring: [out].
     """
 
     num_faces = len(adjacent_faces)
@@ -231,8 +230,8 @@ class VertexCirculator:
         self.m_all_adjacent_faces = compute_adjacent_faces(F)
 
         # Compute face and vertex one rings
-        self.m_all_vertex_one_rings = [None] * num_vertices
-        self.m_all_face_one_rings = [None] * num_vertices
+        # self.m_all_vertex_one_rings = [None] * num_vertices
+        # self.m_all_face_one_rings = [None] * num_vertices
 
         for i in range(num_vertices):
             # TODO: the function below did NOT modify a particular part of the list by reference... which is bad for us.
@@ -254,7 +253,7 @@ class VertexCirculator:
     # ***************
     # Public Members
     # ***************
-    def get_one_ring(self, vertex_index: int, vertex_one_ring: list[int], face_one_ring: list[int]) -> None:
+    def get_one_ring(self, vertex_index: int) -> tuple[list[int], list[int]]:
         """
         Get the one ring of a vertex.
 
@@ -266,13 +265,13 @@ class VertexCirculator:
 
         Args:
             vertex_index:    [in]  index of the vertex to get the one ring for
-            vertex_one_ring: [out] vertices ccw around the one ring
-            face_one_ring:   [out] faces ccw around the one ring
 
         Returns:
-            None
+            vertex_one_ring: [out] vertices ccw around the one ring
+            face_one_ring:   [out] faces ccw around the one ring
         """
 
         # TODO: maybe just use a list of list of ints rather than a 2D NumPy array...
         vertex_one_ring = self.m_all_vertex_one_rings[vertex_index]
         face_one_ring = self.m_all_face_one_rings[vertex_index]
+        return vertex_one_ring, face_one_ring

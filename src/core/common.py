@@ -2,6 +2,11 @@
 import logging
 import math
 import numpy as np
+from typing import NewType
+
+import numpy.typing as npt
+
+UserId = NewType('UserId', int)
 
 # *******
 # GLOBALS
@@ -13,6 +18,15 @@ PLANAR_BOUNDING_BOX_PRECISION: float = 0
 # Epsilon for Bezier clipping intersections
 FIND_INTERSECTIONS_BEZIER_CLIPPING_PRECISION: float = 1e-7
 DISCRETIZATION_LEVEL: int = 2  # Spline surface discretization level
+
+# Real number representations
+# PlanarPoint = NewType('PlanarPoint', npt.NDArray(shape=[(1, 2)], dtype=float))
+# SpatialVector = np.ndarray(shape=(1, 3), dtype=float)
+# Matrix2x3r = np.ndarray(shape=(2, 3), dtype=float)
+# Matrix2x2r = np.ndarray(shape=(2, 2), dtype=float)
+# Matrix3x2r = np.ndarray(shape=(3, 2), dtype=float)
+# Matrix3x3r = np.ndarray(shape=(3, 3), dtype=float)
+# Edge = list[int, int]
 
 
 def float_equal_zero(x: float, eps=FLOAT_EQUAL_PRECISION):
