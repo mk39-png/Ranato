@@ -140,32 +140,33 @@ class RationalFunction:
         logger.info("Taking derivative of rational function")
         logger.info("Numerator:\n%s", self.m_denominator_coeffs)
         logger.info("Denominator:\n%s", self.m_denominator_coeffs)
-        numerator_deriv_coeffs = np.ndarray(
-            shape=(self.m_degree, self.m_dimension))
+
         # TODO: deal with the whole <degree, dimension> and <degree, 1> being passed in...
-        compute_polynomial_mapping_derivative(self.m_degree, self.m_dimension,
-                                              self.m_numerator_coeffs, numerator_deriv_coeffs)
+        numerator_deriv_coeffs = compute_polynomial_mapping_derivative(
+            self.m_degree, self.m_dimension, self.m_numerator_coeffs)
+
+        numerator_deriv_coeffs.shape == (self.m_degree, self.m_dimension)
 
         # HACK: denominator_deriv_coeffs must be shape (self.m_degree, 1) rather than (self.m_degree,) because compute_polynomial_mapping_derivative() is not designed to work with vectors.
-        denominator_deriv_coeffs = np.ndarray(shape=(self.m_degree, 1))
+        # denominator_deriv_coeffs = np.ndarray(shape=(self.m_degree, 1))
 
-        compute_polynomial_mapping_derivative(self.m_degree, 1,
-                                              self.m_denominator_coeffs, denominator_deriv_coeffs)
+        denominator_deriv_coeffs = compute_polynomial_mapping_derivative(
+            self.m_degree, 1, self.m_denominator_coeffs)
+        assert denominator_deriv_coeffs.shape == (self.m_degree, 1)
 
         logger.info("Numerator derivative:\n%s", numerator_deriv_coeffs)
         logger.info("Denominator derivative:\n%s", denominator_deriv_coeffs)
 
         # TODO: 0 degree case?
-
         #  Compute the derivative numerator and denominator from the quotient rule
-        term_0 = np.ndarray(shape=(2 * self.m_degree, self.m_dimension))
-        term_1 = np.ndarray(shape=(2 * self.m_degree, self.m_dimension))
-
         # XXX: there may be an issue between this and the mapping_product function....
-        compute_polynomial_mapping_scalar_product(
-            self.m_degree, self.m_degree - 1, self.m_dimension, self.m_denominator_coeffs, numerator_deriv_coeffs, term_0)
-        compute_polynomial_mapping_scalar_product(
-            self.m_degree - 1, self.m_degree, self.m_dimension, denominator_deriv_coeffs, self.m_numerator_coeffs, term_1)
+        term_0 = compute_polynomial_mapping_scalar_product(
+            self.m_degree, self.m_degree - 1, self.m_dimension, self.m_denominator_coeffs, numerator_deriv_coeffs)
+        term_1 = compute_polynomial_mapping_scalar_product(
+            self.m_degree - 1, self.m_degree, self.m_dimension, denominator_deriv_coeffs, self.m_numerator_coeffs)
+
+        assert term_0.shape == (2 * self.m_degree, self.m_dimension)
+        assert term_1.shape == (2 * self.m_degree, self.m_dimension)
 
         logger.info("First term: \n%s", term_0)
         logger.info("Second term: \n%s", term_1)
@@ -298,7 +299,7 @@ class RationalFunction:
                                  t=t)
 
         assert Pt.shape == (1, self.m_dimension)
-        assert Qt.shape == (1, )
+        assert Qt.shape == (1, 1)
 
         return Pt / Qt[0]
 

@@ -51,13 +51,13 @@ def generate_monomials(degree: int, t: float) -> npt.NDArray[np.float64]:
         T (np.ndarray): [out] row vector of monomials of shape (degree + 1,).
     """
     # assert T.shape == (degree + 1,)
-    T: np.ndarray = np.ndarray(shape=(degree + 1,))
+    T: np.ndarray = np.ndarray(shape=(1, degree + 1))
 
     T[0] = 1.0
 
     # NOTE: In the original ASOC code, T is a Matrix with 1 row and degree + 1 columns.
     for i in range(1, degree + 1):
-        T[i] = T[i - 1] * t
+        T[0, i] = T[0, i - 1] * t
 
     return T
 
@@ -75,11 +75,10 @@ def evaluate_polynomial(degree: int, dimension: int, polynomial_coeffs: np.ndarr
     """
 
     # TODO: change assertions to do NumPy-esque checks.
-    assert polynomial_coeffs.shape[0] == (degree + 1)
-    assert polynomial_coeffs.ndim == dimension
-    # assert polynomial_coeffs.shape == (degree + 1, dimension)
+    assert polynomial_coeffs.shape == (degree + 1, dimension)
 
     T = generate_monomials(degree, t)
+    assert T.shape == (1, degree + 1)
 
     polynomial_evaluation = T @ polynomial_coeffs
 
@@ -128,7 +127,7 @@ def compute_polynomial_mapping_product(first_degree: int, second_degree: int, di
     return product_polynomial_coeffs
 
 
-def compute_polynomial_mapping_scalar_product(first_degree: int, second_degree: int, dimension: int, scalar_polynomial_coeffs: np.ndarray, polynomial_coeffs: np.ndarray, product_polynomial_coeffs: np.ndarray) -> None:
+def compute_polynomial_mapping_scalar_product(first_degree: int, second_degree: int, dimension: int, scalar_polynomial_coeffs: np.ndarray, polynomial_coeffs: np.ndarray) -> np.ndarray:
     """ 
     Generate the polynomial coefficients for the product of a
     scalar polynomial and a vector valued polynomial mapping.
@@ -139,18 +138,19 @@ def compute_polynomial_mapping_scalar_product(first_degree: int, second_degree: 
         dimension: polynomial mapping dimension.
         scalar_polynomial_coeffs: [in] coefficients of the scalar polynomial.
         polynomial_coeffs: [in] coefficients of the vector valued polynomial.
-        product_polynomial_coeffs: [out] product vector valued polynomial mapping coefficients.
 
     Returns:
-        None
+        product_polynomial_coeffs: [out] product vector valued polynomial mapping coefficients.
 
     """
     assert np.shape(scalar_polynomial_coeffs) == (first_degree + 1, 1)
     assert np.shape(polynomial_coeffs) == (second_degree + 1, dimension)
-    assert np.shape(product_polynomial_coeffs) == (
-        first_degree + second_degree + 1, dimension)
+    # assert np.shape(product_polynomial_coeffs) == (
+    # first_degree + second_degree + 1, dimension)
 
     # Compute the new polynomial mapping coefficients by convolution
+    product_polynomial_coeffs = np.ndarray(
+        shape=(first_degree + second_degree + 1, dimension))
     product_polynomial_coeffs[:, :] = 0
 
     # TODO: perhaps use NumPy vectorization to fix the issue of shape and whatnot...
@@ -160,6 +160,8 @@ def compute_polynomial_mapping_scalar_product(first_degree: int, second_degree: 
                 # XXX: there may be problem with scalar_polynomial_coeffs accessing b/c of shape
                 product_polynomial_coeffs[i + j,
                                           k] += scalar_polynomial_coeffs[i] * polynomial_coeffs[j, k]
+
+    return product_polynomial_coeffs
 
 
 def compute_polynomial_mapping_cross_product(first_degree: int, second_degree: int, first_polynomial_coeffs: np.ndarray, second_polynomial_coeffs: np.ndarray) -> np.ndarray:
@@ -243,7 +245,7 @@ def compute_polynomial_mapping_dot_product(dimension: int, first_degree: int, se
 
 
 # NOTE: this is used by rational_function.py
-def compute_polynomial_mapping_derivative(degree: int, dimension: int, polynomial_coeffs: np.ndarray, derivative_polynomial_coeffs: np.ndarray) -> None:
+def compute_polynomial_mapping_derivative(degree: int, dimension: int, polynomial_coeffs: np.ndarray) -> np.ndarray:
     """ 
     Generate the polynomial coefficients for the derivative of a
     polynomial mapping.
@@ -252,22 +254,35 @@ def compute_polynomial_mapping_derivative(degree: int, dimension: int, polynomia
         degree: PLACEHOLDER.
         dimension: polynomial mapping dimension.
         polynomial_coeffs: coefficients of the polynomial mapping.
-        derivative_polynomial_coeffs: [out] derivative polynomial mapping coefficients.
 
     Returns:
-        None
+        derivative_polynomial_coeffs: [out] derivative polynomial mapping coefficients.
+
     """
     assert polynomial_coeffs.shape == (degree + 1, dimension)
-    assert derivative_polynomial_coeffs.shape == (degree, dimension)
 
     # TODO: there may be a problem with shape...
     # TODO: Though, maybe this could be fixed with NumPy's vectorization!
 
     # Wait, isn't this just the same as NumPy's derivative thing?
-    for i in range(1, degree + 1):
-        for j in range(dimension):
-            derivative_polynomial_coeffs[i - 1,
-                                         j] = i * polynomial_coeffs[i, j]
+    # for i in range(1, degree + 1):
+    #     for j in range(dimension):
+    #         derivative_polynomial_coeffs[i - 1,
+    #                                      j] = i * polynomial_coeffs[i, j]
+
+    # np_p_deriv_coeffs = np.polynomial.polynomial.polyder(
+    # polynomial_coeffs.flatten())
+    # nustuff = np.gradient(polynomial_coeffs, axis=0)
+    # assert np.array_equal(derivative_polynomial_coeffs,
+    #   nustuff)
+    # print("what")
+
+    # Below should be equivalent to whatever is happening above.
+    derivative_polynomial_coeffs = np.apply_along_axis(
+        np.polynomial.polynomial.polyder, axis=0, arr=polynomial_coeffs)
+    assert derivative_polynomial_coeffs.shape == (degree, dimension)
+
+    return derivative_polynomial_coeffs
 
 
 def quadratic_real_roots(quadratic_coeffs: np.ndarray, eps: float = 1e-10) -> tuple[np.ndarray, int]:

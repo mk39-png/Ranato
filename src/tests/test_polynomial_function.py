@@ -4,6 +4,28 @@ from ..core.polynomial_function import *
 import pytest
 
 
+def test_generate_monomials() -> None:
+    degree = 2
+    t = -1
+    T = generate_monomials(degree, t)
+
+    assert T.shape == (1, degree + 1)
+    assert T[0, 0] == 1
+    assert T[0, 1] == -1
+    assert T[0, 2] == 1
+
+
+def test_evaluate_polynomial() -> None:
+    degree = 2
+    dimension = 1
+    polynomial_coeffs = np.array([[0.], [0.], [0.]])
+    t = -1
+
+    polynomial_evaluation = evaluate_polynomial(
+        degree, dimension, polynomial_coeffs, t)
+    assert polynomial_evaluation.shape == (1, dimension)
+
+
 def test_compute_polynomial_mapping_product_one_dimension() -> None:
     """
     Testing ASOC code's implementation with NumPy's .convolve() method.
@@ -59,6 +81,10 @@ def test_compute_polynomial_mapping_derivative_with_asoc() -> None:
 
     # assert polynomial_coeffs.shape == (degree + 1, dimension)
     # assert derivative_polynomial_coeffs.shape == (degree, dimension)
+
+    # ******************
+    # ZERO FUNCTION CASE
+    # ******************
     degree = 1
     dimension = 1
     polynomial_coeffs = np.array([[0.0], [0.0]])
@@ -78,6 +104,22 @@ def test_compute_polynomial_mapping_derivative_with_asoc() -> None:
 
     # TODO: test with other derivatives aside from zero function...
     # FIXME: because I'm quite sure this is not working as intended
+
+    # ******************
+    # LINEAR FUNCTION CASE
+    # ******************
+    P_coeffs = np.array([-1, 2]).reshape(2, 1)
+    P_deriv_coeffs = np.ndarray(shape=(1, 1))
+    P_deriv_coeffs = compute_polynomial_mapping_derivative(1, 1, P_coeffs)
+
+    # np_p_deriv_coeffs = np.polynomial.polynomial.polyder(P_coeffs.flatten())
+
+    np_p_deriv_coeffs = np.polynomial.polynomial.polyder(P_coeffs)
+
+    assert np.array_equal(P_deriv_coeffs,
+                          np_p_deriv_coeffs)
+
+    # TODO: derive each row of the polynomial for multidimensional coeff matrices (e.g shape (2, 3))
 
 
 def test_remove_polynomial_trailing_coefficients() -> None:
