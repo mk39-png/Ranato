@@ -35,6 +35,7 @@ class RationalFunction:
         # Member variables
         # ****************
         # TODO: double check that the shape is as it should be with the Eigen matrix.
+        # TODO: change m_ to __ for python private variables...
         self.m_degree = degree
         self.m_dimension = dimension
         self.m_numerator_coeffs = numerator_coeffs
@@ -230,17 +231,19 @@ class RationalFunction:
     # *******************
     # Getters and setters
     # *******************
-    def set_numerators(self):
-        pass
+    def set_numerators(self, numerator: np.ndarray):
+        assert numerator.shape == (self.m_degree + 1, self.m_dimension)
+        self.m_numerator_coeffs = numerator
 
-    def set_denominator(self):
-        pass
+    def set_denominator(self, denominator: np.ndarray):
+        assert denominator.shape == (self.m_degree + 1, 1)
+        self.m_denominator_coeffs = denominator
 
     def get_numerators(self):
-        pass
+        return self.m_numerator_coeffs
 
     def get_denominator(self):
-        pass
+        return self.m_denominator_coeffs
 
     # TODO: then have the domain accessible.
     # TODO: do equivalent to "friend class Conic;"
@@ -251,6 +254,8 @@ class RationalFunction:
         # if (self.m_numerator_coeffs.ndim != 1 or self.m_numerator_coeffs.ndim != 1):
         # return False
 
+        # This ensures that we're still dealing with matrices.
+        # Because numerator can be shape (n, m) and not (n, )
         if (self.m_numerator_coeffs.shape[1] == 0):
             return False
 
