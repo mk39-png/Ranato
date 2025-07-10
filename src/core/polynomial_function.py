@@ -63,19 +63,23 @@ def generate_monomials(degree: int, t: float) -> npt.NDArray[np.float64]:
 
 
 def evaluate_polynomial(degree: int, dimension: int, polynomial_coeffs: np.ndarray, t: float) -> np.ndarray:
-    """Evaluate the polynomial with given coefficients at t. NOTE: this has been modified from the ASOC code to support any dimension.
+    """
+    Evaluate the polynomial with given coefficients at t. 
+    NOTE: this has been modified from the ASOC code to support any dimension.
+
     Args:
         degree: maximum monomial degree.
         dimension (int): polynomial dimension.
         polynomial_coeffs: [in, const, reference] coefficients of the polynomial.
         t: [in] evaluation point for the polynomial.
 
-    Return:
+    Returns:
         polynomial_evaluation: evaluation of the polynomial of shape (1, dimension)
     """
 
     # TODO: change assertions to do NumPy-esque checks.
-    assert polynomial_coeffs.shape == (degree + 1, dimension)
+    assert polynomial_coeffs.shape == (
+        degree + 1, dimension), "polynomial_coeffs supposed to be matrix (i.e. ndim > 1 OR shape != (degree+1,))"
 
     T = generate_monomials(degree, t)
     assert T.shape == (1, degree + 1)
@@ -95,7 +99,9 @@ def evaluate_polynomial_mapping(degree: int, dimension: int, polynomial_coeffs: 
     pass
 
 
-def compute_polynomial_mapping_product(first_degree: int, second_degree: int, dimension: int, first_polynomial_coeffs: np.ndarray, second_polynomial_coeffs: np.ndarray) -> np.ndarray:
+def compute_polynomial_mapping_product(first_degree: int, second_degree: int, dimension: int,
+                                       first_polynomial_coeffs: np.ndarray,
+                                       second_polynomial_coeffs: np.ndarray) -> np.ndarray:
     """ 
     Generate the polynomial coefficients for the kronecker product of two
     polynomials of the same dimension.
@@ -108,7 +114,7 @@ def compute_polynomial_mapping_product(first_degree: int, second_degree: int, di
         second_polynomial_coeffs: [in] coefficients of the second polynomial.
 
     Returns:
-        product_polynomial_coeffs: [out] product polynomial coefficients. shape = (first_degree + second_degree + 1,)
+        product_polynomial_coeffs: [out] product polynomial coefficients. shape = (first_degree + second_degree + 1, dimension)
     """
     # TODO: ask about the shape b/c originally I had something like the pseudocode below
     # assert first_polynomial_coeffs.shape == (first_degree + 1, dimension) OR (first_degree + 1,)
@@ -116,8 +122,18 @@ def compute_polynomial_mapping_product(first_degree: int, second_degree: int, di
     assert second_polynomial_coeffs.shape == (second_degree + 1, dimension)
 
     # Compute the new polynomial coefficients by convolution.
-    product_polynomial_coeffs = np.convolve(
-        first_polynomial_coeffs.flatten(), second_polynomial_coeffs.flatten())
+    # product_polynomial_coeffs = np.convolve(
+    #     first_polynomial_coeffs.flatten(), second_polynomial_coeffs.flatten())
+    product_polynomial_coeffs = np.zeros(
+        shape=(first_degree + second_degree + 1, dimension))
+
+    for k in range(dimension):
+        product_polynomial_coeffs[:, k] = np.convolve(
+            first_polynomial_coeffs[:, k],
+            second_polynomial_coeffs[:, k]
+        )
+    # product_polynomial_coeffs = np.convolve(
+    #     first_polynomial_coeffs, second_polynomial_coeffs)
 
     # TODO: Double checking that the shape is indeed what we expect.
     # XXX: Doesn't work with shape (n,)
@@ -127,7 +143,9 @@ def compute_polynomial_mapping_product(first_degree: int, second_degree: int, di
     return product_polynomial_coeffs
 
 
-def compute_polynomial_mapping_scalar_product(first_degree: int, second_degree: int, dimension: int, scalar_polynomial_coeffs: np.ndarray, polynomial_coeffs: np.ndarray) -> np.ndarray:
+def compute_polynomial_mapping_scalar_product(first_degree: int, second_degree: int, dimension: int,
+                                              scalar_polynomial_coeffs: np.ndarray,
+                                              polynomial_coeffs: np.ndarray) -> np.ndarray:
     """ 
     Generate the polynomial coefficients for the product of a
     scalar polynomial and a vector valued polynomial mapping.
@@ -164,7 +182,9 @@ def compute_polynomial_mapping_scalar_product(first_degree: int, second_degree: 
     return product_polynomial_coeffs
 
 
-def compute_polynomial_mapping_cross_product(first_degree: int, second_degree: int, first_polynomial_coeffs: np.ndarray, second_polynomial_coeffs: np.ndarray) -> np.ndarray:
+def compute_polynomial_mapping_cross_product(first_degree: int, second_degree: int,
+                                             first_polynomial_coeffs: np.ndarray,
+                                             second_polynomial_coeffs: np.ndarray) -> np.ndarray:
     """
     Generate the polynomial coefficients for the cross product of two
     vector valued polynomial mappings with range R^3.
@@ -181,22 +201,35 @@ def compute_polynomial_mapping_cross_product(first_degree: int, second_degree: i
     """
     assert np.shape(first_polynomial_coeffs) == (first_degree + 1, 3)
     assert np.shape(second_polynomial_coeffs) == (second_degree + 1, 3)
-    # assert np.shape(product_polynomial_coeffs) == (
-    #     first_degree + second_degree + 1, 3)
 
-    # Below lines of code retrieving particular columns of first_polynomial_coeffs and second_polynomial_coeffs
+    # NOTE: reshape(-1, 1) is to wrap the slicing inside an array so that they are not Vectors and
+    # remain Matrices of shape (degree, 1).
+    # Below lines of code retrieving particular columns of first_polynomial_coeffs and
+    # second_polynomial_coeffs.
     A0B1 = compute_polynomial_mapping_product(first_degree, second_degree, 1,
-                                              first_polynomial_coeffs[:, 0].reshape(-1, 1), second_polynomial_coeffs[:, 1].reshape(-1, 1))
+                                              first_polynomial_coeffs[:,
+                                                                      0].reshape(-1, 1),
+                                              second_polynomial_coeffs[:, 1].reshape(-1, 1))
     A0B2 = compute_polynomial_mapping_product(first_degree, second_degree, 1,
-                                              first_polynomial_coeffs[:, 0].reshape(-1, 1), second_polynomial_coeffs[:, 2].reshape(-1, 1))
+                                              first_polynomial_coeffs[:,
+                                                                      0].reshape(-1, 1),
+                                              second_polynomial_coeffs[:, 2].reshape(-1, 1))
     A1B0 = compute_polynomial_mapping_product(first_degree, second_degree, 1,
-                                              first_polynomial_coeffs[:, 1].reshape(-1, 1), second_polynomial_coeffs[:, 0].reshape(-1, 1))
+                                              first_polynomial_coeffs[:,
+                                                                      1].reshape(-1, 1),
+                                              second_polynomial_coeffs[:, 0].reshape(-1, 1))
     A1B2 = compute_polynomial_mapping_product(first_degree, second_degree, 1,
-                                              first_polynomial_coeffs[:, 1].reshape(-1, 1), second_polynomial_coeffs[:, 2].reshape(-1, 1))
+                                              first_polynomial_coeffs[:,
+                                                                      1].reshape(-1, 1),
+                                              second_polynomial_coeffs[:, 2].reshape(-1, 1))
     A2B0 = compute_polynomial_mapping_product(first_degree, second_degree, 1,
-                                              first_polynomial_coeffs[:, 2].reshape(-1, 1), second_polynomial_coeffs[:, 0].reshape(-1, 1))
+                                              first_polynomial_coeffs[:,
+                                                                      2].reshape(-1, 1),
+                                              second_polynomial_coeffs[:, 0].reshape(-1, 1))
     A2B1 = compute_polynomial_mapping_product(first_degree, second_degree, 1,
-                                              first_polynomial_coeffs[:, 2].reshape(-1, 1), second_polynomial_coeffs[:, 1].reshape(-1, 1))
+                                              first_polynomial_coeffs[:,
+                                                                      2].reshape(-1, 1),
+                                              second_polynomial_coeffs[:, 1].reshape(-1, 1))
 
     # assert A0B1.shape == (first_degree + second_degree + 1, 1)
     # assert A0B1.shape == (first_degree + second_degree + 1, 1)
@@ -220,7 +253,9 @@ def compute_polynomial_mapping_cross_product(first_degree: int, second_degree: i
     return product_polynomial_coeffs
 
 
-def compute_polynomial_mapping_dot_product(dimension: int, first_degree: int, second_degree: int, first_polynomial_coeffs: np.ndarray, second_polynomial_coeffs: np.ndarray, product_polynomial_coeffs: np.ndarray) -> None:
+def compute_polynomial_mapping_dot_product(dimension: int, first_degree: int, second_degree: int,
+                                           first_polynomial_coeffs: np.ndarray,
+                                           second_polynomial_coeffs: np.ndarray) -> np.ndarray:
     """
     Generate the polynomial coefficients for the cross product of two
     vector valued polynomial mappings with the same range.
@@ -231,21 +266,22 @@ def compute_polynomial_mapping_dot_product(dimension: int, first_degree: int, se
         second_degree (int): maximum monomial degree of the second polynomial.
         first_polynomial_coeffs (np.ndarray): coefficients of the first polynomial.
         second_polynomial_coeffs (np.ndarray): coefficients of the second polynomial.
-        product_polynomial_coeffs (np.ndarray): [out] product vector valued polynomial mapping coefficients.
 
-    Return:
-        None
+    Returns:
+        product_polynomial_coeffs (np.ndarray): [out] product vector valued polynomial 
+                                                mapping coefficients.
     """
     assert np.shape(first_polynomial_coeffs) == (first_degree + 1, dimension)
     assert np.shape(second_polynomial_coeffs) == (second_degree + 1, dimension)
-    assert np.shape(product_polynomial_coeffs) == (
-        first_degree + second_degree + 1, 1)
+    # assert np.shape(product_polynomial_coeffs) == (
+    #     first_degree + second_degree + 1, 1)
 
     pass
 
 
 # NOTE: this is used by rational_function.py
-def compute_polynomial_mapping_derivative(degree: int, dimension: int, polynomial_coeffs: np.ndarray) -> np.ndarray:
+def compute_polynomial_mapping_derivative(degree: int, dimension: int,
+                                          polynomial_coeffs: np.ndarray) -> np.ndarray:
     """ 
     Generate the polynomial coefficients for the derivative of a
     polynomial mapping.

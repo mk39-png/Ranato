@@ -9,14 +9,20 @@ import numpy as np
 
 
 def test_halfedge_one_triangle():
+    F: np.ndarray = np.array([[0, 1, 2]], dtype=int)
+
+    mesh = Halfedge(F)
+    corner_to_he: list[list[Index]] = mesh.get_corner_to_he
+    he_to_corner: list[tuple[Index, Index]] = mesh.get_he_to_corner
+
     # Check size information
-    assert corner_to_he.size() == 1
-    assert corner_to_he[0].size() == 3
-    assert he_to_corner.size() == 3
-    assert mesh.num_halfedges() == 3
-    assert mesh.num_faces() == 1
-    assert mesh.num_vertices() == 3
-    assert mesh.num_edges() == 3
+    assert len(corner_to_he) == 1
+    assert len(corner_to_he[0]) == 3
+    assert len(he_to_corner) == 3
+    assert mesh.num_halfedges == 3
+    assert mesh.num_faces == 1
+    assert mesh.num_vertices == 3
+    assert mesh.num_edges == 3
 
     # Get mesh elements
     he0 = corner_to_he[0][0]
@@ -47,15 +53,20 @@ def test_halfedge_one_triangle():
 
 
 def test_halfedge_two_closed_triangles():
+    F = np.array([[0, 1, 2], [0, 2, 1]], dtype=int)
+    mesh = Halfedge(F)
+    corner_to_he: list[list[Index]] = mesh.get_corner_to_he
+    he_to_corner: list[tuple[Index, Index]] = mesh.get_he_to_corner
+
     # Check size information
-    assert corner_to_he.size() == 2
-    assert corner_to_he[0].size() == 3
-    assert corner_to_he[1].size() == 3
-    assert he_to_corner.size() == 6
-    assert mesh.num_halfedges() == 6
-    assert mesh.num_faces() == 2
-    assert mesh.num_vertices() == 3
-    assert mesh.num_edges() == 3
+    assert len(corner_to_he) == 2
+    assert len(corner_to_he[0]) == 3
+    assert len(corner_to_he[1]) == 3
+    assert len(he_to_corner) == 6
+    assert mesh.num_halfedges == 6
+    assert mesh.num_faces == 2
+    assert mesh.num_vertices == 3
+    assert mesh.num_edges == 3
 
     # Get mesh elements
     # Halfedges are indexed by face and global vertex index
@@ -112,20 +123,20 @@ def test_halfedge_two_closed_triangles():
 
 
 def test_halfedge_two_open_triangles():
-    F = np.array([[0, 1, 2], [0, 3, 1]])
-    corner_to_he: list[list[Index]]
-    he_to_corner: list[tuple[Index, Index]]
-    mesh = HalfEdge(F, corner_to_he, he_to_corner)
+    F = np.array([[0, 1, 2], [0, 3, 1]], dtype=int)
+    mesh = Halfedge(F)
+    corner_to_he: list[list[Index]] = mesh.get_corner_to_he
+    he_to_corner: list[tuple[Index, Index]] = mesh.get_he_to_corner
 
     # Check size information
-    assert corner_to_he.size() == 2
-    assert corner_to_he[0].size() == 3
-    assert corner_to_he[1].size() == 3
-    assert he_to_corner.size() == 6
-    assert mesh.num_halfedges() == 6
-    assert mesh.num_faces() == 2
-    assert mesh.num_vertices() == 4
-    assert mesh.num_edges() == 5
+    assert len(corner_to_he) == 2
+    assert len(corner_to_he[0]) == 3
+    assert len(corner_to_he[1]) == 3
+    assert len(he_to_corner) == 6
+    assert mesh.num_halfedges == 6
+    assert mesh.num_faces == 2
+    assert mesh.num_vertices == 4
+    assert mesh.num_edges == 5
 
     # Get mesh elements
     # Halfedges are indexed by face and global vertex index

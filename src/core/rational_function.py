@@ -144,8 +144,8 @@ class RationalFunction:
         # TODO: deal with the whole <degree, dimension> and <degree, 1> being passed in...
         numerator_deriv_coeffs = compute_polynomial_mapping_derivative(
             self.m_degree, self.m_dimension, self.m_numerator_coeffs)
-
-        numerator_deriv_coeffs.shape == (self.m_degree, self.m_dimension)
+        assert numerator_deriv_coeffs.shape == (
+            self.m_degree, self.m_dimension)
 
         # HACK: denominator_deriv_coeffs must be shape (self.m_degree, 1) rather than (self.m_degree,) because compute_polynomial_mapping_derivative() is not designed to work with vectors.
         # denominator_deriv_coeffs = np.ndarray(shape=(self.m_degree, 1))
@@ -181,7 +181,7 @@ class RationalFunction:
         denom_coeffs = compute_polynomial_mapping_product(
             self.m_degree, self.m_degree, 1, self.m_denominator_coeffs, self.m_denominator_coeffs)
 
-        assert denom_coeffs.shape == (2 * self.m_degree + 1, )
+        assert denom_coeffs.shape == (2 * self.m_degree + 1, 1)
 
         # TODO: this should then change the derivative argument to reference a new RationalFunction
         derivative = RationalFunction.from_interval(
