@@ -162,7 +162,7 @@ def compute_vertex_one_ring_first_face(F: np.ndarray, vertex_index: int, adjacen
     return current_face
 
 
-def compute_vertex_one_ring(F: np.ndarray, vertex_index: int, adjacent_faces: list[int], vertex_one_ring: list[int], face_one_ring: list[int]):
+def compute_vertex_one_ring(F: np.ndarray, vertex_index: int, adjacent_faces: list[int]):
     """
     Compute the vertex one ring for a vertex index using adjacent faces.
 
@@ -181,7 +181,7 @@ def compute_vertex_one_ring(F: np.ndarray, vertex_index: int, adjacent_faces: li
     face_one_ring = [None] * num_faces
 
     if (len(adjacent_faces) == 0):
-        return
+        return []
 
     # Get first face and vertex
     face_one_ring[0] = compute_vertex_one_ring_first_face(
@@ -208,6 +208,8 @@ def compute_vertex_one_ring(F: np.ndarray, vertex_index: int, adjacent_faces: li
         F[face_one_ring[num_faces - 1], :], vertex_one_ring[num_faces - 1])
     logger.info("Last vertex: %s", vertex_one_ring[num_faces])
 
+    return vertex_one_ring, face_one_ring
+
 
 class VertexCirculator:
     # ***************
@@ -230,17 +232,18 @@ class VertexCirculator:
         self.m_all_adjacent_faces = compute_adjacent_faces(F)
 
         # Compute face and vertex one rings
-        # self.m_all_vertex_one_rings = [None] * num_vertices
-        # self.m_all_face_one_rings = [None] * num_vertices
+        self.m_all_vertex_one_rings = [None] * num_vertices
+        self.m_all_face_one_rings = [None] * num_vertices
 
+        # TODO: there must be a better way of doing this.
         for i in range(num_vertices):
             # TODO: the function below did NOT modify a particular part of the list by reference... which is bad for us.
             # TODO: meaning, we'll have to return something to store into m_all_vertex_one_rings and m_all_face_one_rings
-            compute_vertex_one_ring(F,
-                                    i,
-                                    self.m_all_adjacent_faces[i],
-                                    self.m_all_vertex_one_rings[i],
-                                    self.m_all_face_one_rings[i])
+            self.m_all_vertex_one_rings[i], self.m_all_face_one_rings[i] = compute_vertex_one_ring(F,
+                                                                                                   i,
+                                                                                                   self.m_all_adjacent_faces[i])
+
+        print("w")
 
     # ***************
     # Private Members

@@ -11,10 +11,10 @@ import pytest
 
 def test_zero_function() -> None:
     # TODO: change up from_real_line so that it works with (n,) shape rather than whatever funky thing is here.
-    P_coeffs = np.array([0, 0]).reshape(2, 1)
-    Q_coeffs = np.array([1, 0]).reshape(2, 1)
-    # P_coeffs = np.array([0, 0])
-    # Q_coeffs = np.array([1, 0])
+    # P_coeffs = np.array([0, 0]).reshape(2, 1)
+    # Q_coeffs = np.array([1, 0]).reshape(2, 1)
+    P_coeffs = np.array([0, 0])
+    Q_coeffs = np.array([1, 0])
     F = RationalFunction.from_real_line(1, 1, P_coeffs, Q_coeffs)
 
     # TODO: problem is the below since the denom and numerator are NOT (n,) shaped....

@@ -9,9 +9,7 @@ import pytest
 def test_tetrahedron():
     V, F = generate_tetrahedron_VF()
     vertex_circulator = VertexCirculator(F)
-    vertex_one_ring: list[int] = []
-    face_one_ring: list[int] = []
-    vertex_circulator.get_one_ring(0, vertex_one_ring, face_one_ring)
+    vertex_one_ring, face_one_ring = vertex_circulator.get_one_ring(0)
 
     assert len(vertex_one_ring) == 4
     assert len(face_one_ring) == 3
