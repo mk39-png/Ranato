@@ -19,7 +19,7 @@ def test_evaluate_polynomial() -> None:
     degree = 2
     dimension = 1
     polynomial_coeffs = np.array([[0.], [0.], [0.]])
-    t = -1
+    t = -1.0
 
     polynomial_evaluation = evaluate_polynomial(
         degree, dimension, polynomial_coeffs, t)
@@ -31,7 +31,6 @@ def test_compute_polynomial_mapping_product_one_dimension() -> None:
     Testing ASOC code's implementation with NumPy's .convolve() method.
     Because we don't need to reimplement everything if NumPy conveniently provides functionality for us.
     """
-    # Test this with the Kronecker product that is provided by NumPy
     # NOTE: apparently the dimension is always 1... in the cases that compute_polynomial_mapping_product() is used.
     first_polynomial_coeffs = np.array([[2], [1]])
     second_polynomial_coeffs = np.array([[1], [1]])
@@ -61,27 +60,24 @@ def test_compute_polynomial_mapping_product_one_dimension() -> None:
     # COMPARING RESULTS
     # ******************
     # Turns out that convolution likes same sized dimensions
-    numpy_product_polynomial_coeffs = np.convolve(
-        first_polynomial_coeffs.flatten(), second_polynomial_coeffs.flatten())
+    numpy_product_polynomial_coeffs = compute_polynomial_mapping_product(
+        1, 1, 1, first_polynomial_coeffs, second_polynomial_coeffs)
 
-    assert np.array_equal(product_polynomial_coeffs.flatten(),
+    assert np.array_equal(product_polynomial_coeffs,
                           numpy_product_polynomial_coeffs)
 
-    # Below is a hardcoded result from previous testing...
-    # XXX: This may be wrong...
+    # Below is a hardcoded result from previous testing
     assert np.array_equal(
-        product_polynomial_coeffs.flatten(), np.array([2, 3, 1]))
+        product_polynomial_coeffs, np.array([[2], [3], [1]]))
 
 
 def test_compute_polynomial_mapping_derivative_with_asoc() -> None:
     """
-    Testing the ASOC code's implementation of compute_polynomial_mapping_derivative() with NumPy's derivative method.
-    This is grabbing from test_zero_function() interaction with compute_derivative() and thus compute_polynomial_mapping_derivative()
+    Testing the ASOC code's implementation of compute_polynomial_mapping_derivative()
+    with NumPy's derivative method.
+    This is grabbing from test_zero_function() interaction with compute_derivative() 
+    and thus compute_polynomial_mapping_derivative()
     """
-
-    # assert polynomial_coeffs.shape == (degree + 1, dimension)
-    # assert derivative_polynomial_coeffs.shape == (degree, dimension)
-
     # ******************
     # ZERO FUNCTION CASE
     # ******************
@@ -90,16 +86,16 @@ def test_compute_polynomial_mapping_derivative_with_asoc() -> None:
     polynomial_coeffs = np.array([[0.0], [0.0]])
     derivative_polynomial_coeffs = np.array([[0.0]])
 
-    # Wait, isn't this just the same as NumPy's derivative thing?
+    # ASOC CODE
     for i in range(1, degree + 1):
         for j in range(dimension):
             derivative_polynomial_coeffs[i - 1,
                                          j] = i * polynomial_coeffs[i, j]
 
-    numpy_derivative_polynomial_coeffs = np.polynomial.polynomial.polyder(
-        polynomial_coeffs.flatten())
+    numpy_derivative_polynomial_coeffs = compute_polynomial_mapping_derivative(
+        degree, dimension, polynomial_coeffs)
 
-    assert np.array_equal(derivative_polynomial_coeffs.flatten(),
+    assert np.array_equal(derivative_polynomial_coeffs,
                           numpy_derivative_polynomial_coeffs)
 
     # TODO: test with other derivatives aside from zero function...
@@ -111,8 +107,6 @@ def test_compute_polynomial_mapping_derivative_with_asoc() -> None:
     P_coeffs = np.array([-1, 2]).reshape(2, 1)
     P_deriv_coeffs = np.ndarray(shape=(1, 1))
     P_deriv_coeffs = compute_polynomial_mapping_derivative(1, 1, P_coeffs)
-
-    # np_p_deriv_coeffs = np.polynomial.polynomial.polyder(P_coeffs.flatten())
 
     np_p_deriv_coeffs = np.polynomial.polynomial.polyder(P_coeffs)
 

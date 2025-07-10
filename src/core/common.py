@@ -6,7 +6,7 @@ from typing import NewType
 
 import numpy.typing as npt
 
-UserId = NewType('UserId', int)
+# UserId = NewType('UserId', int)
 
 # *******
 # GLOBALS
@@ -27,6 +27,8 @@ DISCRETIZATION_LEVEL: int = 2  # Spline surface discretization level
 # Matrix3x2r = np.ndarray(shape=(3, 2), dtype=float)
 # Matrix3x3r = np.ndarray(shape=(3, 3), dtype=float)
 # Edge = list[int, int]
+
+PlanarPoint = np.ndarray
 
 
 def float_equal_zero(x: float, eps=FLOAT_EQUAL_PRECISION):
@@ -239,8 +241,16 @@ def contains_vertex(face: np.ndarray[tuple[int], np.dtype[np.int_]], vertex_inde
     return vertex_index in face
 
 
-def find_face_vertex_index():
-    pass
+def find_face_vertex_index(face: np.ndarray, vertex_index: int) -> int:
+    # TODO: test this numpy-esque implementation with the ASOC version...
+    # NOTE: we want to check that face is a vector rather than a matrix
+    assert face.ndim == 1
+
+    vertex_indices = np.argwhere(face == vertex_index)
+    if vertex_indices.size > 0:
+        return vertex_indices[0][0]
+
+    return -1
 
 
 def is_manifold():
