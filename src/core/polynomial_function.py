@@ -423,7 +423,13 @@ def formatted_monomial(variable: str, degree: int) -> str:
     Return:
         formatted monomial string
     """
-    pass
+    # Handle degree 0 case
+    if (degree < 1):
+        return ""
+
+    # Format as "<variable>^<degree>"
+    monomial_string = (variable + "^" + str(degree))
+    return monomial_string
 
 
 def formatted_term(coefficient: float, variable: str, precision: int = 16) -> str:
@@ -438,11 +444,23 @@ def formatted_term(coefficient: float, variable: str, precision: int = 16) -> st
     Return:
         formatted term string
     """
-    pass
+    term_string: str = ""
+
+    # Zero case
+    if float_equal(coefficient, 0.0):
+        return ""
+    # Negative case
+    elif coefficient < 0:
+        term_string += f" - {coefficient:.{precision}f} {variable:.{precision}f}"
+    # Positive case
+    else:
+        term_string += f" + {coefficient:.{precision}f} {variable:.{precision}f}"
+
+    return term_string
 
 
 # TODO: can't I put the datatypes inside polynomial_coeffs as well?
-def formatted_polynomial(degree: int, dimension: int, polynomial_coeffs: np.ndarray, precision: int = 16) -> str:
+def formatted_polynomial(degree: int, dimension: int, polynomial_coeffs: np.ndarray[np.dtype[np.float64]], precision: int = 16) -> str:
     """ Construct a formatted string for a polynomial with given coefficients
         TODO: Implement separate method for polynomial mappings
 
@@ -455,9 +473,24 @@ def formatted_polynomial(degree: int, dimension: int, polynomial_coeffs: np.ndar
     Return:
         formatted polynomial string
     """
-
     assert np.shape(polynomial_coeffs) == (degree + 1, dimension)
-    pass
+
+    # Handle trivial case
+    if polynomial_coeffs.shape[1] == 0:
+        return ""
+
+    polynomial_string: str = ""
+
+    # Going through polynomial_coeffs columns
+    for i in polynomial_coeffs.shape[1]:
+        polynomial_string += f"{polynomial_coeffs[0, i]}:.{precision}f"
+        for j in polynomial_coeffs.shape[0]:
+            monomial_string = formatted_monomial("t", j)
+            polynomial_string += formatted_term(
+                polynomial_coeffs[j, i], monomial_string, precision)
+        polynomial_string += "\n"
+
+    return polynomial_string
 
 
 # TODO: this doesn't appear anywhere else...
