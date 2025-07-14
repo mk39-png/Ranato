@@ -18,18 +18,22 @@ class LineSegment(Conic):
     # Constructors
     # ************
 
-    # TODO: deal with the various constructors for LineSegment...
-    def __init__(self):
-        print()
+    def __init__(self, numerator_coeffs: np.ndarray = None, input_domain: Interval = None):
+        # There's not much logic going on for the constructor in the C++ code, so just going to put them all here for simplicity.
+        if (numerator_coeffs):
+            self.__init_conic_coefficients(numerator_coeffs)
 
-    def pullback_linear_function(self, F_coeffs: np.ndarray, pullback_function: RationalFunction):
+        if (input_domain):
+            self.m_domain = input_domain
+
+    def pullback_linear_function(self, dimension: int, F_coeffs: np.ndarray, pullback_function: RationalFunction):
         logger.info("Pulling back line segment by linear function %s",
-                    formatted_bivariate_linear_mapping(F_coeffs))
+                    formatted_bivariate_linear_mapping(dimension, F_coeffs))
 
         # Separate the individual polynomial coefficients from the rational
         # function
         # TODO: typedef Matrix2x2r
-        P_coeffs = self.get_numerators()
+        P_coeffs = self.get_numerators
         u_coeffs = P_coeffs[:, 0]
         assert u_coeffs.shape == (3, 1)
         v_coeffs = P_coeffs[:, 1]
@@ -37,9 +41,9 @@ class LineSegment(Conic):
         Q_coeffs = np.array([1.0, 0.0])
 
         logger.info("u function before pullback: %s",
-                    formatted_polynomial(u_coeffs))
+                    formatted_polynomial(3, 1, u_coeffs))
         logger.info("v function before pullback: %s",
-                    formatted_polynomial(v_coeffs))
+                    formatted_polynomial(3, 1, v_coeffs))
 
         # Combine quadratic monomial functions into a matrix
         monomial_coeffs = np.zeros(shape=(2, 3))
@@ -55,7 +59,7 @@ class LineSegment(Conic):
         pullback_coeffs = monomial_coeffs * F_coeffs
         assert pullback_coeffs.shape == (2, self.m_dimension)
         logger.info("Pullback function: %s",
-                    formatted_polynomial(pullback_coeffs))
+                    formatted_polynomial(2, self.m_dimension, pullback_coeffs))
 
         pullback_function = RationalFunction(
             1, self.m_dimension, pullback_coeffs, Q_coeffs, self.m_domain)

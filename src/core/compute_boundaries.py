@@ -24,10 +24,12 @@ def compute_face_boundary_edges(F: np.ndarray) -> list[tuple[int, int]]:
     # TODO: use HalfEdge's definition of "Index"
     corner_to_he: list[list[Index]]
     he_to_corner: list[tuple[Index, Index]]
-    halfedge = HalfEdge(F, corner_to_he, he_to_corner)
+    halfedge = Halfedge(F)
+    corner_to_he = halfedge.get_corner_to_he
+    he_to_corner = halfedge.get_he_to_corner
 
     # Get boundary halfedges
-    boundary_halfedges: list[Index] = halfedge.build_boundary_halfedge_list()
+    boundary_halfedges: list[Index] = halfedge.build_boundary_halfedge_list
 
     # Get boundary face corners opposite halfedge
     face_boundary_edges: list[tuple[int, int]] = [] * len(boundary_halfedges)
@@ -61,13 +63,15 @@ def compute_boundary_vertices(F: np.ndarray) -> list[int]:
         # Mark boundary edge endpoints as boundary vertices
         face_index: int = face_boundary_edges[i][0]
         face_vertex_index: int = face_boundary_edges[i][1]
-        is_boundary_vertex[F(face_index, (face_vertex_index + 1) % 3)] = True
-        is_boundary_vertex[F(face_index, (face_vertex_index + 2) % 3)] = True
+        is_boundary_vertex[F[face_index, (face_vertex_index + 1) % 3]] = True
+        is_boundary_vertex[F[face_index, (face_vertex_index + 2) % 3]] = True
 
     # Convert boolean array to index vector
-    unsigned_boundary_vertices = convert_boolean_array_to_index_vector(
+    boundary_vertices = convert_boolean_array_to_index_vector(
         is_boundary_vertex)
-    boundary_vertices = convert_unsigned_vector_to_signed(
-        unsigned_boundary_vertices)
+
+    # TODO: maybe get rid of the function below? Aren't boundaries already signed? At least how the implementation is in Python?
+    # boundary_vertices = convert_unsigned_vector_to_signed(
+    #     unsigned_boundary_vertices)
 
     return boundary_vertices

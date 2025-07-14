@@ -195,6 +195,7 @@ def compute_quadratic_cross_product(V_coeffs: np.ndarray, W_coeffs: np.ndarray) 
     return N_coeffs
 
 
+@staticmethod
 def u_derivative_matrix():
     """
     Build matrix from quadratic coefficients to linear coefficients representing
@@ -213,6 +214,8 @@ def u_derivative_matrix():
     return D_u
 
 
+# XXX: made static method. double check logic.
+@staticmethod
 def v_derivative_matrix():
     """
     Build matrix from quadratic coefficients to linear coefficients representing

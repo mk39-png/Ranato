@@ -1,5 +1,9 @@
 
 import numpy as np
+import numpy.linalg as LA
+
+from ..core.affine_manifold import *
+Index = int
 
 
 def remove_cones_from_uv(V: np.ndarray, F: np.ndarray, uv: np.ndarray, F_uv: np.ndarray, V_flat: np.ndarray, F_flat: np.ndarray, uv_flat: np.ndarray, F_uv_flat: np.ndarray) -> None:
@@ -25,7 +29,7 @@ def remove_cones_from_uv(V: np.ndarray, F: np.ndarray, uv: np.ndarray, F_uv: np.
     # TODO: do some data type assertions with the arrays
 
     # Get the cones of the metric
-    cones: list[AffineManifold::Index]
+    cones: list[Index]
     cone_manifold = AffineManifold(F, uv, F_uv)
     logger.info("Removing cones at %s", formatted_vector(cones))
 
@@ -51,7 +55,9 @@ def generate_metric_from_uv(F: np.ndarray, uv: np.ndarray, l: list[list[float]])
 
         # Iterate over vertices in face i
         for j in range(face_size):
-            prev_uv = uv[F(i, (j + 2) % face_size), :]
-            next_uv = uv[F(i, (j + 1) % face_size), :]
+            prev_uv = uv[F[i, (j + 2) % face_size], :]
+            next_uv = uv[F[i, (j + 1) % face_size], :]
             edge_vector = prev_uv - next_uv
-            l[i][j] = edge_vector.norm()
+
+            # TODO: is this getting the right Norm?
+            l[i][j] = LA.norm(edge_vector)
