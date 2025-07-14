@@ -460,7 +460,8 @@ def formatted_term(coefficient: float, variable: str, precision: int = 16) -> st
 
 
 # TODO: can't I put the datatypes inside polynomial_coeffs as well?
-def formatted_polynomial(degree: int, dimension: int, polynomial_coeffs: np.ndarray[np.dtype[np.float64]], precision: int = 16) -> str:
+# TODO: just use degree and dimension from polynomial_coeffs shape... where (n, m) degree = n and dimension = m
+def formatted_polynomial(degree: int, dimension: int, polynomial_coeffs: np.ndarray, precision: int = 16) -> str:
     """ Construct a formatted string for a polynomial with given coefficients
         TODO: Implement separate method for polynomial mappings
 
@@ -474,6 +475,7 @@ def formatted_polynomial(degree: int, dimension: int, polynomial_coeffs: np.ndar
         formatted polynomial string
     """
     assert np.shape(polynomial_coeffs) == (degree + 1, dimension)
+    # assert polynomial_coeffs.dtype = np.float64
 
     # Handle trivial case
     if polynomial_coeffs.shape[1] == 0:

@@ -210,7 +210,7 @@ class Interval:
 
         return points
 
-    def __repr__(self):
+    def formatted_interval(self) -> str:
         interval_string = ""
         # Unbounded cases
         if (not self.is_bounded_above()) and (not self.is_bounded_below()):
@@ -238,3 +238,6 @@ class Interval:
             interval_string += f"({t0:.17g}, {t1:.17g})"
 
         return interval_string
+
+    def __repr__(self) -> str:
+        return self.formatted_interval()

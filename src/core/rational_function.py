@@ -29,6 +29,7 @@ class RationalFunction:
     # TODO: maybe have the arguments have default values... that are then dependent on degree and dimension...
     # TODO: so that would entail some sort of lambda function?
     # NOTE: RationalFunction is never called as RationalFunction()... always constructed with the classmethods below.
+    # TODO: Maybe construct RationalFunction with one single constructor and not class methods?
     def __init__(self, degree: int, dimension: int, numerator_coeffs: np.ndarray, denominator_coeffs: np.ndarray, domain: Interval) -> None:
         """Default constructor"""
         # ****************
@@ -47,12 +48,11 @@ class RationalFunction:
     def from_zero_function(cls, degree: int, dimension: int):
         """Default numerator set to constant 0 in R^n"""
 
-        # XXX: this might be wrong since we want to have a numerator_coeffs with nothing it... no dimension... soon to be replaced.
         numerator_coeffs = np.zeros(
             shape=(degree+1, dimension), dtype='float64')
         denominator_coeffs = np.zeros(
             shape=(degree+1, 1), dtype='float64')
-        denominator_coeffs[0] = 1.0
+        denominator_coeffs[0][0] = 1.0
         domain = Interval()
         # domain.reset_bounds()
 
@@ -70,7 +70,7 @@ class RationalFunction:
         """
         denominator_coeffs = np.zeros(
             shape=(degree+1, 1), dtype='float64')
-        denominator_coeffs[0] = 1.0
+        denominator_coeffs[0][0] = 1.0
         domain = Interval()
         # domain.reset_bounds()
 
@@ -114,13 +114,22 @@ class RationalFunction:
     # *******
     # Methods
     # *******
-    # NOTE: this is never used in the ASOC code
-    def degree(self):
-        pass
+    @property
+    def get_degree(self) -> int:
+        """
+        Compute the degree of the polynomial mapping as the max of the degrees
+        of the numerator and denominator degrees.
+        @return degree of the rational mapping
+        """
+        return self.m_degree
 
-    # NOTE: this is never used in the ASOC code
-    def get_dimension(self):
-        pass
+    @property
+    def get_dimension(self) -> int:
+        """
+        Compute the dimension of the rational mapping.
+        @return dimension of the rational mapping
+        """
+        return self.m_dimension
 
     def compute_derivative(self) -> "RationalFunction":
         """
@@ -232,22 +241,30 @@ class RationalFunction:
     # *******************
     # Getters and setters
     # *******************
+    @property
+    def get_numerators(self):
+        assert self.m_numerator_coeffs.shape == (
+            self.m_degree + 1, self.m_dimension)
+        return self.m_numerator_coeffs
+
+    @property
+    def get_denominator(self):
+        assert self.m_denominator_coeffs.shape == (self.m_degree + 1, 1)
+        return self.m_denominator_coeffs
+
+    @get_numerators.setter
     def set_numerators(self, numerator: np.ndarray):
         assert numerator.shape == (self.m_degree + 1, self.m_dimension)
         self.m_numerator_coeffs = numerator
 
+    @get_numerators.setter
     def set_denominator(self, denominator: np.ndarray):
         assert denominator.shape == (self.m_degree + 1, 1)
         self.m_denominator_coeffs = denominator
 
-    def get_numerators(self):
-        return self.m_numerator_coeffs
-
-    def get_denominator(self):
-        return self.m_denominator_coeffs
-
     # TODO: then have the domain accessible.
     # TODO: do equivalent to "friend class Conic;"
+
     def __is_valid(self):
         # Making sure that numerator is shape (n,) array
         # NOTE: m_numerator_coeffs can have multiple dimensions...

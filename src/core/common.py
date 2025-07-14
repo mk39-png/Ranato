@@ -2,9 +2,12 @@
 import logging
 import math
 import numpy as np
+import numpy.linalg as LA
 from typing import NewType
 
 import numpy.typing as npt
+
+import igl
 
 # UserId = NewType('UserId', int)
 
@@ -31,6 +34,15 @@ DISCRETIZATION_LEVEL: int = 2  # Spline surface discretization level
 PlanarPoint = np.ndarray
 
 
+class Matrix:
+    def __init__(self, arr: np.ndarray):
+        assert arr.ndim != 1
+        self.arr = arr
+
+    def row(self, i):
+        pass
+
+
 def float_equal_zero(x: float, eps=FLOAT_EQUAL_PRECISION):
     """
     /// @brief  Check if some floating point value is numerically zero.
@@ -39,6 +51,8 @@ def float_equal_zero(x: float, eps=FLOAT_EQUAL_PRECISION):
     /// @param[in] eps: threshold for equality
     /// @return true iff x is below 1e-10
     """
+
+    # TODO: switch to absolute tolerance?
     return math.isclose(x, 0.0, rel_tol=eps)
 
 
@@ -53,11 +67,25 @@ def float_equal(x: float, y: float, eps=FLOAT_EQUAL_PRECISION) -> bool:
     /// @param[in] eps: threshold for equality
     /// @return true iff x - y is numerically zero
     """
+
+    # TODO: switch to absolute tolerance?
     return math.isclose(x, y, rel_tol=eps)
 
 
-def vector_equal():
-    pass
+def vector_equal(v: np.ndarray, w: np.ndarray, eps: float = FLOAT_EQUAL_PRECISION):
+    """
+    @brief Check if two row vectors of floating point values are numerically
+    equal
+
+    @param[in] v: first vector of values to compare
+    @param[in] w: second vector of values to compare
+    @param[in] eps: threshold for equality
+    @return true iff v - w is numerically the zero vector
+    """
+
+    # Just using numpy comparison.
+    # TODO :compare with ASOC code and if atol is the way to go.
+    return np.allclose(v, w, atol=eps)
 
 
 def column_vector_equal():
@@ -134,8 +162,18 @@ def elementary_basis_vector():
     pass
 
 
-def reflect_across_x_axis():
-    pass
+def reflect_across_x_axis(vector: PlanarPoint) -> PlanarPoint:
+    """
+    @brief  Reflect a vector in the plane across the x-axis.
+
+    @param[in] vector: vector to reflect
+    @return reflected vector    
+    """
+    reflected_vector = PlanarPoint(shape=(1, 2))
+    # FIXME maybe problem with index accessing
+    reflected_vector[0][0] = vector[0][0]
+    reflected_vector[0][1] = -vector[0][1]
+    return reflected_vector
 
 
 # this is a void.
@@ -175,8 +213,19 @@ def convert_index_vector_to_boolean_array():
     pass
 
 
-def convert_boolean_array_to_index_vector():
-    pass
+def convert_boolean_array_to_index_vector(boolean_array: list[bool]):
+    """
+    @brief From a boolean array, build a vector of the indices that are true.
+    @param[in] boolean_array: array of boolean values
+    @param[out] index_vector: indices where the array is true
+    """
+    num_indices: int = len(boolean_array)
+    index_vector: list[int] = []
+    for i in range(num_indices):
+        if (boolean_array[i]):
+            index_vector.append(i)
+
+    return index_vector
 
 
 def index_vector_complement():
@@ -187,7 +236,8 @@ def convert_signed_vector_to_unsigned():
     pass
 
 
-def convert_unsigned_vector_to_signed():
+def convert_unsigned_vector_to_signed(unsigned_vector: list[int]):
+    # Pretty sure we don't need this function
     pass
 
 
@@ -205,8 +255,12 @@ def copy_to_spatial_vector():
 
 # TODO: don't think we need this since Python prints out vectors just fine.... maybe
 # Unless there's an extra fancy vector type in the C++ code like vector<RationalFunction> or something like that.
-def formatted_vector():
-    pass
+def formatted_vector(vec: list, delim: str = "\n") -> str:
+    vector_string: str = ""
+    for i, _ in enumerate(vec):
+        vector_string += (vec[i] + delim)
+
+    return vector_string
 
 
 def write_vector():
@@ -271,24 +325,125 @@ def find_face_vertex_index(face: np.ndarray, vertex_index: int) -> int:
     return -1
 
 
-def is_manifold():
-    pass
+def is_manifold(F: np.ndarray) -> bool:
+    """
+    @brief Check if F describes a manifold mesh with a single component
+
+    @param[in] F: mesh faces
+    @return true iff the mesh is manifold
+    """
+    # Check edge manifold condition
+    if (not igl.is_edge_manifold(F)):
+        logger.error("Mesh is not edge manifold")
+        return False
+
+    # Check vertex manifold condition
+    if (not igl.is_vertex_manifold(F)):
+        logger.error("Mesh is not vertex manifold")
+        return False
+
+    # Check single component
+    # TODO: check datatype on component_ids and if it's a numpy array
+    component_ids: np.ndarray = igl.vertex_components(F)
+
+    if (component_ids.max() - component_ids.min()) > 0:
+        logger.error("Mesh has multiple components")
+        return False
+
+    # Manifold otherwise
+    return True
 
 
-def area_from_length():
-    pass
+#  *******************
+#  Basic mesh geometry
+#  *******************
+def area_from_length(edge_length_opposite_corner: float,
+                     first_adjacent_edge_length: float,
+                     second_adjacent_edge_length: float) -> float:
+    """
+    @brief Compute the angle of a triangle corner with given edge lengths
+    @param[in] edge_length_opposite_corner: length of the edge opposite the
+    corner
+    @param[in] first_adjacent_edge_length: length of one of the edges adjacent
+    to the corner
+    @param[in] first_adjacent_edge_length: length of the other edge adjacent to
+    the corner
+    @return angle of the corner
+    """
+    # Rename variables for readability
+    l0: float = edge_length_opposite_corner
+    l1: float = first_adjacent_edge_length
+    l2: float = second_adjacent_edge_length
+
+    # Compute the angle
+    # FIXME Avoid potential division by 0
+    Ijk: float = (-l0 * l0 + l1 * l1 + l2 * l2)
+    return math.acos(min(max(Ijk / (2.0 * l1 * l2), -1.0), 1.0))
 
 
-def area_from_positions():
-    pass
+def area_from_positions(p0: np.ndarray, p1: np.ndarray, p2: np.ndarray) -> float:
+    assert p0.shape[0] == 1  # making sure that p0 is shape (1, n)
+    assert p0.shape == p1.shape
+    assert p1.shape == p2.shape
+
+    # TODO: double check that numpy norm is doing what we want
+    l0: float = LA.norm(p2 - p1)
+    l1: float = LA.norm(p0 - p2)
+    l2: float = LA.norm(p1 - p0)
+
+    assert isinstance(l0, float)
+
+    return area_from_length(l0, l1, l2)
 
 
-def angle_from_length():
-    pass
+def angle_from_length(edge_length_opposite_corner: float,
+                      first_adjacent_edge_length: float,
+                      second_adjacent_edge_length: float
+                      ) -> float:
+    """
+    @brief Compute the angle of a triangle corner with given edge lengths
+
+    @param[in] edge_length_opposite_corner: length of the edge opposite the
+    corner
+    @param[in] first_adjacent_edge_length: length of one of the edges adjacent
+    to the corner
+    @param[in] first_adjacent_edge_length: length of the other edge adjacent to
+    the corner
+    @return angle of the corner
+    """
+    # Rename variables for readability
+    l0: float = edge_length_opposite_corner
+    l1: float = first_adjacent_edge_length
+    l2: float = second_adjacent_edge_length
+
+    # Compute the angle
+    # FIXME Avoid potential division by 0
+    Ijk: float = (-l0 * l0 + l1 * l1 + l2 * l2)
+    return math.acos(min(max(Ijk / (2.0 * l1 * l2), -1.0), 1.0))
 
 
-def angle_from_positions():
-    pass
+def angle_from_positions(dimension: int, angle_corner_position: np.ndarray, second_corner_position: np.ndarray, third_corner_position: np.ndarray) -> float:
+    """
+    @brief Compute the angle of a triangle corner with given positions
+
+    @param[in] angle_corner_position: position of the corner to compute the
+    angle for
+    @param[in] second_corner_position: position of one of the other two corners
+    of the triangle
+    @param[in] third_corner_position: position of the final corner of the
+    triangle
+    @return angle of the corner
+    """
+    assert angle_corner_position.shape == (1, dimension)
+    assert second_corner_position.shape == (1, dimension)
+    assert third_corner_position.shape == (1, dimension)
+
+    # TODO: double check that the below are going to be floats...
+    l0: float = LA.norm(third_corner_position - second_corner_position)
+    l1: float = LA.norm(third_corner_position - second_corner_position)
+    l2: float = LA.norm(third_corner_position - second_corner_position)
+
+    return angle_from_length(l0, l1, l2)
 
 
 def interval_lerp():
@@ -311,12 +466,18 @@ def join_path():
     pass
 
 
-def matrix_contains_nan():
-    pass
+def matrix_contains_nan(mat: np.ndarray) -> bool:
+    assert mat.ndim > 1
+
+    # TODO: add test case to check this function with ASOC code version
+    return np.isnan(mat).any()
 
 
-def vector_contains_nan():
-    pass
+def vector_contains_nan(vec: np.ndarray) -> bool:
+    assert vec.shape[0] == 1
+
+    # TODO: add test case to check this function with ASOC code version
+    return np.isnan(vec).any()
 
 
 def convert_polylines_to_edges():
