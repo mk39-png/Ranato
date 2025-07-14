@@ -100,8 +100,26 @@ def dot_product():
     pass
 
 
-def cross_product():
-    pass
+def cross_product(v: np.ndarray, w: np.ndarray) -> np.ndarray:
+    """
+    @brief  Compute the cross product of two vectors of arbitrary scalars.
+    @tparam Scalar: scalar field (must support addition and multiplication)
+    @param[in] v: first vector to cross product
+    @param[in] w: second vector to cross product
+    @return cross product v x w
+    """
+    assert v.shape == (3, 1)
+    assert w.shape == (3, 1)
+
+    # TODO: make these 2D matrices act like Eigen matrices with shape (n, 1) where they can be accessed like vectors and whatnot
+    # TODO: use NumPy's version of cross products
+    n = np.array([
+        [v[1][0] * w[2][0] - v[2][0] * w[1][0]],
+        [-(v[0][0] * w[2][0] - v[2][0] * w[0][0])],
+        [v[0][0] * w[1][0] - v[1][0] * w[0][0]]])
+
+    assert n.shape == (3, 1)
+    return n
 
 
 def triple_product():
