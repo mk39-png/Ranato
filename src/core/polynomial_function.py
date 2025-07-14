@@ -9,18 +9,19 @@ functions as polynomial mappings to distinguish them from scalar valued
 polynomials. Evaluation of the polynomials and polynomial mappings is then
 simply the left product of the row vector [1 t t^2 ... t^n] with the column
 vector or matrix.
+
+
+NOTE: This should be left as is according to how they were implementing in ASOC
+as to not break anything.
+Meaning, vectors treated as (1, n) and (n, 1) rather than (n, )
 """
 
 # TODO: only import the things needed from numpy... that being ndarray.
-import numpy as np
+# import numpy as np
 
 # https://medium.com/@goldengrisha/using-numpy-typing-for-type-safe-list-handling-in-python-35f8c99c76ac
-import numpy.typing as npt
+# import numpy.typing as npt
 from ..core.common import *
-import logging
-
-# TODO: decide between SciPy and NumPy for implementing polynomials...
-logger = logging.getLogger(__name__)
 
 
 def remove_polynomial_trailing_coefficients(A_coeffs: np.ndarray):
@@ -48,7 +49,7 @@ def generate_monomials(degree: int, t: float) -> npt.NDArray[np.float64]:
 
 
     Returns:
-        T (np.ndarray): [out] row vector of monomials of shape (degree + 1,).
+        T (np.ndarray): [out] row vector of monomials of shape (1, degree + 1).
     """
     # assert T.shape == (degree + 1,)
     T: np.ndarray = np.ndarray(shape=(1, degree + 1))
@@ -56,6 +57,7 @@ def generate_monomials(degree: int, t: float) -> npt.NDArray[np.float64]:
     T[0] = 1.0
 
     # NOTE: In the original ASOC code, T is a Matrix with 1 row and degree + 1 columns.
+    # FIXME: deal with 1D things... You know?
     for i in range(1, degree + 1):
         T[0, i] = T[0, i - 1] * t
 
@@ -96,6 +98,7 @@ def evaluate_polynomial(degree: int, dimension: int, polynomial_coeffs: np.ndarr
 def evaluate_polynomial_mapping(degree: int, dimension: int, polynomial_coeffs: np.ndarray, t: float, polynomial_evaluation: np.ndarray) -> None:
     # NOTE: This function is just here because the C++ has it.
     # NOTE: But, this should be replaced with the more Pythonic version evaluate_polynomial()
+    raise Exception("Deprecated. Use evalute_polynomial() instead.")
     pass
 
 

@@ -118,7 +118,7 @@ class AffineManifold:
         # endif
 
         # Build halfedge
-        self.m_halfedge = Halfedge(F, self.m_corner_to_he, self.m_he_to_corner)
+        self.m_halfedge = Halfedge(F)
 
         # TODO: check if below is actually retrieving what we need properly
         self.m_corner_to_he = self.m_halfedge.get_corner_to_he
@@ -250,17 +250,21 @@ class AffineManifold:
         @param[in] face_index: index of the face for the chart segments
         @param[out] corner_uv_positions: chart uv positions as enumerated above
         """
-        corner_uv_positions: list[np.ndarray] = [None, None, None]
+        corner_uv_positions: list[np.ndarray] = [np.ndarray(shape=(2, 2)),
+                                                 np.ndarray(shape=(2, 2)),
+                                                 np.ndarray(shape=(2, 2))]
 
         for i in range(3):
             # Get the chart for vertex i in the given face
-            vertex_index = self.m_F(face_index, i)
+            vertex_index = self.m_F[face_index, i]
             chart: VertexManifoldChart = self.m_vertex_charts[vertex_index]
 
             # Iterate over the one ring of face vertex i
-            for j in range(len(chart.face_one_ring)):
+            for j, face in enumerate(chart.face_one_ring):
+                # NOTE: face equivalent to chart.face_one_ring[j]
+
                 # Skip faces until the input face is found
-                if (chart.face_one_ring[j] != face_index):
+                if (face != face_index):
                     continue
 
                 # Get the uv coordinates of the other two face vertices in the chart of face vertex i
@@ -269,11 +273,12 @@ class AffineManifold:
 
                 # TODO: check slicing with Eigen .row()
                 corner_uv_positions[i][0,
-                                       :] = chart.one_ring_uv_position[first_edge, :]
+                                       :] = chart.one_ring_uv_positions[first_edge, :]
                 corner_uv_positions[i][1,
-                                       :] = chart.one_ring_uv_position[second_edge, :]
+                                       :] = chart.one_ring_uv_positions[second_edge, :]
                 break
 
+        assert len(corner_uv_positions) == 3
         return corner_uv_positions
 
     def get_face_edge_charts(self, face_index: Index) -> list:
@@ -666,8 +671,8 @@ class AffineManifold:
 
             # Layout vertices starting at vi. Note that here, unlike in the vertex
             # chart case, we start from axis aligned edge with length 1
-            chart.left_vertex_uv_position = np.array([[0, 0]])
-            chart.right_vertex_uv_position = np.array([[1.0, 0]])
+            chart.left_vertex_uv_position = np.array([[0.0, 0.0]])
+            chart.right_vertex_uv_position = np.array([[1.0, 0.0]])
             assert lij > 0
             chart.top_vertex_uv_position = self._layout_next_vertex(
                 chart.right_vertex_uv_position, ljk / lij, lki / lij)
@@ -708,7 +713,8 @@ class AffineManifold:
                 chart.top_vertex_uv_position -= center
 
                 # Set the bottom uv position to the zero vector
-                chart.bottom_vertex_uv_position[:, :] = 0.0
+                # TODO: make this some sort of PlanarPoint class constructor full of 0s
+                chart.bottom_vertex_uv_position = np.zeros(shape=(1, 2))
 
             # Set chart
             edge_charts[edge_index] = chart
@@ -763,8 +769,8 @@ class AffineManifold:
         # Get the current point and its rotation
         p0: PlanarPoint = current_point
 
-        # TODO: getting the perpendicular part?
-        p0_perp = np.array([[-p0[0, 1], p0[0][0]]])
+        # NOTE: getting the perpendicular part?
+        p0_perp = np.array([[-p0[0, 1], p0[0, 0]]])
         assert p0_perp.shape == (1, 2)
 
         # Get ratios of edge lengths
@@ -781,7 +787,7 @@ class AffineManifold:
         b: float = 2 * area_from_length(1.0, l1, l2)
 
         # Build the next point
-        next_point: PlanarPoint = a * p0 + b * p0_perp
+        next_point: PlanarPoint = (a * p0) + (b * p0_perp)
         assert (not vector_contains_nan(next_point))
 
         # FIXME: maybe problem with float type?
@@ -797,8 +803,8 @@ class AffineManifold:
 
         # TODO: logging levels and making sure I'm doing it correctly
         if logger.getEffectiveLevel() != logging.INFO:
-            logger.info("Building layout for one ring: %s",
-                        formatted_vector(vertex_one_ring))
+            logger.info("Building layout for one ring: %s", vertex_one_ring)
+            # formatted_vector(vertex_one_ring))
 
         #  Initialize first vertex to position (l0, 0), where l0 is the length of the
         #  edge
@@ -806,7 +812,7 @@ class AffineManifold:
         j0: int = find_face_vertex_index(F[f0, :], vertex_index)
         l0: float = l[f0][(j0 + 2) % 3]
         one_ring_uv_positions[0, :] = np.array([[l0, 0]])
-        assert one_ring_uv_positions.shape == (1, 2)
+        # assert one_ring_uv_positions.shape == (1, 2)
 
         # Layout remaining vertices
         for i, f in enumerate(face_one_ring):
@@ -815,18 +821,19 @@ class AffineManifold:
             j: int = find_face_vertex_index(F[f, :], vertex_index)
             if logger.getEffectiveLevel() != logging.INFO:
                 logger.info("Laying out vertex for face %s", F[f, :])
-                logger.info("Face lengths are %s", formatted_vector(l[f]))
+                # logger.info("Face lengths are %s", formatted_vector(l[f]))
+                logger.info("Face lengths are %s", l[f])
 
             # Get the lengths of the triangle edges
             next_edge_length: float = l[f][j]
             prev_edge_length: float = l[f][(j + 1) % 3]
             assert float_equal(l[f][(j + 2) % 3],
-                               LA.norm(one_ring_uv_positions[i, :]))
+                               LA.norm(one_ring_uv_positions[[i], :]))
 
             # Layout the next vertex
             # TODO: fix the whole row grabbing thing...
-            one_ring_uv_positions[i + 1, :] = self._layout_next_vertex(
-                one_ring_uv_positions[i, :], next_edge_length, prev_edge_length)
+            one_ring_uv_positions[[i + 1], :] = self._layout_next_vertex(
+                one_ring_uv_positions[[i], :], next_edge_length, prev_edge_length)
             if logger.getEffectiveLevel() != logging.INFO:
                 logger.info("Next vertex is %s",
                             one_ring_uv_positions[i + 1, :])
@@ -848,7 +855,7 @@ class AffineManifold:
         num_faces: Index = F.shape[0]
         face_size: Index = F.shape[1]
         assert face_size == 3
-        l: list[list[float]] = [[None, None, None] for _ in range(face_size)]
+        l: list[list[float]] = [[None, None, None] for _ in range(num_faces)]
 
         # Iterate over faces
         for i in range(num_faces):
@@ -856,7 +863,7 @@ class AffineManifold:
             for j in range(face_size):
                 # Get the length of the edge opposite face vertex j
                 prev_uv = global_uv[F[i, (j + 2) % face_size], :]
-                next_uv = global_uv[F(i, (j + 1) % face_size), :]
+                next_uv = global_uv[F[i, (j + 1) % face_size], :]
                 edge_vector = prev_uv - next_uv
                 l[i][j] = LA.norm(edge_vector)
 
@@ -878,8 +885,10 @@ class AffineManifold:
             assert local_edge.shape == (1, 2)
 
             # TODO: confirm that the elements in this matrix matched position of elements in ASOC code
+            # Documentation confirms that "comma intialization" in Eigen inserts row by row.
+            # https://eigen.tuxfamily.org/dox-devel/group__TutorialAdvancedInitialization.html
             local_similarity_map = np.array(
-                [[local_edge[0], local_edge[1]], [-local_edge[1], local_edge[0]]])
+                [[local_edge[0][0], local_edge[0][1]], [-local_edge[0][1], local_edge[0][0]]])
             assert local_similarity_map.shape == (2, 2)
 
             # Get the global uv values corresponding the edge of the face
@@ -894,12 +903,14 @@ class AffineManifold:
 
             # Get (transposed) similarity map that maps [1, 0]^T to the first global uv
             # edge
-            global_edge = uv[uv_edge_vertex_index] - uv[uv_vertex_index]
+            global_edge = uv[[uv_edge_vertex_index], :] - \
+                uv[[uv_vertex_index], :]
             assert global_edge.shape == (1, 2)
 
             # TODO: confirm that the elements in this matrix matched position of elements in ASOC code
-            global_similarity_map = np.array([[global_edge[0], global_edge[1]],
-                                              [-global_edge[1], global_edge[0]]])
+            global_similarity_map = np.array([[global_edge[0, 0], global_edge[0, 1]],
+                                              [-global_edge[0, 1], global_edge[0, 0]]])
+            assert global_similarity_map.shape == (2, 2)
 
             # Apply composite similarity maps to the local uv positions
             # TODO: double check that this is doing matmul as we wanted
@@ -909,7 +920,8 @@ class AffineManifold:
                 vertex_index].one_ring_uv_positions @ similarity_map
 
         # Check validity after direct member variable manipulation
-        assert self._is_valid_affine_manifold()
+        is_valid = self._is_valid_affine_manifold()
+        assert is_valid
 
     def _mark_cones(self) -> None:
         """
@@ -946,14 +958,14 @@ class AffineManifold:
         """
         vn: Index = self.m_F_uv[face_index, (face_vertex_index + 1) % 3]
         vp: Index = self.m_F_uv[face_index, (face_vertex_index + 2) % 3]
-        next_uv = self.m_global_uv[vn, :]
-        prev_uv = self.m_global_uv[vp, :]
+        next_uv = self.m_global_uv[[vn], :]
+        prev_uv = self.m_global_uv[[vp], :]
         assert next_uv.shape == (1, 2)
         assert prev_uv.shape == (1, 2)
         edge_vector = next_uv - prev_uv
         assert edge_vector.shape == (1, 2)
 
-        result = LA.norm(edge_vector)
+        result: float = LA.norm(edge_vector)
         assert isinstance(result, float)
         return result
 
@@ -1048,19 +1060,19 @@ class AffineManifold:
                     logger.info("Face lengths: %s",
                                 formatted_vector(self.m_l[face_index]))
 
-                if not edge_has_length(zero, chart.one_ring_uv_positions[i, :], self.m_l[face_index][(face_vertex_index + 2) % 3]):
+                if not edge_has_length(zero, chart.one_ring_uv_positions[[i], :], self.m_l[face_index][(face_vertex_index + 2) % 3]):
                     logger.error("uv position %s in chart %s does not expect norm %s",
                                  chart.one_ring_uv_positions[i, :], vertex_index, self.m_l[face_index][(face_vertex_index + 2) % 3])
                     return False
 
-                if not edge_has_length(chart.one_ring_uv_positions[i + 1, :], chart.one_ring_uv_positions[i, :], self.m_l[face_index][(face_vertex_index + 0) % 3]):
+                if not edge_has_length(chart.one_ring_uv_positions[[i + 1], :], chart.one_ring_uv_positions[[i], :], self.m_l[face_index][(face_vertex_index + 0) % 3]):
                     logger.error("uv positions %s and %s in chart %s do not have expected length %s", chart.one_ring_uv_positions[
-                                 i + 1, :], chart.one_ring_uv_positions[i, :], vertex_index, self.m_l[face_index][(face_vertex_index + 0) % 3])
+                                 [i + 1], :], chart.one_ring_uv_positions[[i], :], vertex_index, self.m_l[face_index][(face_vertex_index + 0) % 3])
                     return False
 
-                if not edge_has_length(zero, chart.one_ring_uv_positions[i + 1, :], self.m_l[face_index][(face_vertex_index + 1) % 3]):
+                if not edge_has_length(zero, chart.one_ring_uv_positions[[i + 1], :], self.m_l[face_index][(face_vertex_index + 1) % 3]):
                     logger.error("uv position %s in chart %s does not have the expected norm %s",
-                                 chart.one_ring_uv_positions[i + 1, :], vertex_index, self.m_l[face_index][(face_vertex_index + 1) % 3])
+                                 chart.one_ring_uv_positions[[i + 1], :], vertex_index, self.m_l[face_index][(face_vertex_index + 1) % 3])
                     return False
 
         # Return true if no issues found
@@ -1131,7 +1143,7 @@ class ParametricAffineManifold(AffineManifold):
     def __is_valid_parametric_affine_manifold(self) -> bool:
         """
         """
-        if self.m_F_uv != self.m_F:
+        if not np.array_equal(self.m_F_uv, self.m_F):
             return False
 
         for vertex_index in range(self.num_vertices):
@@ -1140,16 +1152,17 @@ class ParametricAffineManifold(AffineManifold):
             for i, _ in enumerate(chart.vertex_one_ring):
                 vi: Index = chart.vertex_one_ring[i]
                 # TODO: maybe some issue with slicing below
-                local_uv_difference: PlanarPoint = chart.one_ring_uv_positions[i, :]
+                local_uv_difference: PlanarPoint = chart.one_ring_uv_positions[[
+                    i], :]
                 assert local_uv_difference.shape == (1, 2)
-                global_uv_difference: PlanarPoint = self.m_global_uv[vi,
-                                                                     :] - self.m_global_uv[vertex_index, :]
+                global_uv_difference: PlanarPoint = self.m_global_uv[[vi],
+                                                                     :] - self.m_global_uv[[vertex_index], :]
                 assert global_uv_difference.shape == (1, 2)
 
                 if not vector_equal(global_uv_difference, local_uv_difference):
                     logger.error("Global uv coordinates %s and %s do not have expected difference %s",
-                                 self.m_global_uv[vi, :],
-                                 self.m_global_uv[vertex_index, :],
+                                 self.m_global_uv[[vi], :],
+                                 self.m_global_uv[[vertex_index], :],
                                  local_uv_difference)
                     return False
         # Return true if no issues found

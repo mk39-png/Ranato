@@ -30,6 +30,10 @@ class RationalFunction:
     # TODO: so that would entail some sort of lambda function?
     # NOTE: RationalFunction is never called as RationalFunction()... always constructed with the classmethods below.
     # TODO: Maybe construct RationalFunction with one single constructor and not class methods?
+    # But... class methods make life easier, no?
+    # But then again... we're trying to implment a C++-like system...
+    # Some systems work... like that one file I was working on.
+    # But other systems... not so much
     def __init__(self, degree: int, dimension: int, numerator_coeffs: np.ndarray, denominator_coeffs: np.ndarray, domain: Interval) -> None:
         """Default constructor"""
         # ****************
