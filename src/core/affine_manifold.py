@@ -70,13 +70,14 @@ class FaceManifoldChart:
 
     # Vertex positions
     # TODO: adjust the typing of face_uv_positions to be a size 3 list with PlanarPoint elements
-    face_uv_positions = [PlanarPoint, PlanarPoint, PlanarPoint]
+    face_uv_positions: list[PlanarPoint] = [
+        PlanarPoint, PlanarPoint, PlanarPoint]
 
     # Global information
     is_boundary = False  # True iff the edge is on the boundary
     is_cone_adjacent = False  # Mark faces adjacent to a cone
     # Mark individual corners adjacent to a cone
-    is_cone_corner = [False, False, False]
+    is_cone_corner: list[bool] = [False, False, False]
 
 
 class AffineManifold:
@@ -84,7 +85,6 @@ class AffineManifold:
     Representation for an affine manifold, which is a topological manifold F
     equipped with a discrete metric l that satisfies the triangle inequality.
     """
-    Index = int
 
     def __init__(self, F: np.ndarray, global_uv: np.ndarray, F_uv: np.ndarray) -> None:
         """Default constructor for a trivial manifold
@@ -100,18 +100,18 @@ class AffineManifold:
 
         # Check the input
         # if CHECK_VALIDITY
-        if (not is_manifold(F)):
+        if not is_manifold(F):
             logger.error("Input mesh is not manifold")
             self.clear()
             return
 
-        if (not is_manifold(F_uv)):
+        if not is_manifold(F_uv):
             logger.error("Input mesh is not manifold")
             self.clear()
             return
 
         # Comparing row sizes
-        if (F_uv.shape[0] != F.shape[0]):
+        if F_uv.shape[0] != F.shape[0]:
             logger.error("Input mesh and uv mesh have different sizes")
             self.clear()
             return
@@ -123,21 +123,17 @@ class AffineManifold:
         # TODO: check if below is actually retrieving what we need properly
         self.m_corner_to_he = self.m_halfedge.get_corner_to_he
         self.m_he_to_corner = self.m_halfedge.get_he_to_corner
-
-        he_to_edge: list[AffineManifold.Index] = self.m_halfedge.get_halfedge_to_edge_map
-
-        # FIXME: no need to pass in self.m_corner_to_he and m_he_to_corner if the method itself can retrive it...
-        # Depending on how and where it's used, of course
-        self._build_corner_to_edge_map(
-            self.m_corner_to_he, he_to_edge, self.m_corner_to_edge)
+        he_to_edge: list[Index] = self.m_halfedge.get_halfedge_to_edge_map
+        self.m_corner_to_edge = self._build_corner_to_edge_map(
+            self.m_corner_to_he, he_to_edge)
 
         # Build edge lengths and charts from the global uv
-        self._build_lengths_from_global_uv(F_uv, global_uv, self.m_l)
-        self._build_vertex_charts_from_lengths(
-            F, self.m_l, self.m_vertex_charts)
-        self._build_edge_charts_from_lengths(
-            F, self.m_halfedge, self.m_l, self.m_edge_charts)
-        self._build_face_charts(F, global_uv, F_uv, self.m_face_charts)
+        self.m_l = self._build_lengths_from_global_uv(F_uv, global_uv)
+        self.m_vertex_charts = self._build_vertex_charts_from_lengths(
+            F, self.m_l)
+        self.m_edge_charts = self._build_edge_charts_from_lengths(
+            F, self.m_halfedge, self.m_l)
+        self.m_face_charts = self._build_face_charts(F, global_uv, F_uv)
 
         # Align charts with the input parameterization
         self._align_local_charts(global_uv, F_uv)
@@ -146,7 +142,7 @@ class AffineManifold:
         self._mark_cones()
 
         # Check validity
-        if (not self._is_valid_affine_manifold()):
+        if not self._is_valid_affine_manifold():
             logger.error("Could not build a cone manifold")
             self.clear()
 
@@ -308,7 +304,7 @@ class AffineManifold:
                                           :] = chart.right_vertex_uv_position
                 face_edge_uv_positions[i][1, :] = chart.top_vertex_uv_position
                 face_edge_uv_positions[i][2, :] = chart.left_vertex_uv_position
-            elif (chart.bottom_face_index == face_index):
+            elif chart.bottom_face_index == face_index:
                 face_edge_uv_positions[i][0, :] = chart.left_vertex_uv_position
                 face_edge_uv_positions[i][1,
                                           :] = chart.bottom_vertex_uv_position
@@ -352,7 +348,7 @@ class AffineManifold:
         # Compute geodesic curvature for boundary vertices and Gaussian curvature for
         # interior vertices
         if chart.is_boundary:
-            return (math.pi - cone_angle)
+            return math.pi - cone_angle
         else:
             return (2 * math.pi) - cone_angle
 
@@ -615,12 +611,11 @@ class AffineManifold:
                 vertex_index)
 
             # Layout the vertices according to the given flat metric
-            self._layout_one_ring(F,
-                                  l,
-                                  vertex_index,
-                                  vertex_charts[vertex_index].vertex_one_ring,
-                                  vertex_charts[vertex_index].face_one_ring,
-                                  vertex_charts[vertex_index].one_ring_uv_positions)
+            vertex_charts[vertex_index].one_ring_uv_positions = self._layout_one_ring(F,
+                                                                                      l,
+                                                                                      vertex_index,
+                                                                                      vertex_charts[vertex_index].vertex_one_ring,
+                                                                                      vertex_charts[vertex_index].face_one_ring)
 
             # A vertex is on the boundary iff the vertex one ring is not a closed loop
             v0: Index = vertex_charts[vertex_index].vertex_one_ring[0]
@@ -842,7 +837,7 @@ class AffineManifold:
                 one_ring_uv_positions[i + 1, :]))
         logger.info("Final layout:\n%s", one_ring_uv_positions)
 
-        assert not (matrix_contains_nan(one_ring_uv_positions))
+        assert not matrix_contains_nan(one_ring_uv_positions)
         return one_ring_uv_positions
 
     def _build_lengths_from_global_uv(self, F: np.ndarray, global_uv: np.ndarray) -> list[list[float]]:
@@ -864,6 +859,8 @@ class AffineManifold:
                 next_uv = global_uv[F(i, (j + 1) % face_size), :]
                 edge_vector = prev_uv - next_uv
                 l[i][j] = LA.norm(edge_vector)
+
+        return l
 
     def _align_local_charts(self, uv: np.ndarray, F_uv: np.ndarray) -> None:
         """
@@ -1001,7 +998,7 @@ class AffineManifold:
 
                 # Get opposite halfedge and corner if it exists
                 he: Index = self.m_corner_to_he[fi][j]
-                if (self.m_halfedge.is_boundary_halfedge(he)):
+                if self.m_halfedge.is_boundary_halfedge(he):
                     continue
                 he_opp: Index = self.m_halfedge.opposite_halfedge(he)
                 fi_opp: Index = self.m_he_to_corner[he_opp][0]
@@ -1020,11 +1017,11 @@ class AffineManifold:
             chart: VertexManifoldChart = self.m_vertex_charts[vertex_index]
 
             # Check basic chart indexing and size validity
-            if (chart.vertex_index != vertex_index):
+            if chart.vertex_index != vertex_index:
                 return False
-            if (len(chart.vertex_one_ring) != (len(chart.face_one_ring) + 1)):
+            if len(chart.vertex_one_ring) != (len(chart.face_one_ring) + 1):
                 return False
-            if (chart.one_ring_uv_positions.shape[0] != len(chart.vertex_one_ring)):
+            if chart.one_ring_uv_positions.shape[0] != len(chart.vertex_one_ring):
                 return False
 
             # Check that each one ring face contains the central vertex, the vertex with
@@ -1032,7 +1029,43 @@ class AffineManifold:
             for i, face_index in enumerate(chart.face_one_ring):
                 face_vertex_index = find_face_vertex_index(
                     self.m_F[face_index, :], vertex_index)
-                vi = chart.vertex_one_ring
+                vi: Index = chart.vertex_one_ring[i]
+                vj: Index = chart.vertex_one_ring[i + 1]
+
+                # Check that the one ring indexing is valid
+                if face_index > self.m_F.shape[0]:
+                    return False
+                if not contains_vertex(self.m_F[face_index, :], vertex_index):
+                    return False
+                if not contains_vertex(self.m_F[face_index, :], vi):
+                    return False
+                if not contains_vertex(self.m_F[face_index, :], vj):
+                    return False
+
+                # Check that each local uv length is compatible with the given metric
+                # FIXME: pretty sure the below is not the way to go for logging with a set level
+                if logger.getEffectiveLevel != logger.level:
+                    logger.info("Face lengths: %s",
+                                formatted_vector(self.m_l[face_index]))
+
+                if not edge_has_length(zero, chart.one_ring_uv_positions[i, :], self.m_l[face_index][(face_vertex_index + 2) % 3]):
+                    logger.error("uv position %s in chart %s does not expect norm %s",
+                                 chart.one_ring_uv_positions[i, :], vertex_index, self.m_l[face_index][(face_vertex_index + 2) % 3])
+                    return False
+
+                if not edge_has_length(chart.one_ring_uv_positions[i + 1, :], chart.one_ring_uv_positions[i, :], self.m_l[face_index][(face_vertex_index + 0) % 3]):
+                    logger.error("uv positions %s and %s in chart %s do not have expected length %s", chart.one_ring_uv_positions[
+                                 i + 1, :], chart.one_ring_uv_positions[i, :], vertex_index, self.m_l[face_index][(face_vertex_index + 0) % 3])
+                    return False
+
+                if not edge_has_length(zero, chart.one_ring_uv_positions[i + 1, :], self.m_l[face_index][(face_vertex_index + 1) % 3]):
+                    logger.error("uv position %s in chart %s does not have the expected norm %s",
+                                 chart.one_ring_uv_positions[i + 1, :], vertex_index, self.m_l[face_index][(face_vertex_index + 1) % 3])
+                    return False
+
+        # Return true if no issues found
+        return True
+
     # Topology information
     # TODO: The faces are duplicated in the halfedge. Our halfedge alway retains
     # the original VF topology, so there is no need to maintain both separately
@@ -1052,6 +1085,10 @@ class AffineManifold:
     m_edge_charts: list[EdgeManifoldChart]
     m_face_charts: list[FaceManifoldChart]
 
+# **************************
+# Parametric Affine Manifold
+# **************************
+
 
 class ParametricAffineManifold(AffineManifold):
     """
@@ -1068,7 +1105,11 @@ class ParametricAffineManifold(AffineManifold):
         @param[in] global_uv: affine global layout of the manifold
         """
         super().__init__(F, global_uv, F)
-        assert (self.__is_valid_parametric_affine_manifold())
+        assert self.__is_valid_parametric_affine_manifold()
+
+    # **************
+    # Public Methods
+    # **************
 
     def get_vertex_global_uv(self, vertex_index: Index) -> PlanarPoint:
         """
@@ -1083,10 +1124,14 @@ class ParametricAffineManifold(AffineManifold):
 
         return uv_coords
 
+    # ***************
+    # Private Methods
+    # ***************
+
     def __is_valid_parametric_affine_manifold(self) -> bool:
         """
         """
-        if (self.m_F_uv != self.m_F):
+        if self.m_F_uv != self.m_F:
             return False
 
         for vertex_index in range(self.num_vertices):
@@ -1122,8 +1167,7 @@ def remove_cones(V: np.ndarray, affine_manifold: AffineManifold, pruned_V: np.nd
     logger.debug("Remove cones at %s", cones)
 
     # Create boolean arrays of cone adjacent vertices
-    is_cone_adjacent_vertex: list[bool] = [
-        bool] * affine_manifold.num_vertices
+    is_cone_adjacent_vertex: list[bool] = [bool] * affine_manifold.num_vertices
     for vi in range(affine_manifold.num_vertices):
         is_cone_adjacent_vertex[vi] = affine_manifold.get_vertex_chart(
             vi).is_cone_adjacent
@@ -1143,4 +1187,5 @@ def remove_cones(V: np.ndarray, affine_manifold: AffineManifold, pruned_V: np.nd
     F_uv: np.ndarray
 
     # TODO: finish implementation
-    remove_mesh_vertices()
+    F_uv = remove_mesh_vertices(
+        global_uv_orig, F_uv_orig, cones, global_uv, F_uv, removed_faces)

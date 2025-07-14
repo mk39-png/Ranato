@@ -6,9 +6,10 @@ import numpy.linalg as LA
 from typing import NewType
 
 import numpy.typing as npt
-
+import logging
 import igl
 
+logger = logging.getLogger(__name__)
 # UserId = NewType('UserId', int)
 
 # *******
@@ -32,6 +33,12 @@ DISCRETIZATION_LEVEL: int = 2  # Spline surface discretization level
 # Edge = list[int, int]
 
 PlanarPoint = np.ndarray
+
+# Colors
+MINT_GREEN = np.array([[0.170], [0.673], [0.292]])
+# <double, 3, 1> SKY_BLUE(0.297, 0.586, 0.758);
+# <double, 3, 1> OFF_WHITE(0.896, 0.932, 0.997);
+GOLD_YELLOW = np.array([[0.670], [0.673], [0.292]])
 
 
 class Matrix:
@@ -209,11 +216,16 @@ def vector_contains(vec: list, item) -> bool:
     return item in vec
 
 
-def convert_index_vector_to_boolean_array():
-    pass
+def convert_index_vector_to_boolean_array(index_vector: list[int], num_indices: int) -> list[bool]:
+    boolean_array: list[bool] = [False for _ in range(num_indices)]
+
+    for i, _ in enumerate(index_vector):
+        boolean_array[index_vector[i]] = True
+
+    return boolean_array
 
 
-def convert_boolean_array_to_index_vector(boolean_array: list[bool]):
+def convert_boolean_array_to_index_vector(boolean_array: list[bool]) -> list[int]:
     """
     @brief From a boolean array, build a vector of the indices that are true.
     @param[in] boolean_array: array of boolean values
@@ -228,8 +240,18 @@ def convert_boolean_array_to_index_vector(boolean_array: list[bool]):
     return index_vector
 
 
-def index_vector_complement():
-    pass
+def index_vector_complement(index_vector: list[int], num_indices: int) -> list[int]:
+    # Build index boolean array
+    boolean_array: list[bool] = convert_index_vector_to_boolean_array(
+        index_vector, num_indices)
+
+    # Build complement
+    complement_vector: list[int] = []
+    for i in range(num_indices):
+        if not boolean_array[i]:
+            complement_vector.append(i)
+
+    return complement_vector
 
 
 def convert_signed_vector_to_unsigned():
@@ -338,7 +360,8 @@ def is_manifold(F: np.ndarray) -> bool:
         return False
 
     # Check vertex manifold condition
-    if (not igl.is_vertex_manifold(F)):
+    invalid_vertices = igl.is_vertex_manifold(F)
+    if not igl.is_vertex_manifold(F).any():
         logger.error("Mesh is not vertex manifold")
         return False
 
@@ -454,12 +477,36 @@ def compute_point_cloud_bounding_box():
     pass
 
 
-def remove_mesh_faces():
-    pass
+def remove_mesh_faces(V: np.ndarray, F: np.ndarray, faces_to_remove: list[int], V_submesh: np.ndarray, F_submesh: np.ndarray):
+    faces_to_keep: list[int]
+    index_vector_complement(faces_to_remove, F.shape[0], faces_to_keep)
+    F_unsimplified_submesh = np.ndarray(shape=(len(faces_to_keep), F.shape[1]))
+    for i, _ in enumerate(faces_to_keep):
+        F_unsimplified_submesh[i, :] = F[faces_to_keep[i], :]
+
+    # Remove unreferenced vertices and update face indices
+    # FIXME: not sure if the below is doing what it needs to do
+    F_submesh, V_submesh = igl.remove_unreferenced(F, V)
+    logger.info("Final mesh has %s faces and %s vertices",
+                F_submesh.shape[0], V_submesh.shape[0])
 
 
-def remove_mesh_vertices():
-    pass
+def remove_mesh_vertices(V: np.ndarray, F: np.ndarray, vertices_to_remove: list[int], V_submesh: np.ndarray, F_submesh: np.ndarray, faces_to_remove: list[int]):
+    logger.info("Removing %s vertices from mesh with %s faces and %s vertices", len(
+        vertices_to_remove), F.shape[0], V.shape[0])
+
+    # Tag faces adjacent to the vertices to remove
+    # TODO: implement some numpy version of of finding a vertex in a row of F
+    faces_to_remove.clear()
+    for face_index in range(F.shape[0]):
+        for i, _ in enumerate(vertices_to_remove):
+            if contains_vertex(F[face_index, :], vertices_to_remove[i]):
+                faces_to_remove.append(face_index)
+                break
+    logger.info("Remove %s faces", len(faces_to_remove))
+
+    # Remove faces adjacent to cones
+    remove_mesh_faces(V, F, faces_to_remove, V_submesh, F_submesh)
 
 
 def join_path():

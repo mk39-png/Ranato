@@ -15,8 +15,6 @@ from ..core.vertex_circulator import *
 HalfedgeIndex = int
 Index = int
 
-logger = logging.getLogger(__name__)
-
 
 def build_halfedge_to_edge_maps(opp: list[Index]) -> tuple[list[Index], list[tuple[Index, Index]]]:
     """

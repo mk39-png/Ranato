@@ -29,12 +29,13 @@ def remove_cones_from_uv(V: np.ndarray, F: np.ndarray, uv: np.ndarray, F_uv: np.
     # TODO: do some data type assertions with the arrays
 
     # Get the cones of the metric
-    cones: list[Index]
     cone_manifold = AffineManifold(F, uv, F_uv)
+    cones: list[Index] = cone_manifold.compute_cones()
+
     logger.info("Removing cones at %s", formatted_vector(cones))
 
     # Restrict the manifold to the flat vertices
-    removed_faces: list[Index] = removed_mesh_vertices(
+    removed_faces: list[Index] = remove_mesh_vertices(
         V, F, cones, V_flat, F_flat, removed_faces)
 
     # Remove the faces around cones from the uv layout as well
