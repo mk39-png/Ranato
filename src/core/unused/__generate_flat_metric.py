@@ -2,7 +2,7 @@
 import numpy as np
 import numpy.linalg as LA
 
-from ..core.affine_manifold import *
+from ..affine_manifold import *
 Index = int
 
 
@@ -24,19 +24,21 @@ def remove_cones_from_uv(V: np.ndarray, F: np.ndarray, uv: np.ndarray, F_uv: np.
     Returns:
         None
     """
+    # Double checking that these are indeed the types that they should be
     assert V.dtype == np.float64
     assert F.dtype == np.int64
-    # TODO: do some data type assertions with the arrays
 
     # Get the cones of the metric
     cone_manifold = AffineManifold(F, uv, F_uv)
     cones: list[Index] = cone_manifold.compute_cones()
 
-    logger.info("Removing cones at %s", formatted_vector(cones))
+    # TODO: do not use the version with coins...
+    # logger.info("Removing cones at %s", formatted_vector(cones))
+    logger.info("Removing cones at %s", cones)
 
     # Restrict the manifold to the flat vertices
-    removed_faces: list[Index] = remove_mesh_vertices(
-        V, F, cones, V_flat, F_flat, removed_faces)
+    removed_faces: list[Index] = []
+    remove_mesh_vertices(V, F, cones, V_flat, F_flat, removed_faces)
 
     # Remove the faces around cones from the uv layout as well
     remove_mesh_faces(uv, F_uv, removed_faces, uv_flat, F_uv_flat)

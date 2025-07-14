@@ -12,7 +12,6 @@ topological information. Can be initialized from face topology information.
 from ..core.common import *
 import logging
 from ..core.vertex_circulator import *
-HalfedgeIndex = int
 Index = int
 
 
@@ -59,11 +58,7 @@ class Halfedge:
     # ************
     # CONSTRUCTORS
     # ************
-    # TODO: do corner_to_he and he_to_corner need to be used OUTSIDE of the class or not?
-    # Because if yes and if there is some funky referencing going on, then make that whole process more Pythonic
-    def __init__(self, F: np.ndarray = None,
-                 corner_to_he: list[list[HalfedgeIndex]] = None,
-                 he_to_corner: list[tuple[Index, Index]] = None) -> None:
+    def __init__(self, F: np.ndarray = None) -> None:
         """
         TODO: deal with actually default constructor where Default trivial halfedge is made.
         Build halfedge mesh from mesh faces F with.
@@ -88,7 +83,8 @@ class Halfedge:
         #         return
 
         # Build maps between corners and halfedges
-        # TODO: save these below into the actual class itself...
+        # NOTE: self.corner_to_he is type list[list[Index]]
+        # NOTE: self.he_to_corner is type list[tuple[int, int]]
         self.corner_to_he, self.he_to_corner = self.build_corner_to_he_maps(
             num_faces)
 

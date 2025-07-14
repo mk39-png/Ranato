@@ -1,17 +1,25 @@
-from ..core.common import *
+"""
+Methods to operate on bivariate quadratics represented by coefficient vectors.
+"""
+# from ..core.common import logger
 from ..core.polynomial_function import *
 
 # TODO: wait... for parameters that arte passed into every function... what do we do?
-Scalar = float
 
 
 def const_coeffs(dimension: int, quadratic_coeffs: np.ndarray, col: int):
+    """
+    Retrieves quadratic_coeffs const element.
+    """
     assert quadratic_coeffs.shape == (6, dimension)
     assert col > dimension
     return quadratic_coeffs[0, col]
 
 
 def u_coeffs(dimension: int, quadratic_coeffs: np.ndarray, col: int):
+    """
+    Retrieves quadratic_coeffs u element.
+    """
     assert quadratic_coeffs.shape == (6, dimension)
     assert col >= 0
     assert col < dimension
@@ -19,30 +27,42 @@ def u_coeffs(dimension: int, quadratic_coeffs: np.ndarray, col: int):
 
 
 def v_coeffs(dimension: int, quadratic_coeffs: np.ndarray, col: int):
+    """
+    Retrieves quadratic_coeffs v element.
+    """
     assert quadratic_coeffs.shape == (6, dimension)
-    assert (col >= 0)
-    assert (col < dimension)
+    assert col >= 0
+    assert col < dimension
     return quadratic_coeffs[2, col]
 
 
 def uv_coeffs(dimension: int, quadratic_coeffs: np.ndarray, col: int):
+    """
+    Retrieves quadratic_coeffs uv element.
+    """
     assert quadratic_coeffs.shape == (6, dimension)
-    assert (col >= 0)
-    assert (col < dimension)
+    assert col >= 0
+    assert col < dimension
     return quadratic_coeffs[3, col]
 
 
 def uu_coeffs(dimension: int, quadratic_coeffs: np.ndarray, col: int):
+    """
+    Retrieves quadratic_coeffs uu element.
+    """
     assert quadratic_coeffs.shape == (6, dimension)
-    assert (col >= 0)
-    assert (col < dimension)
+    assert col >= 0
+    assert col < dimension
     return quadratic_coeffs[4, col]
 
 
 def vv_coeffs(dimension: int, quadratic_coeffs: np.ndarray, col: int):
+    """
+    Retrieves quadratic_coeffs vv element.
+    """
     assert quadratic_coeffs.shape == (6, dimension)
-    assert (col >= 0)
-    assert (col < dimension)
+    assert col >= 0
+    assert col < dimension
     return quadratic_coeffs[5, col]
 
 
@@ -105,7 +125,9 @@ def evaluate_quadratic(quadratic_coeffs: np.ndarray, domain_point: PlanarPoint):
     @return: quadratic function evaluation
     """
     assert quadratic_coeffs.shape == (6, 1)
-    raise Exception("This will not be implemented")
+    raise Exception(
+        "evaluate_quadratic() will not be implemented. "
+        "Use evaluate_quadratic_mapping() instead.")
 
 
 def evaluate_line(line_coeffs: np.ndarray, domain_point: PlanarPoint) -> float:
@@ -286,7 +308,7 @@ def is_conic_standard_form(C_coeffs: np.ndarray):
     assert C_coeffs.ndim == 1
 
     #  Mixed term must be zero
-    if (not float_equal(C_coeffs[3], 0.0)):
+    if not float_equal(C_coeffs[3], 0.0):
         return False
 
     return True
@@ -473,6 +495,9 @@ def generate_quadratic_coordinate_domain_triangle_normalization_matrix(v0: np.nd
     return change_of_basis_matrix
 
 
-# NOTE: below has been deprecated. DO NOT IMPLEMENT
 def generate_reparameterization():
-    pass
+    """
+    Deprecated.
+    """
+    raise Exception(
+        "generate_reparameterization() is deprecated. DO NOT IMPLEMENT")

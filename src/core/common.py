@@ -26,19 +26,34 @@ DISCRETIZATION_LEVEL: int = 2  # Spline surface discretization level
 # Real number representations
 # PlanarPoint = NewType('PlanarPoint', npt.NDArray(shape=[(1, 2)], dtype=float))
 # SpatialVector = np.ndarray(shape=(1, 3), dtype=float)
+
 # Matrix2x3r = np.ndarray(shape=(2, 3), dtype=float)
 # Matrix2x2r = np.ndarray(shape=(2, 2), dtype=float)
 # Matrix3x2r = np.ndarray(shape=(3, 2), dtype=float)
 # Matrix3x3r = np.ndarray(shape=(3, 3), dtype=float)
 # Edge = list[int, int]
 
-PlanarPoint = np.ndarray
 
-# Colors
-MINT_GREEN = np.array([[0.170], [0.673], [0.292]])
-# <double, 3, 1> SKY_BLUE(0.297, 0.586, 0.758);
-# <double, 3, 1> OFF_WHITE(0.896, 0.932, 0.997);
-GOLD_YELLOW = np.array([[0.670], [0.673], [0.292]])
+class PlanarPoint(np.ndarray):
+    def __new__(cls, input_array):
+        arr = np.asarray(input_array, dtype=float)
+
+        # Flatten all allowed forms to shape (2,)
+        if arr.shape == (2,):
+            flat = arr
+        elif arr.shape == (1, 2) or arr.shape == (2, 1):
+            flat = arr.reshape(2,)
+        else:
+            raise ValueError(
+                "PlanarPoint must be shape (2,), (1, 2), or (2, 1)")
+
+        obj = flat.view(cls)
+        return obj
+
+
+class Index(int):
+    # Basically, this is unsigned stuff only. that's it.
+    pass
 
 
 class Matrix:
@@ -48,6 +63,13 @@ class Matrix:
 
     def row(self, i):
         pass
+
+
+# Colors
+MINT_GREEN = np.array([[0.170], [0.673], [0.292]])
+# <double, 3, 1> SKY_BLUE(0.297, 0.586, 0.758);
+# <double, 3, 1> OFF_WHITE(0.896, 0.932, 0.997);
+GOLD_YELLOW = np.array([[0.670], [0.673], [0.292]])
 
 
 def float_equal_zero(x: float, eps=FLOAT_EQUAL_PRECISION):
@@ -67,16 +89,16 @@ def float_equal_zero(x: float, eps=FLOAT_EQUAL_PRECISION):
 
 def float_equal(x: float, y: float, eps=FLOAT_EQUAL_PRECISION) -> bool:
     """
-    /// @brief Check if two floating point values are numerically equal
-    ///
-    /// @param[in] x: first value to compare
-    /// @param[in] y: second value to compare
-    /// @param[in] eps: threshold for equality
-    /// @return true iff x - y is numerically zero
+    @brief Check if two floating point values are numerically equal
+
+    @param[in] x: first value to compare
+    @param[in] y: second value to compare
+    @param[in] eps: threshold for equality
+    @return true iff x - y is numerically zero
     """
 
-    # TODO: switch to absolute tolerance?
-    return math.isclose(x, y, rel_tol=eps)
+    # NOTE: Use absolute tolerance! Relative tolerance is not suited for our purpose.
+    return math.isclose(x, y, abs_tol=eps)
 
 
 def vector_equal(v: np.ndarray, w: np.ndarray, eps: float = FLOAT_EQUAL_PRECISION):
@@ -277,10 +299,12 @@ def copy_to_spatial_vector():
 
 # TODO: don't think we need this since Python prints out vectors just fine.... maybe
 # Unless there's an extra fancy vector type in the C++ code like vector<RationalFunction> or something like that.
-def formatted_vector(vec: list, delim: str = "\n") -> str:
+def formatted_vector(vec: list[np.float64], delim: str = "\n") -> str:
+    # raise Exception(
+    # "formatted_vector() is not implmemented. Print out object as-is instead.")
     vector_string: str = ""
     for i, _ in enumerate(vec):
-        vector_string += (vec[i] + delim)
+        vector_string += (str(vec[i]) + delim)
 
     return vector_string
 
@@ -380,28 +404,20 @@ def is_manifold(F: np.ndarray) -> bool:
 #  *******************
 #  Basic mesh geometry
 #  *******************
-def area_from_length(edge_length_opposite_corner: float,
-                     first_adjacent_edge_length: float,
-                     second_adjacent_edge_length: float) -> float:
+def area_from_length(l0: float, l1: float, l2: float) -> float:
     """
-    @brief Compute the angle of a triangle corner with given edge lengths
-    @param[in] edge_length_opposite_corner: length of the edge opposite the
-    corner
-    @param[in] first_adjacent_edge_length: length of one of the edges adjacent
-    to the corner
-    @param[in] first_adjacent_edge_length: length of the other edge adjacent to
-    the corner
-    @return angle of the corner
-    """
-    # Rename variables for readability
-    l0: float = edge_length_opposite_corner
-    l1: float = first_adjacent_edge_length
-    l2: float = second_adjacent_edge_length
+    @brief Compute the area of a triangle from the edge lengths.
 
-    # Compute the angle
-    # FIXME Avoid potential division by 0
-    Ijk: float = (-l0 * l0 + l1 * l1 + l2 * l2)
-    return math.acos(min(max(Ijk / (2.0 * l1 * l2), -1.0), 1.0))
+    @param[in] l0: first edge length
+    @param[in] l1: second edge length
+    @param[in] l2: third edge length
+    @return area of the triangle
+    """
+    # Return the area (or zero if there is a triangle inequality violation)
+    s: float = 0.5 * (l0 + l1 + l2)  # semi-perimeter
+    area: float = math.sqrt(max(s * (s - l0) * (s - l1) * (s - l2), 0.0))
+    assert not math.isnan(area)
+    return area
 
 
 def area_from_positions(p0: np.ndarray, p1: np.ndarray, p2: np.ndarray) -> float:
