@@ -179,7 +179,7 @@ def compute_polynomial_mapping_scalar_product(first_degree: int, second_degree: 
         for j in range(second_degree + 1):
             for k in range(dimension):
                 # XXX: there may be problem with scalar_polynomial_coeffs accessing b/c of shape
-                product_polynomial_coeffs[i + j,
+                product_polynomial_coeffs[[i + j],
                                           k] += scalar_polynomial_coeffs[i] * polynomial_coeffs[j, k]
 
     return product_polynomial_coeffs
@@ -454,10 +454,10 @@ def formatted_term(coefficient: float, variable: str, precision: int = 16) -> st
         return ""
     # Negative case
     elif coefficient < 0:
-        term_string += f" - {coefficient:.{precision}f} {variable:.{precision}f}"
+        term_string += f" - {coefficient:.{precision}f} {variable}"
     # Positive case
     else:
-        term_string += f" + {coefficient:.{precision}f} {variable:.{precision}f}"
+        term_string += f" + {coefficient:.{precision}f} {variable}"
 
     return term_string
 

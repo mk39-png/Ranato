@@ -34,73 +34,15 @@ class RationalFunction:
     # But then again... we're trying to implment a C++-like system...
     # Some systems work... like that one file I was working on.
     # But other systems... not so much
-    def __init__(self, degree: int, dimension: int, numerator_coeffs: np.ndarray, denominator_coeffs: np.ndarray, domain: Interval) -> None:
-        """Default constructor"""
-        # ****************
-        # Member variables
-        # ****************
-        # TODO: double check that the shape is as it should be with the Eigen matrix.
-        # TODO: change m_ to __ for python private variables...
-        self.m_degree = degree
-        self.m_dimension = dimension
-        self.m_numerator_coeffs = numerator_coeffs
-        self.m_denominator_coeffs = denominator_coeffs
-        self.m_domain = domain
-        assert self.__is_valid()
-
-    @classmethod
-    def from_zero_function(cls, degree: int, dimension: int):
-        """Default numerator set to constant 0 in R^n"""
-
-        numerator_coeffs = np.zeros(
-            shape=(degree+1, dimension), dtype='float64')
-        denominator_coeffs = np.zeros(
-            shape=(degree+1, 1), dtype='float64')
-        denominator_coeffs[0][0] = 1.0
-        domain = Interval()
-        # domain.reset_bounds()
-
-        return cls(degree, dimension, numerator_coeffs, denominator_coeffs, domain)
-
-    @classmethod
-    def from_polynomial_function(cls, degree: int, dimension: int, numerator_coeffs: np.ndarray):
-        """ Constructor for a vector polynomial
-
-        Args:
-            numerator_coeffs (np.ndarray): coefficients of the polynomial functions
-
-        Return:
-            TODO: fill in the return value
-        """
-        denominator_coeffs = np.zeros(
-            shape=(degree+1, 1), dtype='float64')
-        denominator_coeffs[0][0] = 1.0
-        domain = Interval()
-        # domain.reset_bounds()
-
-        return cls(degree, dimension, numerator_coeffs, denominator_coeffs, domain)
-
-    @classmethod
-    def from_real_line(cls, degree: int, dimension: int, numerator_coeffs: np.ndarray, denominator_coeffs: np.ndarray):
-        # TODO: assert the shape for numerator_coeffs and denominator_coeffs
-        """ General constructor over entire real line.
-
-        Args:
-            numerator_coeffs [in] (np.ndarray): coefficients of the numerator polynomial
-            denominator_coeffs [in] (np.ndarray): coefficients of the denominator polynomial
-
-        Return:
-            TODO: fill in return value
-        """
-        domain = Interval()
-        # domain.reset_bounds()
-
-        return cls(degree, dimension, numerator_coeffs, denominator_coeffs, domain)
-
-    @classmethod
-    def from_interval(cls, degree: int, dimension: int, numerator_coeffs: np.ndarray, denominator_coeffs: np.ndarray, domain: Interval):
+    def __init__(self, degree: int, dimension: int,
+                 numerator_coeffs: np.ndarray = None, denominator_coeffs: np.ndarray = None, domain: Interval = None) -> None:
         # TODO: assert the shape for numerator_coeffs and denominator_coeffs
         """ General constructor over given interval.
+            --- Possible combinations include ---
+            Default constructor for 0 function R^n: numerator_coeffs == None, denominator_coeffs = None, domain == None
+            Constructor for vector polynomial: denominator_coeffs == None, domain == None
+            General constructor over entire real line: domain == None
+            General constructor over given interval: all arguments are NOT None
 
         Args:
             degree: [in]
@@ -113,7 +55,34 @@ class RationalFunction:
             TODO: fill in return value
         """
 
-        return cls(degree, dimension, numerator_coeffs, denominator_coeffs, domain)
+        # """Default constructor"""
+        self.m_degree = degree
+        self.m_dimension = dimension
+
+        if (degree is None) or (dimension is None):
+            raise Exception("degree and dimension cannot be None.")
+
+        if numerator_coeffs is None:
+            self.m_numerator_coeffs = np.zeros(
+                shape=(degree+1, dimension), dtype='float64')
+        else:
+            self.m_numerator_coeffs = numerator_coeffs
+
+        if denominator_coeffs is None:
+            self.m_denominator_coeffs = np.zeros(
+                shape=(degree+1, 1), dtype='float64')
+            self.m_denominator_coeffs[0][0] = 1.0
+        else:
+            self.m_denominator_coeffs = denominator_coeffs
+
+        if domain is None:
+            self.m_domain = Interval()
+        else:
+            self.m_domain = domain
+
+        assert self.m_numerator_coeffs.shape == (degree + 1, dimension)
+        assert self.m_denominator_coeffs.shape == (degree + 1, 1)
+        assert self.__is_valid()
 
     # *******
     # Methods
@@ -197,8 +166,8 @@ class RationalFunction:
         assert denom_coeffs.shape == (2 * self.m_degree + 1, 1)
 
         # TODO: this should then change the derivative argument to reference a new RationalFunction
-        derivative = RationalFunction.from_interval(
-            2 * self.m_degree, self.m_dimension, num_coeffs, denom_coeffs, self.m_domain)
+        derivative = RationalFunction(2 * self.m_degree, self.m_dimension,
+                                      num_coeffs, denom_coeffs, self.m_domain)
 
         return derivative
 
@@ -218,9 +187,6 @@ class RationalFunction:
         pass
 
     def end_point(self):
-        pass
-
-    def evaluate(self):
         pass
 
     def evaluate_normalized_coordinate(self):
@@ -309,6 +275,8 @@ class RationalFunction:
 
         # NOTE: using evaluate_polynomial_mapping() rather than evaluate_polynomial() for cases where m_dimension > 1
         # NOTE: keep the modification by reference since that helps showcase what shape Pt and Qt should be.
+
+        # FIXME: Wait a minute... why is numerator all 0s with test_unit_pullback_case?
         Pt = evaluate_polynomial(degree=self.m_degree,
                                  dimension=self.m_dimension,
                                  polynomial_coeffs=self.m_numerator_coeffs,
