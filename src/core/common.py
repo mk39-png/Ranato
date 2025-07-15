@@ -10,6 +10,7 @@ import logging
 import igl
 
 logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.DEBUG)
 # UserId = NewType('UserId', int)
 
 # *******
@@ -81,8 +82,8 @@ def float_equal_zero(x: float, eps=FLOAT_EQUAL_PRECISION):
     /// @return true iff x is below 1e-10
     """
 
-    # TODO: switch to absolute tolerance?
-    return math.isclose(x, 0.0, rel_tol=eps)
+    # NOTE: Use absolute tolerance! Relative tolerance is not suited for our purpose.
+    return math.isclose(x, 0.0, abs_tol=eps)
 
 
 # TODO: just use the Math library for this?

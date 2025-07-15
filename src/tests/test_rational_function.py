@@ -2,6 +2,7 @@
 Tests to find that the derivative of a rational function can be found.
 """
 
+from src.core.rational_function import RationalFunction
 from ..core.common import *
 from ..core.rational_function import *
 
@@ -16,7 +17,7 @@ def test_zero_function() -> None:
     # Meanwhile, denominator is ALWAYS going to be a vector.
     P_coeffs = np.array([[0], [0]])
     Q_coeffs = np.array([[1], [0]])
-    F = RationalFunction.from_real_line(1, 1, P_coeffs, Q_coeffs)
+    F = RationalFunction(1, 1, P_coeffs, Q_coeffs)
 
     # TODO: problem is the below since the denom and numerator are NOT (n,) shaped....
     # F_derivative = RationalFunction.from_zero_function(2, 1)
@@ -31,7 +32,7 @@ def test_zero_function() -> None:
 def test_constant_function() -> None:
     P_coeffs = np.array([[1], [0]])
     Q_coeffs = np.array([[1], [0]])
-    F = RationalFunction.from_real_line(1, 1, P_coeffs, Q_coeffs)
+    F = RationalFunction(1, 1, P_coeffs, Q_coeffs)
     # F_derivative = RationalFunction.from_zero_function(2, 1)
 
     F_derivative = F.compute_derivative()
@@ -44,7 +45,7 @@ def test_constant_function() -> None:
 def test_linear_function() -> None:
     P_coeffs = np.array([-1, 2]).reshape(2, 1)
     Q_coeffs = np.array([1, 0]).reshape(2, 1)
-    F = RationalFunction.from_real_line(1, 1, P_coeffs, Q_coeffs)
+    F = RationalFunction(1, 1, P_coeffs, Q_coeffs)
 
     # TODO: fix "from_zero_function"
     # F_derivative = RationalFunction.from_zero_function(2, 1)
@@ -63,7 +64,7 @@ def test_quadratic_function() -> None:
     P_coeffs = np.array([[1], [-2], [1]])
     Q_coeffs = np.array([[1], [0], [0]])
 
-    F = RationalFunction.from_real_line(2, 1, P_coeffs, Q_coeffs)
+    F = RationalFunction(2, 1, P_coeffs, Q_coeffs)
     # F_derivative = RationalFunction.from_zero_function(4, 1)
     F_derivative = F.compute_derivative()
 
@@ -75,7 +76,7 @@ def test_quadratic_function() -> None:
 def test_inverse_monomial_function() -> None:
     P_coeffs = np.array([[1], [0], [0]])
     Q_coeffs = np.array([[0], [0], [1]])
-    F = RationalFunction.from_real_line(2, 1, P_coeffs, Q_coeffs)
+    F = RationalFunction(2, 1, P_coeffs, Q_coeffs)
     # F_derivative = RationalFunction.from_zero_function(4, 1)
     F_derivative = F.compute_derivative()
 
@@ -87,7 +88,7 @@ def test_inverse_monomial_function() -> None:
 def test_inverse_quadratic_function() -> None:
     P_coeffs = np.array([[1], [0], [0]])
     Q_coeffs = np.array([[1], [0], [1]])
-    F = RationalFunction.from_real_line(2, 1, P_coeffs, Q_coeffs)
+    F = RationalFunction(2, 1, P_coeffs, Q_coeffs)
     # F_derivative = RationalFunction.from_zero_function(4, 1)
     F_derivative = F.compute_derivative()
 
@@ -101,7 +102,7 @@ def test_inverse_quadratic_function() -> None:
 def test_rational_function() -> None:
     P_coeffs = np.array([[1], [1], [0]])
     Q_coeffs = np.array([[1], [0], [1]])
-    F = RationalFunction.from_real_line(2, 1, P_coeffs, Q_coeffs)
+    F = RationalFunction(2, 1, P_coeffs, Q_coeffs)
     # F_derivative = RationalFunction.from_zero_function(4, 1)
     F_derivative = F.compute_derivative()
 
@@ -116,10 +117,10 @@ def test_planar_rational_function() -> None:
     assert P_coeffs.shape == (3, 2)
 
     Q_coeffs = np.array([[1], [0], [1]])
-    F = RationalFunction.from_real_line(2, 2, P_coeffs, Q_coeffs)
+    F = RationalFunction(2, 2, P_coeffs, Q_coeffs)
 
     # F_derivative = RationalFunction.from_zero_function(4, 2)
-    F_derivative = F.compute_derivative()
+    F_derivative: RationalFunction = F.compute_derivative()
 
     # FIXME: the whole non-scalar, non-vector F_derivative results might cause a lot of problems
     # -2t / (1 + t ^ 2) ^ 2
