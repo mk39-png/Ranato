@@ -27,6 +27,9 @@ FIND_INTERSECTIONS_BEZIER_CLIPPING_PRECISION: float = 1e-7
 DISCRETIZATION_LEVEL: int = 2  # Spline surface discretization level
 
 # Real number representations
+PlanarPoint = np.ndarray
+SpatialVector = np.ndarray
+
 # PlanarPoint = NewType('PlanarPoint', npt.NDArray(shape=[(1, 2)], dtype=float))
 # SpatialVector = np.ndarray(shape=(1, 3), dtype=float)
 
@@ -34,24 +37,36 @@ DISCRETIZATION_LEVEL: int = 2  # Spline surface discretization level
 # Matrix2x2r = np.ndarray(shape=(2, 2), dtype=float)
 # Matrix3x2r = np.ndarray(shape=(3, 2), dtype=float)
 # Matrix3x3r = np.ndarray(shape=(3, 3), dtype=float)
+Matrix6x3r = np.ndarray
 # Edge = list[int, int]
 
 
-class PlanarPoint(np.ndarray):
-    def __new__(cls, input_array):
-        arr = np.asarray(input_array, dtype=float)
+# **********************
+# Debug/Helper Methods
+# **********************
+def unimplemented(msg: str):
+    raise Exception(msg)
 
-        # Flatten all allowed forms to shape (2,)
-        if arr.shape == (2,):
-            flat = arr
-        elif arr.shape == (1, 2) or arr.shape == (2, 1):
-            flat = arr.reshape(2,)
-        else:
-            raise ValueError(
-                "PlanarPoint must be shape (2,), (1, 2), or (2, 1)")
 
-        obj = flat.view(cls)
-        return obj
+def todo(msg: str | None = None):
+    raise Exception(msg)
+
+
+# class PlanarPoint(np.ndarray):
+#     def __new__(cls, input_array):
+#         arr = np.asarray(input_array, dtype=float)
+
+#         # Flatten all allowed forms to shape (2,)
+#         if arr.shape == (2,):
+#             flat = arr
+#         elif arr.shape == (1, 2) or arr.shape == (2, 1):
+#             flat = arr.reshape(2,)
+#         else:
+#             raise ValueError(
+#                 "PlanarPoint must be shape (2,), (1, 2), or (2, 1)")
+
+#         obj = flat.view(cls)
+#         return obj
 
 
 class Index(int):
