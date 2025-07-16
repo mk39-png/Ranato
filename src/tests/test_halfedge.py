@@ -1,11 +1,10 @@
 
-from ..core.common import *
-from ..core.halfedge import *
-from ..utils.generate_shapes import *
+from src.core.common import *
+from src.core.halfedge import *
+from src.utils.generate_shapes import *
 
-import logging
-import pytest
 import numpy as np
+import pytest
 
 
 def test_halfedge_one_triangle():

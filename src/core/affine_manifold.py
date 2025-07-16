@@ -2,12 +2,13 @@
 Representation of an affine manifold.
 """
 
+from src.core.common import *
 from src.core.halfedge import Halfedge
-from ..core.common import *
-from ..core.halfedge import *
+from src.core.vertex_circulator import VertexCirculator
 
 
 class VertexManifoldChart:
+    # TODO: refer to 7/15 meeting for python implementation
     """
     Local layout manifold chart in R2 of the one ring around a central vertex.
 
@@ -21,6 +22,8 @@ class VertexManifoldChart:
     begins as the boundary face to the right of the vertex and ends at the left
     boundary face, and the nth vertex is generally different from the 0th.
     """
+
+    # TODO: below is going to make these class variables accessible across ALL VertexManifoldChart objects...
     vertex_index: int  # Index of the vertex in the affine manifold
     # List of manifold vertex indices in the one ring
     vertex_one_ring: list[int]

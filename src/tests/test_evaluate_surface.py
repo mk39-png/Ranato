@@ -1,10 +1,9 @@
 """
 This file basically test bivariate_quadratic_function.py
 """
-
-import pytest
 from ..core.common import *
 from ..core.bivariate_quadratic_function import *
+import pytest
 
 
 def test_patch_monomials():

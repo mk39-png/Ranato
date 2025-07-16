@@ -1,6 +1,6 @@
-import pytest
 from ..core.bivariate_quadratic_function import *
 import numpy as np
+import pytest
 
 
 def test_compute_quadratic_cross_product():

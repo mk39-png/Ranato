@@ -1,12 +1,14 @@
-# TODO: include logging here?
-import logging
-import math
 import numpy as np
 import numpy.linalg as LA
-from typing import NewType
-
 import numpy.typing as npt
+
+# from typing import NewType
 import logging
+import mathutils
+import math
+
+# TODO: there's something wrong with the IGL import statement here that's causing everything to error...
+# And that was because I accidentally uninstall SciPy...
 import igl
 
 logger = logging.getLogger(__name__)
@@ -74,6 +76,8 @@ GOLD_YELLOW = np.array([[0.670], [0.673], [0.292]])
 
 
 def float_equal_zero(x: float, eps=FLOAT_EQUAL_PRECISION):
+    # TODO: I don't think this is used since anyone could just input 0.0 into "y" of float_equal....
+    # So maybe get rid of this method or at least note that it is out of use
     """
     /// @brief  Check if some floating point value is numerically zero.
     ///
@@ -344,8 +348,12 @@ def read_camera_matrix():
     pass
 
 
-def generate_linspace():
-    pass
+def generate_linspace(t_0: float, t_1: float, num_points: int):
+    """
+    Originally under "Pythonic methods" in ASOC code.
+    """
+    # TODO: compare NumPy linspace with ASOC linspace
+    return np.linspace(t_0, t_1, num_points)
 
 
 def arrange():

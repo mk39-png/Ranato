@@ -28,10 +28,10 @@ class Conic(RationalFunction):
     # ************
     # Constructors
     # ************
-    def __init__(self, type=ConicType.UNKNOWN, *args, **kwargs):
+    def __init__(self, m_type=ConicType.UNKNOWN, *args, **kwargs):
         super().__init__(2, 2, *args, **kwargs)
 
-        self.m_type = type
+        self.m_type = m_type
         assert self.__is_valid()
 
     # ******
@@ -47,17 +47,17 @@ class Conic(RationalFunction):
 
     def transform(self, rotation: np.ndarray, translation: np.ndarray):
         """
-        NOTE: assumes row vector points
+        NOTE: assumes row vector points... somewhat.
         """
         assert rotation.shape == (2, 2)
         assert translation.shape == (1, 2)
+
         P_rot_coeffs: np.ndarray = self.get_numerators @ \
             rotation + self.get_denominator @ translation
         assert P_rot_coeffs.shape == (3, 2)
         self.set_numerators(P_rot_coeffs)
 
     def pullback_quadratic_function(self, dimension: int, F_coeffs: np.ndarray) -> RationalFunction:
-        # TODO: change function to return pullback_function?
         assert F_coeffs.shape == (6, dimension)
         assert F_coeffs.dtype == np.float64
 
@@ -67,10 +67,10 @@ class Conic(RationalFunction):
         # Separate the individual polynomial coefficients from the rational function
         P_coeffs = self.get_numerators
 
-        # TODO: make sure that this is getting the shape we want...
         u_coeffs = P_coeffs[:, [0]]
         v_coeffs = P_coeffs[:, [1]]
         Q_coeffs = self.get_denominator
+        # Asserting to make sure we are getting the shape we want.
         assert u_coeffs.shape == (3, 1)
         assert v_coeffs.shape == (3, 1)
         assert Q_coeffs.shape == (3, 1)
@@ -150,6 +150,7 @@ class Conic(RationalFunction):
         conic_string += formatted_polynomial(2, 1, self.m_denominator_coeffs)
         conic_string += ") [\n "
 
+        # Going through rows of m_numerator_coeffs
         for i in self.m_numerator_coeffs.shape[1]:
             conic_string += formatted_polynomial(2,
                                                  1, self.m_numerator_coeffs[:, i])

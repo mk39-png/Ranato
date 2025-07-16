@@ -6,8 +6,8 @@ with degree 1 numerator and degree 0 denominator.
 # TODO: address the whole : public Conic part of the C++ code
 
 
-from ..core.bivariate_quadratic_function import *
 from ..core.common import *
+from ..core.bivariate_quadratic_function import *
 from ..core.conic import *
 from ..core.polynomial_function import *
 from ..core.rational_function import *
@@ -20,13 +20,17 @@ class LineSegment(Conic):
 
     def __init__(self, numerator_coeffs: np.ndarray = None, input_domain: Interval = None):
         # There's not much logic going on for the constructor in the C++ code, so just going to put them all here for simplicity.
+        if (numerator_coeffs is None) and (input_domain is None):
+            raise Exception(
+                "Attempted LineSegment constructions with no parameters.")
+
         if (numerator_coeffs):
             self.__init_conic_coefficients(numerator_coeffs)
 
         if (input_domain):
             self.m_domain = input_domain
 
-    def pullback_linear_function(self, dimension: int, F_coeffs: np.ndarray, pullback_function: RationalFunction):
+    def pullback_linear_function(self, dimension: int, F_coeffs: np.ndarray, pullback_function:     RationalFunction):
         logger.info("Pulling back line segment by linear function %s",
                     formatted_bivariate_linear_mapping(dimension, F_coeffs))
 

@@ -1,6 +1,5 @@
-from ..core.common import *
-import numpy as np
-import pytest
+from src.core.common import *
+# import pytest
 
 
 def test_cross_product():
@@ -9,7 +8,7 @@ def test_cross_product():
     assert v.shape == (3, 1)
     assert w.shape == (3, 1)
 
-    n = cross_product(v, w,)
+    n = cross_product(v, w)
     n_numpy = np.cross(v, w, axis=0)
 
     assert np.array_equal(n, n_numpy)
