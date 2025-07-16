@@ -205,50 +205,31 @@ def compute_polynomial_mapping_cross_product(first_degree: int, second_degree: i
     assert np.shape(first_polynomial_coeffs) == (first_degree + 1, 3)
     assert np.shape(second_polynomial_coeffs) == (second_degree + 1, 3)
 
-    # NOTE: reshape(-1, 1) is to wrap the slicing inside an array so that they are not Vectors and
-    # remain Matrices of shape (degree, 1).
     # Below lines of code retrieving particular columns of first_polynomial_coeffs and
     # second_polynomial_coeffs.
-
-    # TODO: change reshape to use []
+    # Column retrieval wrapped in [] to preserve shape of Matrices as (degree, dimension) in case #
+    # where dimension is 1 (i.e. shape is (degree, 1))
     A0B1 = compute_polynomial_mapping_product(first_degree, second_degree, 1,
-                                              first_polynomial_coeffs[:,
-                                                                      0].reshape(-1, 1),
-                                              second_polynomial_coeffs[:, 1].reshape(-1, 1))
+                                              first_polynomial_coeffs[:, [0]],
+                                              second_polynomial_coeffs[:, [1]])
     A0B2 = compute_polynomial_mapping_product(first_degree, second_degree, 1,
-                                              first_polynomial_coeffs[:,
-                                                                      0].reshape(-1, 1),
-                                              second_polynomial_coeffs[:, 2].reshape(-1, 1))
+                                              first_polynomial_coeffs[:, [0]],
+                                              second_polynomial_coeffs[:, [2]])
     A1B0 = compute_polynomial_mapping_product(first_degree, second_degree, 1,
-                                              first_polynomial_coeffs[:,
-                                                                      1].reshape(-1, 1),
-                                              second_polynomial_coeffs[:, 0].reshape(-1, 1))
+                                              first_polynomial_coeffs[:, [1]],
+                                              second_polynomial_coeffs[:, [0]])
     A1B2 = compute_polynomial_mapping_product(first_degree, second_degree, 1,
-                                              first_polynomial_coeffs[:,
-                                                                      1].reshape(-1, 1),
-                                              second_polynomial_coeffs[:, 2].reshape(-1, 1))
+                                              first_polynomial_coeffs[:, [1]],
+                                              second_polynomial_coeffs[:, [2]])
     A2B0 = compute_polynomial_mapping_product(first_degree, second_degree, 1,
-                                              first_polynomial_coeffs[:,
-                                                                      2].reshape(-1, 1),
-                                              second_polynomial_coeffs[:, 0].reshape(-1, 1))
+                                              first_polynomial_coeffs[:, [2]],
+                                              second_polynomial_coeffs[:, [0]])
     A2B1 = compute_polynomial_mapping_product(first_degree, second_degree, 1,
-                                              first_polynomial_coeffs[:,
-                                                                      2].reshape(-1, 1),
-                                              second_polynomial_coeffs[:, 1].reshape(-1, 1))
-
-    # assert A0B1.shape == (first_degree + second_degree + 1, 1)
-    # assert A0B1.shape == (first_degree + second_degree + 1, 1)
-    # assert A0B2.shape == (first_degree + second_degree + 1, 1)
-    # assert A1B0.shape == (first_degree + second_degree + 1, 1)
-    # assert A1B2.shape == (first_degree + second_degree + 1, 1)
-    # assert A2B0.shape == (first_degree + second_degree + 1, 1)
-    # assert A2B1.shape == (first_degree + second_degree + 1, 1)
+                                              first_polynomial_coeffs[:, [2]],
+                                              second_polynomial_coeffs[:, [1]])
 
     # Assemble the cross product from the terms
     # NOTE: must reshape for broadcasting to convert (3, 1) to (3,)
-    # TODO: or just use 3,1
-    # TODO: bpy wrapper class perhaps?"
-    # TODO: Add a wrapper!! Like, for .col() and whatnot.
     product_polynomial_coeffs = np.ndarray(
         shape=(first_degree + second_degree + 1, 3))
     product_polynomial_coeffs[:, 0] = A1B2.reshape(-1) - A2B1.reshape(-1)
