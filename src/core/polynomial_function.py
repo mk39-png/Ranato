@@ -209,6 +209,8 @@ def compute_polynomial_mapping_cross_product(first_degree: int, second_degree: i
     # remain Matrices of shape (degree, 1).
     # Below lines of code retrieving particular columns of first_polynomial_coeffs and
     # second_polynomial_coeffs.
+
+    # TODO: change reshape to use []
     A0B1 = compute_polynomial_mapping_product(first_degree, second_degree, 1,
                                               first_polynomial_coeffs[:,
                                                                       0].reshape(-1, 1),

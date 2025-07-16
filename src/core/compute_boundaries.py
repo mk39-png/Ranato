@@ -2,10 +2,10 @@
 Methods to compute the boundaries of a mesh
 """
 
-# from ..core.common import *
+from ..core.common import *
 from ..core.halfedge import *
 # from ..core.quadratic_spline_surface import *
-import numpy as np
+# import numpy as np
 
 
 def compute_face_boundary_edges(F: np.ndarray) -> list[tuple[int, int]]:

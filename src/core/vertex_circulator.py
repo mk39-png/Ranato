@@ -2,13 +2,15 @@
 Class to build circulators around vertices in VF representation
 """
 
+from src.core.common import contains_vertex, logger
+
+# TODO: numpy import here or through src.core.common
+# TODO: explicit import numpy here
 import numpy as np
-from ..core.common import contains_vertex
 
-import logging
-
+# import logging
 # TODO: decide between SciPy and NumPy for implementing polynomials...
-logger = logging.getLogger(__name__)
+# logger = logging.getLogger(__name__)
 
 
 def contains_edge(face: np.ndarray, vertex_0: int, vertex_1: int) -> bool:

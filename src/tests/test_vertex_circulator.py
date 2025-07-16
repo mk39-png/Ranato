@@ -2,10 +2,12 @@ from ..core.common import *
 from ..core.vertex_circulator import *
 from ..utils.generate_shapes import *
 
+import numpy as np
 import pytest
 
-
 # TODO: again! Figure out the data type before implementing...
+
+
 def test_tetrahedron():
     V, F = generate_tetrahedron_VF()
     vertex_circulator = VertexCirculator(F)

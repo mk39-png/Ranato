@@ -3,10 +3,9 @@ Tests to find that the derivative of a rational function can be found.
 """
 
 from src.core.rational_function import RationalFunction
-from ..core.common import *
-from ..core.rational_function import *
+from src.core.common import *
+from src.core.rational_function import *
 
-import numpy as np
 import pytest
 
 

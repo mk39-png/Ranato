@@ -1,12 +1,13 @@
 import numpy as np
-#
-V_coeffs = np.array([[0, 1, 2], [3, 4, 5], [6, 7, 8]])
-assert V_coeffs.shape == (3, 3)
-what = V_coeffs[[2], :]
-what = V_coeffs[[2]]
-print(what.shape)
+import mathutils
+# #
+# V_coeffs = np.array([[0, 1, 2], [3, 4, 5], [6, 7, 8]])
+# assert V_coeffs.shape == (3, 3)
+# what = V_coeffs[[2], :]
+# what = V_coeffs[[2]]
+# print(what.shape)
 
-print(what)
+# print(what)
 
 
 # QQ_coeffs = np.zeros(shape=(5, 1))
@@ -45,3 +46,23 @@ print(what)
 # print(F[0, :].shape)
 # print(F[0].shape)
 # print(F[:, 0].shape)
+
+# mathutils.Quaternion
+# vec = mathutils.Vector((1.0, 2.0, 3.0))
+# vec = mathutils.Vector((1.0, 2.0, 3.0))
+
+# https://blender.stackexchange.com/questions/159824/mathutils-matrix-matrix-world-set-get-round-trip-with-ndarray-requires-trans
+# quat_b = mathutils.Quaternion(np.array([0.0, 1.0, 0.0])., math.radians(90.0))
+# print(quat_b)
+# X_WO = np.array([
+#     [0, 1, 0],
+#     [-1, 0, 0],
+#     [0, 0, 1]])
+
+# what = mathutils.Matrix(X_WO)
+# print(what)
+
+# huh = np.array(what)
+# print(huh)
+
+# yes = mathutils.Vector(np.array([[1, 2, 3]]))

@@ -35,7 +35,9 @@ class RationalFunction:
     # Some systems work... like that one file I was working on.
     # But other systems... not so much
     def __init__(self, degree: int, dimension: int,
-                 numerator_coeffs: np.ndarray = None, denominator_coeffs: np.ndarray = None, domain: Interval = None) -> None:
+                 numerator_coeffs: np.ndarray | None = None,
+                 denominator_coeffs: np.ndarray | None = None,
+                 domain: Interval | None = None) -> None:
         # TODO: assert the shape for numerator_coeffs and denominator_coeffs
         """ General constructor over given interval.
             --- Possible combinations include ---

@@ -1,6 +1,6 @@
 """
 Methods to evaluate normals to a quadratic surface with Zwart-Powell basis
-coefficients
+coefficients.
 """
 from ..core.bivariate_quadratic_function import u_derivative_matrix, v_derivative_matrix, compute_quadratic_cross_product
 

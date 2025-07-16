@@ -1,8 +1,10 @@
-# import pytest
 
-from ..core.common import *
-from ..core.affine_manifold import *
-from ..utils.generate_shapes import *
+from src.core.common import *
+from src.core.affine_manifold import *
+from src.utils.generate_shapes import *
+import pytest
+
+import numpy as np
 
 
 def test_affine_manifold_from_global_uvs():

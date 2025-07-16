@@ -10,7 +10,6 @@ topological information. Can be initialized from face topology information.
 """
 
 from ..core.common import *
-import logging
 from ..core.vertex_circulator import *
 Index = int
 
