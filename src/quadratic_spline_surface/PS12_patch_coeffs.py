@@ -1,7 +1,8 @@
 import numpy as np
 
 
-def PS12_patch_coeffs(patch_coeffs: np.ndarray) -> None:
+def PS12_patch_coeffs() -> np.ndarray:
+    patch_coeffs: np.ndarray = np.ndarray(shape=(12, 6, 12))
     assert patch_coeffs.shape == [12, 6, 12]
 
     patch_coeffs[0][0][0] = 0
@@ -868,3 +869,5 @@ def PS12_patch_coeffs(patch_coeffs: np.ndarray) -> None:
     patch_coeffs[11][5][9] = 1
     patch_coeffs[11][5][10] = 0
     patch_coeffs[11][5][11] = -3
+
+    return patch_coeffs

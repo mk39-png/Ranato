@@ -70,3 +70,11 @@ import mathutils
 
 left = np.array([[1, 2, 3]])
 right = np.ones(shape=(2, 3))
+
+
+local_to_global_map: list[int] = [-1 for _ in range(27)]
+# print(local_to_global_map)
+
+num_faces = 2
+global_edge_indices: list[list[int]] = [[-1, -1, -1] for _ in range(num_faces)]
+print(global_edge_indices)

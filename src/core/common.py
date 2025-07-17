@@ -30,6 +30,7 @@ DISCRETIZATION_LEVEL: int = 2  # Spline surface discretization level
 OneFormXr = np.ndarray
 PlanarPoint = np.ndarray
 SpatialVector = np.ndarray
+VectorX = np.ndarray
 Index = int
 
 # PlanarPoint = NewType('PlanarPoint', npt.NDArray(shape=[(1, 2)], dtype=float))
