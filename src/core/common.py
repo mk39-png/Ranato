@@ -27,8 +27,10 @@ FIND_INTERSECTIONS_BEZIER_CLIPPING_PRECISION: float = 1e-7
 DISCRETIZATION_LEVEL: int = 2  # Spline surface discretization level
 
 # Real number representations
+OneFormXr = np.ndarray
 PlanarPoint = np.ndarray
 SpatialVector = np.ndarray
+Index = int
 
 # PlanarPoint = NewType('PlanarPoint', npt.NDArray(shape=[(1, 2)], dtype=float))
 # SpatialVector = np.ndarray(shape=(1, 3), dtype=float)
@@ -37,6 +39,10 @@ SpatialVector = np.ndarray
 # Matrix2x2r = np.ndarray(shape=(2, 2), dtype=float)
 # Matrix3x2r = np.ndarray(shape=(3, 2), dtype=float)
 # Matrix3x3r = np.ndarray(shape=(3, 3), dtype=float)
+Matrix2x3r = np.ndarray
+Matrix2x2r = np.ndarray
+Matrix3x2r = np.ndarray
+Matrix3x3r = np.ndarray
 Matrix6x3r = np.ndarray
 # Edge = list[int, int]
 
@@ -44,11 +50,15 @@ Matrix6x3r = np.ndarray
 # **********************
 # Debug/Helper Methods
 # **********************
-def unimplemented(msg: str):
+def unimplemented(msg: str = "Method yet to be implemented"):
     raise Exception(msg)
 
 
-def todo(msg: str | None = None):
+def todo(msg: str = "Method needs some work"):
+    raise Exception(msg)
+
+
+def unreachable(msg: str = "Method should never reach this part"):
     raise Exception(msg)
 
 
@@ -69,9 +79,9 @@ def todo(msg: str | None = None):
 #         return obj
 
 
-class Index(int):
-    # Basically, this is unsigned stuff only. that's it.
-    pass
+# class Index(int):
+#     # Basically, this is unsigned stuff only. that's it.
+#     pass
 
 
 class Matrix:
@@ -85,8 +95,8 @@ class Matrix:
 
 # Colors
 MINT_GREEN = np.array([[0.170], [0.673], [0.292]])
-# <double, 3, 1> SKY_BLUE(0.297, 0.586, 0.758);
-# <double, 3, 1> OFF_WHITE(0.896, 0.932, 0.997);
+SKY_BLUE = np.array([[0.297], [0.586], [0.758]])
+OFF_WHITE = np.array([[0.896], [0.932], [0.997]])
 GOLD_YELLOW = np.array([[0.670], [0.673], [0.292]])
 
 
@@ -513,8 +523,41 @@ def interval_lerp():
     pass
 
 
-def compute_point_cloud_bounding_box():
-    pass
+def compute_point_cloud_bounding_box(points: np.ndarray) -> tuple[SpatialVector, SpatialVector]:
+    """ Compute the bounding box for a matrix of points in R^n.
+    The points are assumed to be the rows of the points matrix.
+
+    :param points: points to compute the bounding box for.
+    :type points: np.ndarray
+
+    :return (min_point, max_point): tuple of (point with minimum coordinates for the bounding box, point with maximum coordinates for the bounding box).
+    :rtype: tuple[Vector, Vector]
+    """
+
+    # TODO: cahnge type of points to matrix
+    num_points = points.shape[0]
+    dimension = points.shape[1]
+
+    if (num_points == 0):
+        todo("deal with 0 case")
+    if (dimension == 0):
+        todo("deal with 0 case")
+
+    # Get minimum and maximum coordinates for the points
+    # TODO: test this with NumPy, and also maybe mathutils
+    # Get minimum and maximum coordinates for the points
+    min_point = points[[0], :]
+    max_point = points[[0], :]
+    assert min_point.shape == (1, 3)
+    assert max_point.shape == (1, 3)
+
+    for pi in range(num_points):
+        for j in range(dimension):
+            min_point[0][j] = min(min_point[0][j], points[pi, j])
+            max_point[0][j] = max(max_point[0][j], points[pi, j])
+
+    # NOTE: returning "Vector", which is just shape (1, 3) iirc
+    return min_point, max_point
 
 
 def remove_mesh_faces(V: np.ndarray, F: np.ndarray, faces_to_remove: list[int], V_submesh: np.ndarray, F_submesh: np.ndarray):

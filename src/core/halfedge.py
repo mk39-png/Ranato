@@ -9,9 +9,8 @@ Mesh halfedge representation. Supports meshes with boundary and basic
 topological information. Can be initialized from face topology information.
 """
 
-from ..core.common import *
-from ..core.vertex_circulator import *
-Index = int
+from src.core.common import *
+from src.core.vertex_circulator import *
 
 
 def build_halfedge_to_edge_maps(opp: list[Index]) -> tuple[list[Index], list[tuple[Index, Index]]]:

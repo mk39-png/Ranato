@@ -4,13 +4,11 @@ with degree 1 numerator and degree 0 denominator.
 """
 
 # TODO: address the whole : public Conic part of the C++ code
-
-
-from ..core.common import *
-from ..core.bivariate_quadratic_function import *
-from ..core.conic import *
-from ..core.polynomial_function import *
-from ..core.rational_function import *
+from src.core.common import *
+from src.core.bivariate_quadratic_function import *
+from src.core.conic import *
+from src.core.polynomial_function import *
+from src.core.rational_function import *
 
 
 class LineSegment(Conic):

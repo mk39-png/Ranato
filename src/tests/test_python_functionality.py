@@ -66,3 +66,7 @@ import mathutils
 # print(huh)
 
 # yes = mathutils.Vector(np.array([[1, 2, 3]]))
+
+
+left = np.array([[1, 2, 3]])
+right = np.ones(shape=(2, 3))

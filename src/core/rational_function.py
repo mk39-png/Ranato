@@ -2,15 +2,13 @@
     Quotient of scalar or vector valued polynomial functions over an interval.
 """
 
+
+from src.core.common import *
+from src.core.polynomial_function import *
+from src.core.interval import Interval
+
 from dataclasses import dataclass
-import logging
 import numpy as np
-
-# from polynomial_function import PolynomialFunction
-from .polynomial_function import *
-from .interval import Interval
-
-logger = logging.getLogger(__name__)
 
 
 # TODO: instead of a class... why not just make this a dict?

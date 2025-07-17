@@ -1,9 +1,18 @@
+
+from src.core.common import *
+from src.core.conic import Conic
 import numpy as np
 import math
 
 
-def generate_angle(i: float, resolution: int, angle_offset: float) -> float:
-    return angle_offset + 2 * math.pi * i / resolution
+def generate_circle(radius: float) -> Conic:
+    """
+    Generate circle of given radius
+
+    :param radius: radius of the circle
+    :return: parametrized circle (missing point at bottom)
+    """
+    unimplemented()
 
 
 def generate_torus_point(major_radius: float, minor_radius: float, i: int, j: int, resolution: int, angle_offset: float):
@@ -16,7 +25,89 @@ def generate_torus_point(major_radius: float, minor_radius: float, i: int, j: in
                      minor_radius * math.sin(theta)])
 
 
-def generate_tetrahedron_VF():
+def generate_angle(i: float, resolution: int, angle_offset: float) -> float:
+    return angle_offset + 2 * math.pi * i / resolution
+
+
+def generate_angle_derivative(resolution: int) -> float:
+    unimplemented()
+
+
+def generate_elliptic_contour_quadratic_surface():
+    """
+    Generate a quadratic surface with an ellipse as the parametric contour.
+    :return: surface_mapping_coeffs: Coefficients for the quadratic surface
+    :return: normal_mapping_coeffs: Coefficients for the quadratic surface normal
+    """
+    surface_mapping_coeffs: Matrix6x3r
+    normal_mapping_coeffs: Matrix6x3r
+
+    unimplemented("na")
+
+    return surface_mapping_coeffs, normal_mapping_coeffs
+
+# ***************
+# VF construction
+# ***************
+
+
+def generate_equilateral_triangle_VF(length: float = 1) -> tuple[np.ndarray, np.ndarray]:
+    V: np.ndarray
+    F: np.ndarray
+    unimplemented()
+    return V, F
+
+
+def generate_right_triangle_VF(width: float = 1.0, height: float = 1.0) -> tuple[np.ndarray, np.ndarray]:
+    V: np.ndarray
+    F: np.ndarray
+    unimplemented()
+    return V, F
+
+
+def generate_rectangle_VF(width: float = 1.0, height: float = 1.0) -> tuple[np.ndarray, np.ndarray]:
+    V: np.ndarray
+    F: np.ndarray
+    unimplemented()
+    return V, F
+
+
+def generate_square_VF(length: float = 1) -> tuple[np.ndarray, np.ndarray]:
+    V: np.ndarray
+    F: np.ndarray
+    unimplemented()
+    return V, F
+
+
+def generate_global_layout_grid(resolution: int) -> list[list[PlanarPoint]]:
+    """
+    Used in quadratic_spline_surface and optimize_spline_surface test cases.
+    """
+    assert resolution != 0
+
+    center: float = resolution / 2.0
+    layout_grid: list[list[PlanarPoint]] = []
+    # TODO: have planarpoint check that shape is (1, 2)
+
+    for i in range(resolution):
+        layout_grid.append([])
+        for j in range(resolution):
+            layout_grid[i].append(np.array([[i - center], [j - center]]))
+
+    return layout_grid
+#
+
+
+def generate_tetrahedron_VF() -> tuple[np.ndarray, np.ndarray]:
+    # TODO: how to include typing in np.ndarray? like, int64 and whatnot?
+    # np.ndarray[np.dtype[np.float64]]?
+    """
+    Generate simple tetrahedron mesh.
+
+    :return: tuple of (tetrahedron vertices (V), tetrahedron faces (F))
+    :rtype: tuple[np.ndarray[dtype=np.float64], np.ndarray[dtype=np.int64]]
+    """
+
     V = np.array([
         [0, 0, 0],
         [1, 0, 0],
@@ -38,13 +129,13 @@ def generate_minimal_torus_VF(major_radius: float = 3.0, minor_radius: float = 1
     """
     Generate simple torus mesh.
 
-    Args: 
-        major_radius.
-        minor_radius.
+    :param major_radius: 
+    :type major_radius: float    
+    :param minor_radius:
+    :type minor_radius: float
 
-    Returns:
-        V: Torus vertices.
-        F: Torus facets.
+    :return: tuple of ( V: Torus vertices, F: Torus facets )
+    :rtype: tuple[np.ndarray, np.ndarray]
     """
     V = np.ndarray(shape=(9, 3))
     F = np.array([[0, 1, 3],
@@ -87,3 +178,10 @@ def generate_minimal_torus_VF(major_radius: float = 3.0, minor_radius: float = 1
         major_radius, minor_radius, 2, 2, resolution, 0.1)
 
     return V, F
+
+# ********************
+# Polygon construction
+# ********************
+
+
+def generate_rectangle(float: x0, )
