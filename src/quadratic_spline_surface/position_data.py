@@ -16,7 +16,7 @@ from src.core.vertex_circulator import *
 import numpy as np
 
 # NOTE: VectorX also encompasses SpatialVectors as well.
-VectorX = np.ndarray
+# VectorX = np.ndarray
 
 
 @dataclass

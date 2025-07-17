@@ -12,8 +12,10 @@ import src.core.line_segment
 import src.core.polynomial_function
 import src.core.rational_function
 
+from src.quadratic_spline_surface.optimize_spline_surface import OptimizationParameters, build_twelve_split_spline_energy_system
 from src.quadratic_spline_surface.quadratic_spline_surface import *
 from src.quadratic_spline_surface.position_data import *
+from src.quadratic_spline_surface.optimize_spline_surface import *
 
 from igl import per_vertex_normals
 
@@ -26,10 +28,160 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
     - quadratic spline surface operations
     - vertex position updates
     """
-    def __init__():
+
+    def __init__(self, V: np.ndarray,
+                 affine_manifold: AffineManifold,
+                 optimization_params: OptimizationParameters,
+                 face_to_patch_indices: list[list[int]], patch_to_face_indices: list[int],
+                 fit_matrix: np.ndarray, energy_hessian: np.ndarray, energy_hessian_inverse=np.ndarray,
+                 corner_data: list[list[TriangleCornerData]] | None = None, midpoint_data: list[list[TriangleMidpointData]] | None = None) -> None:
+        # TODO: fitmatrix and energy_hessian originally sparse matrices in Eigen ASOC code... may be useful to have them sparse here somehow.
+        # TODO: as in, I may have to use SciPy for energy_hessian_inverse
+        """ Maps from the input mesh faces to the patches and from patches to the faces are also generated.
+
+        @param[in] V: mesh vertex positions
+        @param[in] affine_manifold: affine manifold structure
+        @param[in] optimization_params: parameters for the spline optimization
+        @param[out] face_to_patch_indices: map from mesh faces to lists of
+        corresponding patches
+        @param[out] patch_to_face_indices: map from patches to the corresponding
+        mesh face
+        @param[out] fit_matrix: fit matrix for the energy
+        @param[out] energy_hessian: hessian for the energy computation
+        @param[out] energy_hessian_inverse: inverse of the hessian for the energy
+        computation
+
+        @param[in] corner_data: quadratic vertex position and derivative data
+        @param[in] midpoint_data: quadratic edge midpoint derivative data
         """
 
+        # Constructor for VF representation with uv coordinates and with additional data for the spline inferred as determined by the parameters.
+        # Generate normals
+        N = self.__generate_face_normals(V, affine_manifold)
+
+        # Generate fit matrix by setting the parametrized quadratic surface mapping factor to zero
+        # fit_energy: float, fit_derivatives: VectorX
+        optimization_params_fit: OptimizationParameters = optimization_params
+        optimization_params_fit.parametrized_quadratic_surface_mapping_factor = 0.0
+
+        self_bui
+        # Constructor for the spline directly from position data.
+        self.m_affine_manifold: AffineManifold
+        self.m_corner_data: list[list[TriangleCornerData]]
+        self.m_midpoint_data: list[list[TriangleMidpointData]]
+
+    def update_positions(self, V: np.ndarray):
         """
-        V: np.ndarray
-        # contains logic that constructs VF representation from UV coordinates
-        # versus directly from position data
+        Update the spline surface vertex positions for the fit
+        @param[in] V: mesh vertex positions
+
+        @param[out] fit_matrix: fit matrix for the energy
+        @param[out] energy_hessian_inverse: inverse of the hessian for the energy
+        computation
+        """
+        return fit_matrix, energy_hessian_inverse
+
+    @property
+    def get_affine_manifold(self):
+        """
+        Get the underlying affine manifold for the spline
+        @return affine manifold for the spline
+        """
+        return self.m_affine_manifold
+
+    def add_position_data_to_viewer():
+        """
+        Add the position data for the surface to the viewer
+        """
+        todo()
+
+    def clear():
+        """Clear the surface data."""
+
+    def view(color=SKY_BLUE, num_subdivisions: int = DISCRETIZATION_LEVEL):
+        """View the surface.
+
+        @param[in] color: color for the surface in the viewer
+        @param[in] num_subdivisions: number of subdivisions for the surface
+        """
+
+    # ***************
+    # Private methods
+    # ***************
+
+    def __init_twelve_split_patches(self, corner_data: list[list[TriangleCornerData]], midpoint_data: list[list[TriangleMidpointData]], is_cone_corner: list[list[bool]], face_to_patch_indices: list[list[int]], patch_to_face_indices: list[int]):
+        todo()
+
+    def __generate_face_normals(self, V: np.ndarray, affine_manifold: AffineManifold) -> np.ndarray:
+        todo()
+
+
+def generate_twelve_split_spline_patch_patch_boundaries(patch_boundaries: list[list[np.ndarray]]):
+    """
+    Generate patch boundary equations for the twelve split patches in the same
+    order as the patch surface mappings
+
+    @param[out] patch_boundaries: twelve patch domain boundary coefficients
+    """
+
+
+def generate_twelve_split_spline_patch_patch_to_corner_map(patch_to_corner_map):
+    """
+    Generate a map from patches to corners of the face they correspond to, or
+    -1 for interior patches, and the vertex of the patch at the corner.
+
+    @param[out] patch_to_corner_map: face corner and patch vertex in the corner
+    for each patch
+    """
+
+
+def generate_twelve_split_domain_areas(v0: PlanarPoint, v1: PlanarPoint, v2: PlanarPoint):
+    """
+    Generate areas for the twelve split patches in the same order as the
+    patch surface mappings for a given domain triangle.
+
+    @param[in] v0: first vertex position of the domain triangle
+    @param[in] v1: second vertex position of the domain triangle
+    @param[in] v2: third vertex position of the domain triangle
+    @param[out] patch_areas: twelve patch domain areas
+    """
+
+
+def generate_twelve_split_data_to_monomial_matrices():
+    """
+    Build matrices to go from position data to surface mappings
+    @param[out] coefficient_matrices: conversion matrix
+    """
+
+
+def compute_twelve_split_spline_patch_boundary_edges(F: np.ndarray, face_to_patch_indices: list[list[int]]) -> list[tuple[int, int]]:
+    """
+    @param[in] F: mesh faces
+    @param[in] face_to_patch_indices: map from triangle mesh faces to the
+    patches arising from it
+    @param[out] patch_boundary_edges: edges of the patch triangle domains that
+    are boundaries
+    """
+
+
+def generate_twelve_split_data_matrix(corrner_data: list[TriangleCornerData], midpoint_data: list[TriangleMidpointData]):
+    """
+    Combine structured position data into a single matrix
+
+    @tparam Scalar: coefficient scalar
+    @param[in] corner_data: data at triangle corners
+    @param[in] midpoint_data: data at triangle edge midpoints
+    @param[out] twelve_split_data: combined data
+    """
+
+
+def generate_twelve_split_spline_patch_surface_mapping(corner_data: list[TriangleCornerData], midpoint_data: list[TriangleMidpointData]):
+    """
+    Generate twelve spline surface patch mapping coefficient matrix from corner
+    and midpoint data according to the twelve-split Powell-Sabin formula.
+
+    @tparam Scalar: coefficient scalar
+    @param[in] corner_data: data at triangle corners
+    @param[in] midpoint_data: data at triangle edge midpoints
+    @param[out] surface_mappings: spline surface mappings
+    """

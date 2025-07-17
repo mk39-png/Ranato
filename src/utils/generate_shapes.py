@@ -182,6 +182,4 @@ def generate_minimal_torus_VF(major_radius: float = 3.0, minor_radius: float = 1
 # ********************
 # Polygon construction
 # ********************
-
-
-def generate_rectangle(float: x0, )
+# def generate_rectangle(float: x0, )
