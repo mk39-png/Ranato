@@ -4,7 +4,8 @@ Convex polygon formed by intersecting half planes.
 """
 
 from src.core.line_segment import LineSegment
-from src.core.common import float_equal, generate_linspace
+from src.core.common import float_equal, generate_linspace, PlanarPoint
+import numpy as np
 
 
 class ConvexPolygon:
@@ -17,6 +18,13 @@ class ConvexPolygon:
     # TODO: Implement constructor from collection of points
 
     def __init__(self, boundary_segments_coeffs: list[np.ndarray], vertices: np.ndarray):
+        # Constructor when boundary_segments_coeffs passed in
+
+        # Constructor when vertices passed in
+
+        # Else, cannot have both boundary_segment_coeffs and vertices pass in
+        # Also, cannot have both boundary_segment_coeffs and vertices be none.
+
         # Assertions to match ASOC code C++ code
         assert len(self.m_boundary_segments_coeffs) == 3
         assert self.m_boundary_segments_coeffs[0].shape == (3, 1)
@@ -151,12 +159,11 @@ class ConvexPolygon:
         return patch_boundaries
 
     def triangulate(self, num_refinements: int, V: np.ndarray, F: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-        raise Exception(
-            "Pretty sure convex_polygon triangulate() is not used.")
         """
         Triangulate domain with
         TODO Can generalize to arbitrary domain if needed
         """
+
         assert V.dtype == np.float64
         assert F.dtype == np.int64
 

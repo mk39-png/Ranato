@@ -1,10 +1,8 @@
 """
 Methods to operate on bivariate quadratics represented by coefficient vectors.
 """
-# from ..core.common import logger
-from ..core.polynomial_function import *
-
-# TODO: wait... for parameters that arte passed into every function... what do we do?
+from src.core.common import logger
+from src.core.polynomial_function import *
 
 
 def const_coeffs(dimension: int, quadratic_coeffs: np.ndarray, col: int):
@@ -100,19 +98,28 @@ def generate_linear_monomials(domain_point: PlanarPoint):
     return w
 
 
-def evaluate_quadratic_mapping(quadratic_coeffs: np.ndarray, domain_point: PlanarPoint) -> float:
+def evaluate_quadratic_mapping(dimension: int, quadratic_coeffs: np.ndarray, domain_point: PlanarPoint) -> np.ndarray:
     """
     Evaluate a quadratic bivariate equation with scalar coefficients.
+    Dimension can be greater than 1, as seen in quadratic_spline_surface_patch.py
 
+    :param dimension: dimension of quadratic_coeffs
+    :type dimension: int
     @param quadratic_coeffs: quadratic coefficients in order [1, u, v, uv, uu, vv]
     @param domain_point: uv coordinates to evaluate the quadratic at
+
     @return: quadratic_evaluation: quadratic function evaluation
     """
-    assert quadratic_coeffs.shape == (6, 1)
+
+    assert quadratic_coeffs.shape == (6, dimension)
     w = generate_quadratic_monomials(domain_point)
     assert w.shape == (1, 6)
 
-    return (w @ quadratic_coeffs)[0]
+    # shapes: (1, 6) @ (6, dimension)
+    quadratic_evaluation: np.ndarray = (w @ quadratic_coeffs)
+    assert quadratic_evaluation.shape == (1, dimension)
+
+    return quadratic_evaluation
 
 
 # TODO: This is the same as the above, just remove this or something

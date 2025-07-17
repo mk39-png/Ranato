@@ -21,7 +21,7 @@ Meaning, vectors treated as (1, n) and (n, 1) rather than (n, )
 
 # https://medium.com/@goldengrisha/using-numpy-typing-for-type-safe-list-handling-in-python-35f8c99c76ac
 # import numpy.typing as npt
-from ..core.common import *
+from src.core.common import *
 
 
 def remove_polynomial_trailing_coefficients(A_coeffs: np.ndarray):
