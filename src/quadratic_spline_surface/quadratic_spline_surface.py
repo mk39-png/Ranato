@@ -45,22 +45,23 @@ class QuadraticSplineSurface:
         @param[in] patches: quadratic surface patches
         """
         # Protected
-        self.m_patches: list[QuadraticSplineSurfacePatch]
+        self.m_patches: list[QuadraticSplineSurfacePatch] = patches
 
         # TODO: utilize some sort of pythonic hash table type
         #  Hash table data
         # hash_table is a 2D list of list[int]
-        hash_table: list[list[list[int]]] = [
-            []][HASH_TABLE_SIZE][HASH_TABLE_SIZE]
-        reverse_hash_table: list[list[tuple[int, int]]]
+        self.hash_table: list[list[list[int]]] = self.compute_patch_hash_tables()
+
+        # TODO: what about the below? what is the reverse exactly?
+        self.reverse_hash_table: list[list[tuple[int, int]]]
 
         # Hash table parameters
-        patches_bbox_x_min: float = 0.0
-        patches_bbox_x_max: float = 0.0
-        patches_bbox_y_min: float = 0.0
-        patches_bbox_y_max: float = 0.0
-        hash_x_interval: float = 0.0
-        hash_y_interval: float = 0.0
+        self.patches_bbox_x_min: float = 0.0
+        self.patches_bbox_x_max: float = 0.0
+        self.patches_bbox_y_min: float = 0.0
+        self.patches_bbox_y_max: float = 0.0
+        self.hash_x_interval: float = 0.0
+        self.hash_y_interval: float = 0.0
 
     @property
     def num_patches(self) -> PatchIndex:
@@ -119,7 +120,7 @@ class QuadraticSplineSurface:
         """
         Clear the surface
         """
-        todo()
+        self.m_patches.clear()
 
     def subsurface(self, patch_indices: list[PatchIndex]) -> "QuadraticSplineSurface":
         """
@@ -130,7 +131,13 @@ class QuadraticSplineSurface:
         :return: subsurface with the given patches
         :rtype: QuadraticSplineSurface
         """
-        todo()
+        sub_patches: list[QuadraticSplineSurfacePatch] = []
+
+        for i, _ in enumerate(patch_indices):
+            sub_patches.append(self.m_patches[patch_indices[i]])
+
+        subsurface_spline = QuadraticSplineSurface(sub_patches)
+        return subsurface_spline
 
     def triangulate_patch(self, patch_index: PatchIndex, num_refinements: int) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
@@ -144,9 +151,14 @@ class QuadraticSplineSurface:
         :return: vertices (V), faces (F), and vertex normals (N) of the triangulation
         :rtype: tuple[np.ndarray, np.ndarray, np.ndarray]
         """
-        todo()
 
-    def discretize(self, surface_disc_params: SurfaceDiscretizationParameters, V: np.ndarray, F: np.ndarray, N: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        todo("Parameter modification and return below")
+        self.get_patch(patch_index).triangulate(num_refinements, V, F, N)
+
+    def discretize(self, surface_disc_params: SurfaceDiscretizationParameters,
+                   V: np.ndarray,
+                   F: np.ndarray,
+                   N: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Triangulate the surface.
 
@@ -165,6 +177,15 @@ class QuadraticSplineSurface:
         :return: vertices of the triangulation (V_tri), faces of the triangulation(F_tri), and vertex normals (N_tri)
         :rtype: tuple[np.ndarray, np.ndarray, np.ndarray]
         """
+
+        V_vec: np.ndarray
+        num_subdivisions: int = surface_disc_params.num_subdivisions
+        if (self.empty()):
+            return
+
+        # Build triangulated surface in place
+        patch_index: PatchIndex = 0
+
         todo()
 
     def discretize_patch_boundaries(self) -> tuple[list[SpatialVector], list[list[int]]]:

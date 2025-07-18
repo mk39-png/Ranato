@@ -374,10 +374,19 @@ class QuadraticSplineSurfacePatch:
         :param num_refinements: number of refinements of the domain to perform.
         :type num_refinements: int
 
+        # TODO: format params below to sphinx format
+        @param[out] V: triangulated patch vertex positions
+        @param[out] F: triangulated patch faces
+        @param[out] N: triangulated patch vertex normals
+
         :return: triangulated patch vertex positions (V), faces (F), and vertex normals (N)
         :rtype: tuple[np.ndarray, np.ndarray, np.ndarray]
         """
+
         todo("Finish implementation of convex_polygon.triangulate")
+        # Triangulate the domain
+        V_domain: np.ndarray
+        F: np.ndarray
         V_domain, F = self.m_domain.triangulate(num_refinements, V_domain, F)
 
     def add_patch_to_viewer(self, patch_name: str = "surface_patch") -> None:
