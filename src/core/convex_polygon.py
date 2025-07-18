@@ -51,7 +51,7 @@ def compute_parametric_line_between_points(point_0: PlanarPoint,
     :rtype: LineSegment
     """
     # Set numerator
-    numerators = np.array([
+    numerators: np.ndarray = np.array([
         [point_0[0, 0], point_0[0, 1]],
         [point_1[0, 0] - point_0[0, 0], point_1[0, 1] - point_0[0, 1]]])
     # TODO: double check that the elements in numerators are indeed as per ASOC code
@@ -128,17 +128,19 @@ class ConvexPolygon:
     sampling, boundary segments and vertices computation, triangulation, and
     boundary parametrization.
     """
-    # 3 constructors
-    # TODO: Implement constructor from collection of points
+    # TODO (from ASOC code): Implement constructor from collection of points
 
-    def __init__(self, boundary_segments_coeffs: list[np.ndarray], vertices: np.ndarray):
-        # Constructor when boundary_segments_coeffs passed in
+    def __init__(self, boundary_segments_coeffs: list[np.ndarray],
+                 vertices: np.ndarray) -> None:
+        """
+        Constructor that is called by classmethod init_from_boundary_segments_coeffs or init_from_vertices.
+        NOTE: Do not call this constructor directly. As in, do not call ConvexPolygon(boundary_segments_coeffs, vertices). Instead, use ConvexPolygon.init_from_boundary_segments_coeffs or ConvexPolygon.init_from_vertices().
 
-        # Constructor when vertices passed in
-
-        # Else, cannot have both boundary_segment_coeffs and vertices pass in
-        # Also, cannot have both boundary_segment_coeffs and vertices be none.
-
+        :param boundary_segments_coeffs: boundary segment coefficients list of size 3 with element np.ndarray of shape (3, 1) and type np.float64
+        :type boundary_segments_coeffs: list[np.ndarray]
+        :param vertices: vertices of type np.ndarray of shape (3, 2)
+        :type vertices: np.ndarray
+        """
         # Assertions to match ASOC code C++ code
         assert len(boundary_segments_coeffs) == 3
         assert boundary_segments_coeffs[0].shape == (3, 1)
@@ -151,28 +153,27 @@ class ConvexPolygon:
         self.m_vertices: np.ndarray = vertices
 
     @classmethod
-    def __from_boundary_segments_coeffs(cls, boundary_segments_coeffs: list[np.ndarray]):
+    def init_from_boundary_segments_coeffs(cls, boundary_segments_coeffs: list[np.ndarray]):
         """
         Only boundary_segments_coeffs passed in. Construct m_vertices.
         """
-        v0 = cls.intersect_patch_boundaries(
-            cls, boundary_segments_coeffs[1], boundary_segments_coeffs[2])
-        v1 = cls.intersect_patch_boundaries(
-            cls, boundary_segments_coeffs[2], boundary_segments_coeffs[0])
-        v2 = cls.intersect_patch_boundaries(
-            cls, boundary_segments_coeffs[0], boundary_segments_coeffs[1])
+        v0: PlanarPoint = cls.intersect_patch_boundaries(boundary_segments_coeffs[1], boundary_segments_coeffs[2])
+        v1: PlanarPoint = cls.intersect_patch_boundaries(boundary_segments_coeffs[2], boundary_segments_coeffs[0])
+        v2: PlanarPoint = cls.intersect_patch_boundaries(boundary_segments_coeffs[0], boundary_segments_coeffs[1])
 
         # TODO: may be problem with vertices shape
         # v0 shape == (1, 2)
         # v1 shape == (1, 2)
         # v2 shape == (1, 2)
         # So, we want vertices shape == (3, 2)
-        vertices = np.array([v0, v1, v2])
+        vertices: np.ndarray = np.array([v0, v1, v2])
         assert vertices.shape == (3, 2)
+
+        # return vertices
         return cls(boundary_segments_coeffs, vertices)
 
     @classmethod
-    def __from_vertices(cls, vertices: np.ndarray):
+    def init_from_vertices(cls, vertices: np.ndarray):
         """
         Only vertices passed in. Construct m_boundary_segments_coeffs.
         """
@@ -182,12 +183,14 @@ class ConvexPolygon:
 
         # TODO: is the below the dynamic sizing of arrays that I needed to avoid?
         for i in range(num_vertices):
-            line_coeffs = compute_line_between_points(vertices[[i], :],
-                                                      vertices[[(i + 1) % num_vertices], :])
+            line_coeffs: np.ndarray = compute_line_between_points(vertices[[i], :],
+                                                                  vertices[[(i + 1) % num_vertices], :])
             boundary_segments_coeffs.append(line_coeffs)
 
         assert len(boundary_segments_coeffs) == 3
         assert boundary_segments_coeffs[0].shape == (3, 1)
+
+        # return boundary_segments_coeffs
         return cls(boundary_segments_coeffs, vertices)
 
     def contains(self, point: PlanarPoint) -> bool:
@@ -203,8 +206,12 @@ class ConvexPolygon:
 
         return True
 
-    def intersect_patch_boundaries(self, first_boundary_segment_coeffs: np.ndarray,
+    @staticmethod
+    def intersect_patch_boundaries(first_boundary_segment_coeffs: np.ndarray,
                                    second_boundary_segment_coeffs: np.ndarray) -> PlanarPoint:
+        """
+        NOTE: method has decorator @staticmethod to work with @classmethod init_from_boundary_segments_coeffs.
+        """
         assert first_boundary_segment_coeffs.shape == (3, 1)
         assert second_boundary_segment_coeffs.shape == (3, 1)
 
@@ -297,7 +304,7 @@ class ConvexPolygon:
     def sample(self, num_samples: int) -> list[PlanarPoint]:
         domain_points: list[PlanarPoint] = []
 
-        # TODO: Make actual bounding box
+        # TODO (from ASOC code): Make actual bounding box
         lower_left_corner: PlanarPoint = np.array([[-1, -1]])
         upper_right_corner: PlanarPoint = np.array([[1, 1]])
 
