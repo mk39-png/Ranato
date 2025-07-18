@@ -4,8 +4,122 @@ Convex polygon formed by intersecting half planes.
 """
 
 from src.core.line_segment import LineSegment
-from src.core.common import float_equal, generate_linspace, PlanarPoint
+from src.core.common import *  # import float_equal, generate_linspace, PlanarPoint, Index
+from src.core.interval import *
 import numpy as np
+
+
+# *******
+# Helpers
+# *******
+
+def compute_line_between_points(point_0: PlanarPoint, point_1: PlanarPoint) -> np.ndarray:
+    """
+    Compute the implicit form of a line between two points
+
+    :param point_0: first point of shape (1, 2)
+    :type point_0: PlanarPoint
+    :param point_1: second point of shape (1, 2)
+    :type point_1: PlanarPoint
+
+    :return: line_coeff of shape (3, 1) made from the points
+    :rtype: np.ndarray 
+    """
+    x0 = point_0[0, 0]
+    y0 = point_0[0, 1]
+    x1 = point_1[0, 0]
+    y1 = point_1[0, 1]
+    line_coeffs: np.ndarray = np.array([[x0 * y1 - x1 * y0],
+                                        [y0 - y1],
+                                        [x1 - x0]])
+
+    assert line_coeffs.shape == (3, 1)
+    return line_coeffs
+
+
+def compute_parametric_line_between_points(point_0: PlanarPoint,
+                                           point_1: PlanarPoint) -> LineSegment:
+    """
+    Compute the parametric form of a line between two points
+
+    :param point_0: first point of shape (1, 2)
+    :type point_0: PlanarPoint
+    :param point_1: second point of shape (1, 2)
+    :type point_1: PlanarPoint
+
+    :return: line_segment
+    :rtype: LineSegment
+    """
+    # Set numerator
+    numerators = np.array([
+        [point_0[0, 0], point_0[0, 1]],
+        [point_1[0, 0] - point_0[0, 0], point_1[0, 1] - point_0[0, 1]]])
+    # TODO: double check that the elements in numerators are indeed as per ASOC code
+    # numerators(0, 0) = point_0(0)
+    # numerators(0, 1) = point_0(1)
+    # numerators(1, 0) = point_1(0) - point_0(0)
+    # numerators(1, 1) = point_1(1) - point_0(1)
+
+    assert numerators.shape == (2, 2)
+
+    # Set domain interval [0, 1]
+    # TODO: below may not be the most Python way of making the Interval object domain
+    domain: Interval = Interval()
+    domain.set_lower_bound(0, False)
+    domain.set_upper_bound(1, False)
+
+    line_segment = LineSegment(numerators, domain)
+    return line_segment
+
+
+def refine_triangles(V: np.ndarray, F: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Refine a mesh with midpoint subdivision.
+    Logic of this method does not modify V and F by reference and instead creates new np.ndarray V_refined and F_refined.
+
+    :param V: vertices
+    :type V: np.ndarray
+
+    :param F: faces
+    :type F: np.ndarray
+
+    :return: Vertices and Faces refined
+    :rtype: tuple[np.ndarray, np.ndarray]
+    """
+    assert V.dtype == np.float64
+    assert F.dtype == np.int64
+
+    num_faces: Index = F.shape[0]  # rows
+
+    V_refined: np.ndarray = np.ndarray(shape=(num_faces * 6, 2))
+    F_refined: np.ndarray = np.ndarray(shape=(num_faces * 4, 3))
+
+    # TODO: could probably use NumPy indexing for the things below, right?
+    for i in range(num_faces):
+        # We have vectors below, this time of shape (n, ) because we're using NumPy broadcasting
+        v0: np.ndarray = V[F[i, 0], :]
+        v1: np.ndarray = V[F[i, 1], :]
+        v2: np.ndarray = V[F[i, 2], :]
+        assert v0.ndim == 1
+        assert v1.ndim == 1
+        assert v2.ndim == 1
+
+        # Add vertices for refined face
+        # TODO: do I need ", :" to access the row?
+        V_refined[6 * i + 0, :] = v0
+        V_refined[6 * i + 1, :] = v1
+        V_refined[6 * i + 2, :] = v2
+        V_refined[6 * i + 3, :] = (v0 + v1) / 2.0
+        V_refined[6 * i + 4, :] = (v1 + v2) / 2.0
+        V_refined[6 * i + 5, :] = (v2 + v0) / 2.0
+
+        # Add refined faces
+        F_refined[4 * i + 0, :] = np.array([6 * i + 0, 6 * i + 3, 6 * i + 5])
+        F_refined[4 * i + 1, :] = np.array([6 * i + 1, 6 * i + 4, 6 * i + 3])
+        F_refined[4 * i + 2, :] = np.array([6 * i + 2, 6 * i + 5, 6 * i + 4])
+        F_refined[4 * i + 3, :] = np.array([6 * i + 3, 6 * i + 4, 6 * i + 5])
+
+    return V_refined, F_refined
 
 
 class ConvexPolygon:
@@ -26,15 +140,18 @@ class ConvexPolygon:
         # Also, cannot have both boundary_segment_coeffs and vertices be none.
 
         # Assertions to match ASOC code C++ code
-        assert len(self.m_boundary_segments_coeffs) == 3
-        assert self.m_boundary_segments_coeffs[0].shape == (3, 1)
-        assert self.m_vertices.shape == (3, 2)
+        assert len(boundary_segments_coeffs) == 3
+        assert boundary_segments_coeffs[0].shape == (3, 1)
+        assert vertices.shape == (3, 2)
 
-        self.m_boundary_segments_coeffs = boundary_segments_coeffs
-        self.m_vertices = vertices
+        # *******
+        # Private
+        # *******
+        self.m_boundary_segments_coeffs: list[np.ndarray] = boundary_segments_coeffs
+        self.m_vertices: np.ndarray = vertices
 
     @classmethod
-    def from_boundary_segments_coeffs(cls, boundary_segments_coeffs: list[np.ndarray]):
+    def __from_boundary_segments_coeffs(cls, boundary_segments_coeffs: list[np.ndarray]):
         """
         Only boundary_segments_coeffs passed in. Construct m_vertices.
         """
@@ -55,7 +172,7 @@ class ConvexPolygon:
         return cls(boundary_segments_coeffs, vertices)
 
     @classmethod
-    def from_vertices(cls, vertices: np.ndarray):
+    def __from_vertices(cls, vertices: np.ndarray):
         """
         Only vertices passed in. Construct m_boundary_segments_coeffs.
         """
@@ -119,7 +236,7 @@ class ConvexPolygon:
             logger.error("Degenerate line")
             # TODO: maybe exception is a bit too extreme... originally there was a "return"
             # here in the ASOC code
-            raise Exception("Error with intersect_patch_boundaries()")
+            unreachable("Error with intersect_patch_boundaries()")
 
         # Build intersection
         # TODO: I really need a subclass of np.ndarray called PlanarPoint that automatically checks
@@ -158,112 +275,53 @@ class ConvexPolygon:
         assert len(patch_boundaries) == 3
         return patch_boundaries
 
-    def triangulate(self, num_refinements: int, V: np.ndarray, F: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    def triangulate(self, num_refinements: int) -> tuple[np.ndarray, np.ndarray]:
         """
-        Triangulate domain with
+        Triangulate domain with.
+        This takes in self.m_vertices and creates a new F matrix of shape (1, 3) to return.
         TODO Can generalize to arbitrary domain if needed
         """
-        assert V.dtype == np.float64
-        assert F.dtype == np.int64
-
-        V = self.m_vertices
-
-        # TODO: Is this really how it works? resetting F to 0, 1, 2???
-        F = np.array([[0, 1, 2]])
+        V: np.ndarray = self.m_vertices
+        F: np.ndarray = np.array([[0, 1, 2]])
         assert F.shape == (1, 3)
 
-        V_refined: np.ndarray
-        F_refined: np.ndarray
-
         for i in range(num_refinements):
+            V_refined: np.ndarray
+            F_refined: np.ndarray
             V_refined, F_refined = refine_triangles(V, F)
+            V = V_refined
+            F = F_refined
 
-        # TODO: possibly unbounded V_refined and F_refined
-        return V_refined, F_refined
+        return V, F
 
     def sample(self, num_samples: int) -> list[PlanarPoint]:
         domain_points: list[PlanarPoint] = []
 
         # TODO: Make actual bounding box
-        lower_left_corner = np.array([[-1, -1]])
-        upper_right_corner = np.array([[1, 1]])
+        lower_left_corner: PlanarPoint = np.array([[-1, -1]])
+        upper_right_corner: PlanarPoint = np.array([[1, 1]])
+
+        # Checking if shape (1, 2) since that is the shape of PlanarPoint type
         assert lower_left_corner.shape == (1, 2)
         assert upper_right_corner.shape == (1, 2)
+
         x0: float = lower_left_corner[0, 0]
         y0: float = lower_left_corner[0, 1]
         x1: float = upper_right_corner[0, 0]
         y1: float = upper_right_corner[0, 1]
 
         # Compute points
-        x_axis = generate_linspace(x0, x1, num_samples)
-        y_axis = generate_linspace(y0, y1, num_samples)
+        x_axis: VectorX = generate_linspace(x0, x1, num_samples)
+        y_axis: VectorX = generate_linspace(y0, y1, num_samples)
         # Asserting ndim == 1 because ASOC code has x_axis and y_axis as VectorXr
         assert x_axis.ndim == 1
         assert y_axis.ndim == 1
 
         for i in range(num_samples):
             for j in range(num_samples):
-                # TODO: point is supposed to be PlanarPoint type
-                point = np.array([[x_axis[i], y_axis[j]]])
+                point: PlanarPoint = np.array([[x_axis[i], y_axis[j]]])
                 assert point.shape == (1, 2)
                 if self.contains(point):
                     domain_points.append(point)
 
         return domain_points
-
-    # *******
-    # Private
-    # *******
-    m_boundary_segments_coeffs: list[np.ndarray]
-    m_vertices: np.ndarray
-
-# *******
-# Helpers
-# *******
-
-
-def compute_line_between_points(point_0: PlanarPoint, point_1: PlanarPoint) -> np.ndarray:
-    # Compute the implicit form of a line between two points
-    x0 = point_0[0, 0]
-    y0 = point_0[0, 1]
-    x1 = point_1[0, 0]
-    y1 = point_1[0, 1]
-    line_coeffs = np.array([[x0 * y1 - x1 * y0],
-                            [y0 - y1],
-                            [x1 - x0]])
-
-    assert line_coeffs.shape == (3, 1)
-    return line_coeffs
-
-
-def compute_parametric_line_between_points(point_0: PlanarPoint, point_1: PlanarPoint) -> LineSegment:
-    # Set numerator
-    numerators = np.array([
-        [point_0[0, 0], point_0[0, 1]],
-        [point_1[0, 0] - point_0[0, 0], point_1[0, 1] - point_0[0, 1]]])
-    # TODO: double check that the elements in numerators are indeed as per ASOC code
-    # numerators(0, 0) = point_0(0)
-    # numerators(0, 1) = point_0(1)
-    # numerators(1, 0) = point_1(0) - point_0(0)
-    # numerators(1, 1) = point_1(1) - point_0(1)
-
-    assert numerators.shape == (2, 2)
-
-    # Set domain interval [0, 1]
-    domain = Interval()
-    domain.set_lower_bound(0, False)
-    domain.set_upper_bound(1, False)
-
-    # Compute the parametric form of a line between two points
-    line_segment = LineSegment(numerators, domain)
-    return line_segment
-
-
-def refine_triangles(V: np.ndarray, F: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    raise Exception("pretty sure refine_triangles() is not used either.")
-    """
-    Refine a mesh with midpoint subdivision
-    """
-    V_refined = np.array()
-    F_refined = np.array()
-    return V_refined, F_refined

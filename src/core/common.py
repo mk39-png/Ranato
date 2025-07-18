@@ -375,7 +375,7 @@ def read_camera_matrix():
     pass
 
 
-def generate_linspace(t_0: float, t_1: float, num_points: int):
+def generate_linspace(t_0: float, t_1: float, num_points: int) -> np.ndarray:
     """
     Originally under "Pythonic methods" in ASOC code.
     """
