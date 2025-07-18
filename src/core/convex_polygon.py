@@ -163,7 +163,6 @@ class ConvexPolygon:
         Triangulate domain with
         TODO Can generalize to arbitrary domain if needed
         """
-
         assert V.dtype == np.float64
         assert F.dtype == np.int64
 

@@ -25,6 +25,7 @@ PLANAR_BOUNDING_BOX_PRECISION: float = 0
 # Epsilon for Bezier clipping intersections
 FIND_INTERSECTIONS_BEZIER_CLIPPING_PRECISION: float = 1e-7
 DISCRETIZATION_LEVEL: int = 2  # Spline surface discretization level
+HASH_TABLE_SIZE: int = 70  # Size of spline surface hash table
 
 # Real number representations
 OneFormXr = np.ndarray
