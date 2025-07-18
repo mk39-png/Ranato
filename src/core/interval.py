@@ -6,7 +6,7 @@
 
 
 class Interval:
-    def __init__(self, lower_bound: float = -float("inf"), upper_bound: float = float("inf")):
+    def __init__(self, lower_bound: float = -float("inf"), upper_bound: float = float("inf")) -> None:
         """Default constructor. Which also has support for constructor where user passes in lower_bound and upper_bound"""
 
         # *****************
