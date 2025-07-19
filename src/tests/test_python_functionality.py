@@ -1,5 +1,7 @@
 import numpy as np
 import mathutils
+
+
 # #
 # V_coeffs = np.array([[0, 1, 2], [3, 4, 5], [6, 7, 8]])
 # assert V_coeffs.shape == (3, 3)
@@ -68,13 +70,26 @@ import mathutils
 # yes = mathutils.Vector(np.array([[1, 2, 3]]))
 
 
-left = np.array([[1, 2, 3]])
-right = np.ones(shape=(2, 3))
+# left = np.array([[1, 2, 3]])
+# right = np.ones(shape=(2, 3))
 
 
-local_to_global_map: list[int] = [-1 for _ in range(27)]
-# print(local_to_global_map)
+# local_to_global_map: list[int] = [-1 for _ in range(27)]
+# # print(local_to_global_map)
 
-num_faces = 2
-global_edge_indices: list[list[int]] = [[-1, -1, -1] for _ in range(num_faces)]
-print(global_edge_indices)
+# num_faces = 2
+# global_edge_indices: list[list[int]] = [[-1, -1, -1] for _ in range(num_faces)]
+# print(global_edge_indices)
+# https://stackoverflow.com/questions/8849833/python-list-reserving-space-resizing
+def list_resize(l: list, newsize: int, filling=None) -> None:
+    if newsize > len(l):
+        l.extend([filling for x in range(len(l), newsize)])
+    else:
+        del l[newsize:]
+
+
+corner_data = [[1] for _ in range(6)]
+sizing = 10
+
+list_resize(corner_data, sizing, [])
+print(corner_data)

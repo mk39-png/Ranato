@@ -3,6 +3,7 @@ Representation for quadratic surface patches with convex domains.
 """
 from src.core.common import *
 from src.core.convex_polygon import *
+from src.core.convex_polygon import ConvexPolygon
 from src.core.evaluate_surface_normal import *
 from src.core.polynomial_function import *
 from src.core.rational_function import *
@@ -238,6 +239,8 @@ class QuadraticSplineSurfacePatch:
         # Get parametrized domain boundaries.
         domain_boundaries: list[LineSegment] = self.get_domain.parametrize_patch_boundaries(
         )
+        # Checking len == 3 since ASOC code has domain_boundarys as array of 3 LineSegment elements
+        assert len(domain_boundaries) == 3
 
         # Lift the domain boundaries to the surface
         __ref_surface_mapping_coeffs: Matrix6x3r = self.get_surface_mapping()
@@ -266,16 +269,13 @@ class QuadraticSplineSurfacePatch:
         # Generate the standard u + v <= 1 triangle
         # TODO: double check numpy array with the way eigen makes its matrices with the << operator
         normalized_domain_vertices: Matrix3x2r = np.array(
-            [[0, 0, 1], [0, 0, 1]])
+            [[0, 0], [1, 0], [0, 1]])
         assert normalized_domain_vertices.shape == (3, 2)
-
-        # TODO: get rid of the class methods and utilize some better way of constructing.
-        normalized_domain = ConvexPolygon.from_boundary_segments_coeffs(
+        normalized_domain: ConvexPolygon = ConvexPolygon.init_from_vertices(
             normalized_domain_vertices)
 
         # Build the normalized surface patch
         normalized_surface_mapping_coeffs: Matrix6x3r = self.get_normalized_surface_mapping()
-
         normalized_spline_surface_patch = QuadraticSplineSurfacePatch(
             normalized_surface_mapping_coeffs, normalized_domain)
 
@@ -314,10 +314,10 @@ class QuadraticSplineSurfacePatch:
         """
         Evaluate the surface at a given domain point.
 
-        :param domain_point: domain evaluation point
+        :param domain_point: domain evaluation point of shape (1, 2)
         :type domain_point: PlanarPoint
 
-        :return: surface_point: image of the domain point on the surface
+        :return: surface_point: image of the domain point on the surface of shape (1, 3)
         :rtype: SpatialVector
         """
         # TODO: double check that evaluate_quadratic_mapping returns something
@@ -330,10 +330,10 @@ class QuadraticSplineSurfacePatch:
         """
         Evaluate the surface normal at a given domain point.
 
-        :param domain_point: domain evaluation point
+        :param domain_point: domain evaluation point of shape (1, 2)
         :type domain_point: PlanarPoint
 
-        :return: surface_point: surface normal at the image of the domain point
+        :return: surface_point: surface normal (of shape (1, 3)) at the image of the domain point
         :rtype: SpatialVector
         """
         surface_normal: SpatialVector = evaluate_quadratic_mapping(
@@ -367,7 +367,12 @@ class QuadraticSplineSurfacePatch:
 
         return spline_surface_patch_points
 
-    def triangulate(self, num_refinements: int) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def triangulate(self,
+                    num_refinements: int,
+                    __ref_V: np.ndarray,
+                    __ref_F: np.ndarray,
+                    __ref_N: np.ndarray):
+        # -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Triangulate the surface patch.
 
@@ -379,15 +384,38 @@ class QuadraticSplineSurfacePatch:
         @param[out] F: triangulated patch faces
         @param[out] N: triangulated patch vertex normals
 
+        # TODO: remove the return note because it is no longer true.
         :return: triangulated patch vertex positions (V), faces (F), and vertex normals (N)
         :rtype: tuple[np.ndarray, np.ndarray, np.ndarray]
         """
 
-        todo("Finish implementation of convex_polygon.triangulate")
         # Triangulate the domain
         V_domain: np.ndarray
         F: np.ndarray
-        V_domain, F = self.m_domain.triangulate(num_refinements, V_domain, F)
+        # __ref_F: np.ndarray
+
+        # TODO: will F be changed by reference or what? What will happen to F as it gets reassigned here?
+        V_domain, F = self.m_domain.triangulate(num_refinements)
+
+        # Lift the domain vertices to the surface and also compute the normals
+        # reshape to (V_domain.rows(), self.dimension)
+        __ref_V.reshape((V_domain.shape[0], self.dimension))
+        __ref_N.reshape((V_domain.shape[0], self.dimension))
+
+        for i in range(V_domain.shape[0]):  # V_domain.rows()
+            # V_domain of shape
+            surface_point: SpatialVector = self.evaluate(V_domain[[i], :])
+            surface_normal: SpatialVector = self.evaluate_normal(V_domain[[i], :])
+
+            # TODO: something might go wrong with the broadcasting shapes
+            __ref_V[i, :] = surface_point.flatten()
+            __ref_N[i, :] = surface_normal.flatten()
+
+        # TODO: have the change in the method be reflected back into the parameter!
+        todo("Have the changes to __ref_F be reflected OUTSIDE of the method since it's being  binded to the local np.ndarray and not modified by reference.")
+        todo("So, have this return the triangulated V, F, and N arrays?")
+        np.copyto(__ref_F, F)
+        __ref_F.copy(F)
 
     def add_patch_to_viewer(self, patch_name: str = "surface_patch") -> None:
         """
@@ -397,18 +425,21 @@ class QuadraticSplineSurfacePatch:
         :type patch_name: str
         """
         # Generate mesh discretization
-
         num_refinements: int = 2
 
-        # TODO: finish triangulate implementation...
-        V, F, N = self.triangulate()
+        # TODO: does the logic below work? Triangulate modifies by reference and that may bring up some issues with this Python code.
+        V: np.ndarray = np.zeros(shape=(0, 0))
+        F: np.ndarray = np.zeros(shape=(0, 0))
+        N: np.ndarray = np.zeros(shape=(0, 0))
 
+        self.triangulate(num_refinements, V, F, N)
+
+        # Add patch mesh
+        # TODO: does the below already add the patch to the viewer as it should or not?
         ps.init()
-
-        # TODO: have this uhhh, not display yet?
-        # Rather, just have it registered and whatnot.
         ps_mesh = ps.register_surface_mesh(patch_name, V, F)
-        ps.show()
+
+        # ps.show()
 
     def serialize(self) -> str:
         """
