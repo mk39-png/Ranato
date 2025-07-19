@@ -1,3 +1,6 @@
+import os
+import scipy as sp
+import igl
 import numpy as np
 import mathutils
 
@@ -93,3 +96,12 @@ sizing = 10
 
 list_resize(corner_data, sizing, [])
 print(corner_data)
+
+
+v = np.zeros(shape=(1, 2))
+f = np.zeros(shape=(1, 2))
+
+# F_submesh, V_submesh, _, _ = igl.remove_unreferenced(F, V)
+root_folder = os.getcwd()
+
+# ret = igl.write_triangle_mesh(os.path.join(root_folder, "data", "bunny_out.obj"), v, f)

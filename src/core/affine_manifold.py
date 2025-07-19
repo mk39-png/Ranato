@@ -6,6 +6,9 @@ from src.core.common import *
 from src.core.halfedge import Halfedge
 from src.core.vertex_circulator import VertexCirculator
 
+import polyscope as ps
+import mathutils
+
 
 class VertexManifoldChart:
     """
@@ -123,9 +126,6 @@ class AffineManifold:
         @param[in] global_uv: global layout of the manifold
         @param[in] F_uv: faces of the global layout
         """
-        self.m_F = F
-        self.m_global_uv = global_uv
-        self.m_F_uv = F_uv
 
         # Check the input
         # if CHECK_VALIDITY
@@ -146,23 +146,30 @@ class AffineManifold:
             return
         # endif
 
-        # Build halfedge
-        self.m_halfedge = Halfedge(F)
-
+        # *** Topology information ***
+        # TODO (from ASOC): The faces are duplicated in the halfedge. Our halfedge alway retains
+        # the original VF topology, so there is no need to maintain both separately
         # TODO: check if below is actually retrieving what we need properly
-        self.m_corner_to_he = self.m_halfedge.get_corner_to_he
-        self.m_he_to_corner = self.m_halfedge.get_he_to_corner
+        self.m_F: np.ndarray = F
+        self.m_halfedge = Halfedge(F)  # Build halfedge
         he_to_edge: list[Index] = self.m_halfedge.get_halfedge_to_edge_map
-        self.m_corner_to_edge = self._build_corner_to_edge_map(
+        self.m_corner_to_he: list[list[Index]] = self.m_halfedge.get_corner_to_he
+        self.m_corner_to_edge: list[list[Index]] = self._build_corner_to_edge_map(
             self.m_corner_to_he, he_to_edge)
+        self.m_he_to_corner: list[tuple[Index, Index]] = self.m_halfedge.get_he_to_corner
 
-        # Build edge lengths and charts from the global uv
-        self.m_l = self._build_lengths_from_global_uv(F_uv, global_uv)
-        self.m_vertex_charts = self._build_vertex_charts_from_lengths(
+        # *** Global metric information ***
+        self.m_global_uv: np.ndarray = global_uv
+        self.m_F_uv: np.ndarray = F_uv
+
+        # ** Build edge lengths and charts from the global uv **
+        self.m_l: list[list[float]] = self._build_lengths_from_global_uv(F_uv, global_uv)
+        # * Local metric information *
+        self.m_vertex_charts: list[VertexManifoldChart] = self._build_vertex_charts_from_lengths(
             F, self.m_l)
-        self.m_edge_charts = self._build_edge_charts_from_lengths(
+        self.m_edge_charts: list[EdgeManifoldChart] = self._build_edge_charts_from_lengths(
             F, self.m_halfedge, self.m_l)
-        self.m_face_charts = self._build_face_charts(F, global_uv, F_uv)
+        self.m_face_charts: list[FaceManifoldChart] = self._build_face_charts(F, global_uv, F_uv)
 
         # Align charts with the input parameterization
         self._align_local_charts(global_uv, F_uv)
@@ -213,12 +220,13 @@ class AffineManifold:
         return self.m_halfedge
 
     @property
-    def get_he_to_corner(self):
+    def get_he_to_corner(self) -> list[tuple[Index, Index]]:
         """
         Get halfedge to corner map for the manifold
 
         @return halfedge to corner map of the manifold
         """
+        return self.m_he_to_corner
 
     @property
     def get_F_uv(self) -> np.ndarray:
@@ -433,7 +441,7 @@ class AffineManifold:
 
         @param[out] cones: list of cone vertices
         """
-        cones = []
+        cones: list[Index] = []
 
         for vertex_index in range(self.num_vertices):
             if not self.is_flat(vertex_index):
@@ -444,11 +452,14 @@ class AffineManifold:
 
     def compute_cone_corners(self) -> list[list[bool]]:
         """
-        Get boolean mask of all cones corners in the manifold
+        Get boolean mask of all cones corners in the manifold.
+        NOTE: returns a list of list with 3 bool elements.
 
         @param[out] is_cone_corner: true iff corner i, j is a cone
         """
-        is_cone_corner: list[list[bool]] = [[None, None, None]
+        # NOTE: initializing list with False values, which does not mean anything since the ASOC code just has an array space allocation.
+        # Simply there because it needed a bool type. Otherwise, I would put None, but the typing system complains.
+        is_cone_corner: list[list[bool]] = [[False, False, False]
                                             for _ in range(self.num_faces)]
 
         for fi in range(self.num_faces):
@@ -460,7 +471,7 @@ class AffineManifold:
 
     def compute_cone_points(self, V: np.ndarray) -> np.ndarray:
         """
-        Compute a matrix of cone point positions from mesh vertex
+        Compute a matrix of cone point positions from mesh vertex.
 
         @param[in] V: mesh vertex positions
         @param[out] cone_points: cone positions w.r.t. V
@@ -472,7 +483,7 @@ class AffineManifold:
         num_cones: Index = len(cones)
 
         # shape is (num_cones, V.cols())
-        cone_points = np.ndarray(shape=(num_cones, V.shape[1]))
+        cone_points: np.ndarray = np.ndarray(shape=(num_cones, V.shape[1]))
 
         for i in range(num_cones):
             ci: Index = cones[i]
@@ -583,6 +594,20 @@ class AffineManifold:
         @param[in] V: mesh vertex positions
         @param[in] color: color for the affine manifold in the viewer
         """
+        ps.init()
+
+        # Add manifold
+        F: np.ndarray = self.get_faces
+        cone_manifold: ps.SurfaceMesh = ps.register_surface_mesh("cone_manifold", V, F)
+        cone_manifold.set_edge_width(1)
+        # TODO: probably going to be a problem interacting with NumPy arrays...
+        cone_manifold.set_color(color)
+
+        # Add cone points
+        cone_points: np.ndarray = self.compute_cone_points(V)
+        cones: ps.PointCloud = ps.register_point_cloud("cones", cone_points)
+        # TODO: might have problem with tuples being passed in rather than glm3 vector
+        cones.set_color((0.5, 0.0, 0.0))
 
     def view(self, V: np.ndarray) -> None:
         """
@@ -590,8 +615,15 @@ class AffineManifold:
 
         @param[in] V: mesh vertex positions
         """
+        self.add_to_viewer(V)
+        ps.show()
 
-    def screenshot(self, filename: str, V: np.ndarray, camera_position: np.ndarray, camera_target: np.ndarray, use_orthographic: bool):
+    def screenshot(self,
+                   filename: str,
+                   V: np.ndarray,
+                   camera_position: np.ndarray,
+                   camera_target: np.ndarray,
+                   use_orthographic: bool) -> None:
         """
         Save an image of the cone manifold and its data to file.
 
@@ -601,6 +633,23 @@ class AffineManifold:
         @param[in] camera_target: camera target for the screenshot
         @param[in] use_orthographic: use orthographic perspective if true
         """
+        # Add the contour network to the surface
+        self.add_to_viewer(V)
+
+        # Build the cameras for the viewer
+        # TODO: try just passing in these numpy vectors
+
+        # Set up the cameras
+        ps.look_at(camera_position.flatten(), camera_target.flatten())
+
+        if use_orthographic:
+            # TODO: is this the right interaction?
+            ps.set_view_projection_mode("Orthographic")
+
+        # Take the screenshot
+        ps.screenshot(filename)
+        logger.info("Screenshot saved to %s", filename)
+        ps.remove_all_structures()
 
     def clear(self) -> None:
         """
@@ -623,7 +672,7 @@ class AffineManifold:
     # *****************
     # Protected Methods
     # *****************
-    def _build_vertex_charts_from_lengths(self, F: np.ndarray, l: list[list[float]]):
+    def _build_vertex_charts_from_lengths(self, F: np.ndarray, l: list[list[float]]) -> list[VertexManifoldChart]:
         """
         Build isometric charts for a surface with a flat metric
         """
@@ -871,6 +920,7 @@ class AffineManifold:
                 one_ring_uv_positions[i + 1, :] - one_ring_uv_positions[i, :]))
             assert float_equal(prev_edge_length, LA.norm(
                 one_ring_uv_positions[i + 1, :]))
+
         logger.info("Final layout:\n%s", one_ring_uv_positions)
 
         assert not matrix_contains_nan(one_ring_uv_positions)
@@ -1107,24 +1157,6 @@ class AffineManifold:
         # Return true if no issues found
         return True
 
-    # Topology information
-    # TODO: The faces are duplicated in the halfedge. Our halfedge alway retains
-    # the original VF topology, so there is no need to maintain both separately
-    m_F: np.ndarray
-    m_corner_to_he: list[list[Index]]
-    m_corner_to_edge: list[list[Index]]
-    m_he_to_corner: list[tuple[Index, Index]]
-    m_halfedge: Halfedge
-
-    # Global metric information
-    m_l: list[list[float]]
-    m_global_uv: np.ndarray
-    m_F_uv: np.ndarray
-
-    # Local metric information
-    m_vertex_charts: list[VertexManifoldChart]
-    m_edge_charts: list[EdgeManifoldChart]
-    m_face_charts: list[FaceManifoldChart]
 
 # **************************
 # Parametric Affine Manifold
@@ -1198,12 +1230,21 @@ class ParametricAffineManifold(AffineManifold):
         return True
 
 
-def remove_cones(V: np.ndarray, affine_manifold: AffineManifold, pruned_V: np.ndarray, pruned_affine_manifold: AffineManifold, cones: list[Index], removed_faces: list[Index]):
+def remove_cones(V: np.ndarray,
+                 affine_manifold: AffineManifold,
+                 #  Really, only need the top two parameters.
+                 pruned_V: np.ndarray,
+                 pruned_affine_manifold: AffineManifold,
+                 cones: list[Index],
+                 removed_faces: list[Index]) -> None:
     """
     Generate an affine manifold with the cone faces removed but cone adjaceny
-    information retained
+    information retained.
+
+    NOTE: this method is not used anywhere.
     """
     # Compute the cones
+    # TODO: why do we even need to pass in cones if they're just going to be removed anyways?
     cones = affine_manifold.compute_cones()
     # TODO: implement with proper formatted_vector() function
     logger.debug("Remove cones at %s", cones)
@@ -1229,5 +1270,24 @@ def remove_cones(V: np.ndarray, affine_manifold: AffineManifold, pruned_V: np.nd
     F_uv: np.ndarray
 
     # TODO: finish implementation
-    F_uv = remove_mesh_vertices(
-        global_uv_orig, F_uv_orig, cones, global_uv, F_uv, removed_faces)
+    global_uv, F_uv, removed_faces = remove_mesh_vertices(global_uv_orig, F_uv_orig, cones)
+    pruned_V, F = remove_mesh_faces(V, F_orig, removed_faces)
+
+    # Remove faces from the cone adjacent arrays
+    is_cone_adjacent_face_reindexed: list[bool] = remove_vector_values(removed_faces, is_cone_adjacent_face)
+    is_cone_adjacent_vertex_reindexed: list[bool] = remove_vector_values(cones, is_cone_adjacent_vertex)
+
+    # Make new affine manifold with cones removed
+    pruned_affine_manifold = AffineManifold(F, global_uv, F_uv)
+
+    # Mark cone adjacent faces
+    for fi, _ in enumerate(is_cone_adjacent_face_reindexed):
+        if (is_cone_adjacent_face_reindexed[fi]):
+            pruned_affine_manifold.mark_cone_adjacent_face(fi)
+
+    # Mark cone adjacent vertices
+    for vi, _ in enumerate(is_cone_adjacent_vertex_reindexed):
+        if (is_cone_adjacent_vertex_reindexed[vi]):
+            pruned_affine_manifold.mark_cone_adjacent_vertex(vi)
+
+    unimplemented("This method is not used anywhere else.")
