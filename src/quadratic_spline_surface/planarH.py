@@ -3,7 +3,11 @@ import numpy as np
 
 # TODO: ensure that H is 36x36
 # TODO: note how I changed from double array in C++ to np nd array for Python
-def planarHfun(nx: float, ny: float, nz: float, H: np.ndarray) -> None:
+def planarHfun(nx: float, ny: float, nz: float) -> np.ndarray:
+    """
+    Returns np.ndarray of shape (36, 36)    
+    """
+    H: np.ndarray = np.ndarray(shape=(36, 36), dtype=float)
     assert H.shape == [36, 36]
 
     H[0][0] = 32 * nx * nx
@@ -1302,3 +1306,5 @@ def planarHfun(nx: float, ny: float, nz: float, H: np.ndarray) -> None:
     H[35][33] = 0
     H[35][34] = 0
     H[35][35] = 0
+
+    return H

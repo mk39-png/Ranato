@@ -4,6 +4,7 @@ from src.core.common import *
 from src.core.evaluate_surface_normal import generate_quadratic_surface_normal_coeffs
 from src.quadratic_spline_surface.position_data import *
 from src.quadratic_spline_surface.quadratic_spline_surface_patch import *
+from src.quadratic_spline_surface.quadratic_spline_surface_patch import QuadraticSplineSurfacePatch
 
 PatchIndex = int
 
@@ -16,7 +17,7 @@ class SurfaceDiscretizationParameters:
     def __init__(self, patches: list[QuadraticSplineSurfacePatch]) -> None:
         self.clear()
 
-        self.m_patches = patches
+        self.m_patches: list[QuadraticSplineSurfacePatch] = patches
 
         # Number of subdivisions per triangle of the domain
         self.num_subdivisions: int = 2
@@ -152,8 +153,13 @@ class QuadraticSplineSurface:
         :rtype: tuple[np.ndarray, np.ndarray, np.ndarray]
         """
 
-        todo("Parameter modification and return below")
+        todo("Parameter modification and return below. So, change V F and N and return them properly according to Python")
+        V = np.zeros(shape=(0, 0))
+        F = np.zeros(shape=(0, 0))
+        N = np.zeros(shape=(0, 0))
         self.get_patch(patch_index).triangulate(num_refinements, V, F, N)
+
+        return V, F, N
 
     def discretize(self, surface_disc_params: SurfaceDiscretizationParameters,
                    V: np.ndarray,
@@ -178,6 +184,7 @@ class QuadraticSplineSurface:
         :rtype: tuple[np.ndarray, np.ndarray, np.ndarray]
         """
 
+        # TODO: this resizes the V F and N matrices anyways...
         V_vec: np.ndarray
         num_subdivisions: int = surface_disc_params.num_subdivisions
         if (self.empty()):

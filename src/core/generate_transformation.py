@@ -2,7 +2,7 @@
 generate_transformations.py
 Methods to generate projective transformation matrices.
 """
-from ..core.common import *
+from .common import *
 
 
 def get_frame():

@@ -287,7 +287,16 @@ class ConvexPolygon:
         Triangulate domain with.
         This takes in self.m_vertices and creates a new F matrix of shape (1, 3) to return.
         TODO Can generalize to arbitrary domain if needed
+
+        :param num_refinements: number of iterations to refine V and F
+        :type num_refinements: int
+
+        :return: tuple of V (shape (3, 2)) and F (shape (1, 3))
+        :rtype: tuple[np.ndarray, np.ndarray]
         """
+
+        # TODO: logic of triangulate might be weird in comparison to the original ASOC code
+
         V: np.ndarray = self.m_vertices
         F: np.ndarray = np.array([[0, 1, 2]])
         assert F.shape == (1, 3)

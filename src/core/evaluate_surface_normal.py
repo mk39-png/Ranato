@@ -17,8 +17,8 @@ def generate_quadratic_surface_normal_coeffs(surface_mapping_coeffs) -> Matrix6x
     on the surface
     """
     # Get directional derivatives
-    D_u = u_derivative_matrix()
-    D_v = v_derivative_matrix()
+    D_u: np.ndarray = u_derivative_matrix()
+    D_v: np.ndarray = v_derivative_matrix()
     # TODO: double check matmul
     u_derivative_coeffs = D_u @ surface_mapping_coeffs
     v_derivative_coeffs = D_v @ surface_mapping_coeffs

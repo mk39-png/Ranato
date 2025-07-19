@@ -2,7 +2,7 @@
 Used by optimize_spline_surface.py
 """
 
-from src.core.common import Matrix2x2r,
+from src.core.common import Matrix2x2r
 from src.quadratic_spline_surface.PS12_patch_coeffs import PS12_patch_coeffs
 
 import numpy as np

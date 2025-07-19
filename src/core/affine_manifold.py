@@ -38,13 +38,13 @@ class VertexManifoldChart:
         self.one_ring_uv_positions: np.ndarray = one_ring_uv_positions
 
         # Mark boundary vertices
-        self.is_boundary = is_boundary
+        self.is_boundary: bool = is_boundary
 
         # Mark cone vertices
-        self.is_cone = is_cone
+        self.is_cone: bool = is_cone
 
         # Mark vertices adjacent to a cone
-        self.is_cone_adjacent = is_cone_adjacent
+        self.is_cone_adjacent: bool = is_cone_adjacent
 
 
 class EdgeManifoldChart:

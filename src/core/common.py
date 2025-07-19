@@ -28,30 +28,30 @@ DISCRETIZATION_LEVEL: int = 2  # Spline surface discretization level
 HASH_TABLE_SIZE: int = 70  # Size of spline surface hash table
 
 # Real number representations
-OneFormXr = np.ndarray
-PlanarPoint = np.ndarray
-SpatialVector = np.ndarray
-VectorX = np.ndarray
+OneFormXr = np.ndarray  # TODO: what shape is this... I forget
+PlanarPoint = np.ndarray  # shape (1, 2)
+SpatialVector = np.ndarray  # shape (1, 3)
+VectorX = np.ndarray  # shape (n, )
 Index = int
 
 # PlanarPoint = NewType('PlanarPoint', npt.NDArray(shape=[(1, 2)], dtype=float))
 # SpatialVector = np.ndarray(shape=(1, 3), dtype=float)
 
-# Matrix2x3r = np.ndarray(shape=(2, 3), dtype=float)
-# Matrix2x2r = np.ndarray(shape=(2, 2), dtype=float)
-# Matrix3x2r = np.ndarray(shape=(3, 2), dtype=float)
-# Matrix3x3r = np.ndarray(shape=(3, 3), dtype=float)
-Matrix2x3r = np.ndarray
-Matrix2x2r = np.ndarray
-Matrix3x2r = np.ndarray
-Matrix3x3r = np.ndarray
-Matrix6x3r = np.ndarray
+Matrix2x3r = np.ndarray  # shape (2, 3)
+Matrix2x2r = np.ndarray  # shape (2, 2)
+Matrix3x2r = np.ndarray  # shape (3, 2)
+Matrix3x3r = np.ndarray  # shape (3, 3)
+Matrix6x3r = np.ndarray  # shape (6, 3)
 # Edge = list[int, int]
 
+TwelveSplitGradient = np.ndarray  # shape (36, 1)
+TwelveSplitHessian = np.ndarray  # shape (36, 36)
 
 # **********************
 # Debug/Helper Methods
 # **********************
+
+
 def unimplemented(msg: str = "Method yet to be implemented"):
     raise Exception(msg)
 
@@ -100,6 +100,20 @@ MINT_GREEN = np.array([[0.170], [0.673], [0.292]])
 SKY_BLUE = np.array([[0.297], [0.586], [0.758]])
 OFF_WHITE = np.array([[0.896], [0.932], [0.997]])
 GOLD_YELLOW = np.array([[0.670], [0.673], [0.292]])
+
+
+# *******************************************
+# New functionality for Python implementation
+# *******************************************
+# https://stackoverflow.com/questions/8849833/python-list-reserving-space-resizing
+def list_resize(l: list, newsize: int, filling=None) -> None:
+    if newsize > len(l):
+        l.extend([filling for x in range(len(l), newsize)])
+    else:
+        del l[newsize:]
+
+
+# -----------------------------------------
 
 
 def float_equal_zero(x: float, eps=FLOAT_EQUAL_PRECISION):
@@ -396,6 +410,16 @@ def contains_vertex(face: np.ndarray[tuple[int], np.dtype[np.int_]], vertex_inde
 
 
 def find_face_vertex_index(face: np.ndarray, vertex_index: int) -> int:
+    """
+    :param face: np.ndarray of shape (n, ) of ndim = 1
+    :type face: np.ndarray
+
+    :param vertex_index:
+    :type vertex_index: int
+
+    :return:  face vertex index
+    :rtype: int
+    """
     # TODO: test this numpy-esque implementation with the ASOC version...
     # NOTE: we want to check that face is a vector rather than a matrix
     assert face.ndim == 1
