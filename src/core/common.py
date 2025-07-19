@@ -33,6 +33,8 @@ PlanarPoint = np.ndarray  # shape (1, 2)
 SpatialVector = np.ndarray  # shape (1, 3)
 VectorX = np.ndarray  # shape (n, )
 Index = int
+FaceIndex = int
+VertexIndex = int
 
 # PlanarPoint = NewType('PlanarPoint', npt.NDArray(shape=[(1, 2)], dtype=float))
 # SpatialVector = np.ndarray(shape=(1, 3), dtype=float)
@@ -83,7 +85,7 @@ def unreachable(msg: str = "Method should never reach this part"):
 
 # class Index(int):
 #     # Basically, this is unsigned stuff only. that's it.
-#     pass
+#     todo()
 
 
 class Matrix:
@@ -92,7 +94,7 @@ class Matrix:
         self.arr = arr
 
     def row(self, i):
-        pass
+        todo()
 
 
 # Colors
@@ -164,23 +166,23 @@ def vector_equal(v: np.ndarray, w: np.ndarray, eps: float = FLOAT_EQUAL_PRECISIO
 
 
 def column_vector_equal():
-    pass
+    todo()
 
 
 def matrix_equal():
-    pass
+    todo()
 
 
 def view_mesh():
-    pass
+    todo()
 
 
 def view_parameterized_mesh():
-    pass
+    todo()
 
 
 def screenshot_mesh():
-    pass
+    todo()
 
 # ****************
 # Basic arithmetic
@@ -188,19 +190,19 @@ def screenshot_mesh():
 
 
 def sgn():
-    pass
+    todo()
 
 
 def power():
-    pass
+    todo()
 
 
 def compute_discriminant():
-    pass
+    todo()
 
 
 def dot_product():
-    pass
+    todo()
 
 
 def cross_product(v: np.ndarray, w: np.ndarray) -> np.ndarray:
@@ -226,15 +228,15 @@ def cross_product(v: np.ndarray, w: np.ndarray) -> np.ndarray:
 
 
 def triple_product():
-    pass
+    todo()
 
 
 def normalize():
-    pass
+    todo()
 
 
 def elementary_basis_vector():
-    pass
+    todo()
 
 
 def reflect_across_x_axis(vector: PlanarPoint) -> PlanarPoint:
@@ -253,31 +255,31 @@ def reflect_across_x_axis(vector: PlanarPoint) -> PlanarPoint:
 
 # this is a void.
 def rotate_vector():
-    pass
+    todo()
 
 # this returns a SpatialVector class
 # def rotate_vector():
-#     pass
+#     todo()
 
 
 def project_vector_to_plane():
-    pass
+    todo()
 
 
 def vector_min():
-    pass
+    todo()
 
 
 def vector_max():
-    pass
+    todo()
 
 
 def column_vector_min():
-    pass
+    todo()
 
 
 def column_vector_max():
-    pass
+    todo()
 
 
 def vector_contains(vec: list, item) -> bool:
@@ -309,6 +311,20 @@ def convert_boolean_array_to_index_vector(boolean_array: list[bool]) -> list[int
 
 
 def index_vector_complement(index_vector: list[int], num_indices: int) -> list[int]:
+    """
+    Returns the complement of the index_vector as a list of int.
+
+    :param index_vector: vector to take the complement of
+    :type index_vector: list[int]
+
+    :param num_indices: determines the size of the complement_vector
+    :type num_indices: int
+
+    :return: complement_vector
+    :rtype: list[int]
+    """
+    # TODO: test this function to see if it's working correctly
+
     # Build index boolean array
     boolean_array: list[bool] = convert_index_vector_to_boolean_array(
         index_vector, num_indices)
@@ -323,24 +339,48 @@ def index_vector_complement(index_vector: list[int], num_indices: int) -> list[i
 
 
 def convert_signed_vector_to_unsigned():
-    pass
+    todo()
 
 
 def convert_unsigned_vector_to_signed(unsigned_vector: list[int]):
     # Pretty sure we don't need this function
-    pass
+    todo()
 
 
-def remove_vector_values():
-    pass
+def remove_vector_values(indices_to_remove: list[Index], vec: list) -> list:
+    """
+    Removes elements from vec with indices specified in indices_to_remove.
+
+    :param indices_to_remove: indices to remove
+    :type indices_to_remove: list[Index]
+
+    :param vec: vector to remove from
+    :type vec: list
+
+    :return: vector with indices removed
+    :rtype: list
+    """
+    # Removes indices from vev
+
+    # Remove faces adjacent to cones
+    indices_to_keep: list[Index] = index_vector_complement(indices_to_remove, len(vec))
+    subvec: list = []
+
+    # TODO: double check logic here with ASOC code
+    for _, index_to_keep in enumerate(indices_to_keep):
+        subvec.append(vec[index_to_keep])
+
+    assert len(subvec) == len(indices_to_keep)
+
+    return subvec
 
 
 def copy_to_planar_point():
-    pass
+    todo()
 
 
 def copy_to_spatial_vector():
-    pass
+    todo()
 
 
 # TODO: don't think we need this since Python prints out vectors just fine.... maybe
@@ -356,37 +396,37 @@ def formatted_vector(vec: list[np.float64], delim: str = "\n") -> str:
 
 
 def write_vector():
-    pass
+    todo()
 
 
 def write_float_vector():
-    pass
+    todo()
 
 
 def append():
-    pass
+    todo()
 
 
 def nested_vector_size():
-    pass
+    todo()
 
 
 def convert_nested_vector_to_matrix():
-    pass
+    todo()
 
 
 def append_matrix():
-    pass
+    todo()
 
 
 def flatten_matrix_by_row():
-    pass
+    todo()
 
 
 # TODO: this seems like something that would interact with the Blender API.
 #       Move this over to a different file to separate the parts that interact with the Blender API
 def read_camera_matrix():
-    pass
+    todo()
 
 
 def generate_linspace(t_0: float, t_1: float, num_points: int) -> np.ndarray:
@@ -398,7 +438,7 @@ def generate_linspace(t_0: float, t_1: float, num_points: int) -> np.ndarray:
 
 
 def arrange():
-    pass
+    todo()
 
 #  *******************
 #  Basic mesh topology
@@ -406,6 +446,17 @@ def arrange():
 
 
 def contains_vertex(face: np.ndarray[tuple[int], np.dtype[np.int_]], vertex_index: int) -> bool:
+    """
+    Returns true iff the face contains the given vertex.
+
+    :param face: 1D NumPy array of integers. Shape is (n, )
+    :type face: np.ndarray
+
+    :param vertex_index: the index to check for inside face
+    :type vertex_index: int
+
+    :return: boolean if vertex_index is in face
+    """
     return vertex_index in face
 
 
@@ -546,7 +597,7 @@ def angle_from_positions(dimension: int, angle_corner_position: np.ndarray, seco
 
 
 def interval_lerp():
-    pass
+    todo()
 
 
 def compute_point_cloud_bounding_box(points: np.ndarray) -> tuple[SpatialVector, SpatialVector]:
@@ -586,40 +637,84 @@ def compute_point_cloud_bounding_box(points: np.ndarray) -> tuple[SpatialVector,
     return min_point, max_point
 
 
-def remove_mesh_faces(V: np.ndarray, F: np.ndarray, faces_to_remove: list[int], V_submesh: np.ndarray, F_submesh: np.ndarray):
-    faces_to_keep: list[int]
-    index_vector_complement(faces_to_remove, F.shape[0], faces_to_keep)
-    F_unsimplified_submesh = np.ndarray(shape=(len(faces_to_keep), F.shape[1]))
+def remove_mesh_faces(V: np.ndarray,
+                      F: np.ndarray,
+                      faces_to_remove: list[FaceIndex]) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Using igl to remove unreferenced vertices from V using faces_to_remove and updating F accordingly.
+
+    :param V: vertices to remove unreferenced vertices from. np.ndarray of float
+    :type V: np.ndarray
+    :param F: faces with np.ndarray of int
+    :type F: np.ndarray
+    :param faces_to_remove: index of faces to remove
+    :type faces_to_remove: list[int]
+
+    :return: tuple of V and F submeshes (V, F)
+    :rtype: tuple[np.ndarray, np.ndarray]
+    """
+    faces_to_keep: list[FaceIndex] = index_vector_complement(faces_to_remove, F.shape[0])  # rows
+
+    # TODO: in the ASOC code, this F_unsimplified_submesh was initialized to shape (faces_to_keep.size(), F.cols()) and then immediately resized.
+    F_unsimplified_submesh: np.ndarray = np.ndarray(shape=(len(faces_to_keep), 3), dtype=int)
+
     for i, _ in enumerate(faces_to_keep):
         F_unsimplified_submesh[i, :] = F[faces_to_keep[i], :]
 
     # Remove unreferenced vertices and update face indices
     # FIXME: not sure if the below is doing what it needs to do
-    F_submesh, V_submesh = igl.remove_unreferenced(F, V)
+    F_submesh: np.ndarray
+    V_submesh: np.ndarray
+    # TODO: Pylint shows error with igl not having member, but I'm sure it is fine.
+    F_submesh, V_submesh, __placeholder1, __placeholder2 = igl.remove_unreferenced(F, V)
+
     logger.info("Final mesh has %s faces and %s vertices",
-                F_submesh.shape[0], V_submesh.shape[0])
+                F_submesh.shape[0], V_submesh.shape[0])  # rows
+
+    return V_submesh, F_submesh
 
 
-def remove_mesh_vertices(V: np.ndarray, F: np.ndarray, vertices_to_remove: list[int], V_submesh: np.ndarray, F_submesh: np.ndarray, faces_to_remove: list[int]):
+def remove_mesh_vertices(V: np.ndarray,
+                         F: np.ndarray[tuple[int], np.dtype[np.int_]],
+                         vertices_to_remove: list[VertexIndex]) -> tuple[np.ndarray, np.ndarray, list[FaceIndex]]:
+    """
+    Removes mesh vertices from V based on the indices inside vertices_to_remove and updates F accordingly.
+
+    :param V: vertices matrix of floats
+    :type V: np.ndarray
+    :param F: faces matrix of integers
+    :type F: np.ndarray
+    :param vertices_to_remove: list of indices of vertices to remove
+    :type vertices_to_remove: list[int]
+
+    :return: tuple of vertex matrix with vertices removed, updated faces, and list of face indices that were removed
+    :rtype: tuple[np.ndarray, np.ndarray, list[FaceIndex]]
+    """
     logger.info("Removing %s vertices from mesh with %s faces and %s vertices", len(
         vertices_to_remove), F.shape[0], V.shape[0])
 
     # Tag faces adjacent to the vertices to remove
     # TODO: implement some numpy version of of finding a vertex in a row of F
+    faces_to_remove: list[FaceIndex] = []
     faces_to_remove.clear()
     for face_index in range(F.shape[0]):
         for i, _ in enumerate(vertices_to_remove):
+            # NOTE: contains_vertex expects NumPy array of 1 dimension (i.e. shape (n , ))
             if contains_vertex(F[face_index, :], vertices_to_remove[i]):
                 faces_to_remove.append(face_index)
                 break
     logger.info("Remove %s faces", len(faces_to_remove))
 
     # Remove faces adjacent to cones
-    remove_mesh_faces(V, F, faces_to_remove, V_submesh, F_submesh)
+    V_submesh: np.ndarray
+    F_submesh: np.ndarray
+    V_submesh, F_submesh = remove_mesh_faces(V, F, faces_to_remove)
+
+    return V_submesh, F_submesh, faces_to_remove
 
 
 def join_path():
-    pass
+    todo()
 
 
 def matrix_contains_nan(mat: np.ndarray) -> bool:
@@ -637,4 +732,4 @@ def vector_contains_nan(vec: np.ndarray) -> bool:
 
 
 def convert_polylines_to_edges():
-    pass
+    todo()

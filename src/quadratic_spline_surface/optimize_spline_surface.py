@@ -1,9 +1,10 @@
 from src.core.common import *
 from PS12_patch_coeffs import *
 
-from src.core.affine_manifold import AffineManifold
+from src.core.affine_manifold import AffineManifold, EdgeManifoldChart
 from src.core.differentiable_variable import *
 from src.core.halfedge import *
+from src.core.halfedge import Halfedge
 from src.core.polynomial_function import *
 
 from src.quadratic_spline_surface.position_data import TriangleCornerData, TriangleMidpointData
@@ -257,7 +258,7 @@ def compute_local_twelve_split_energy_quadratic(local_hessian_data: LocalHessian
     return local_energy, local_derivatives, local_hessian
 
 
-def shift_array(__ref_arr: list, shift: int) -> list:
+def shift_array(__ref_arr: list, shift: int) -> None:
     """
     Helper function to cyclically shift an array of three elements.
 
@@ -265,7 +266,7 @@ def shift_array(__ref_arr: list, shift: int) -> list:
 
     TODO: check that this modifies by reference
     """
-    arr_copy = copy.deepcopy(__ref_arr)
+    arr_copy: list = copy.deepcopy(__ref_arr)
     for i in range(3):
         __ref_arr[i] = arr_copy[(i + shift) % 3]
 
@@ -289,7 +290,7 @@ def shift_local_energy_quadratic_vertices(
     Method to cyclically shift the indexing of all energy quadratic data arrays
     for triangle vertex values.
     NOTE: all array arguments/parameters for this function should be size 3.
-    NOTE: should modifies parameters by reference.
+    NOTE: should modify all parameters by reference.
     """
     shift_array(vertex_positions_T, shift)
     shift_array(vertex_gradients_T, shift)
@@ -304,8 +305,153 @@ def shift_local_energy_quadratic_vertices(
     shift_array(face_global_edge_indices, shift)
 
 
-def compute_twelve_split_energy_quadratic():
-    """Compute the energy system for a twelve-split spline."""
+def compute_twelve_split_energy_quadratic(
+        vertex_positions: list[SpatialVector],
+        vertex_gradients: list[SpatialVector],
+        edge_gradients: list[list[SpatialVector]],  # list[SpatialVector] of length 3
+        global_vertex_indices: list[int],
+        global_edge_indices: list[list[int]],  # list[int] of length 3
+        initial_vertex_positions: list[SpatialVector],
+        initial_face_normals: np.ndarray,  # matrix
+        manifold: AffineManifold,
+        optimization_params: OptimizationParameters,
+        num_variable_vertices: int,
+        num_variable_edges: int
+) -> tuple[float, np.ndarray, np.ndarray]:
+    """
+    Compute the energy system for a twelve-split spline.
+
+    :return: tuple of energy and derivatives (shape (n, ), ndim 1) (and maybe hessian)
+    :rtype: tuple[float, np.ndarray, np.ndarray]
+    """
+    num_independent_variables: int = 9 * num_variable_vertices + 3 * num_variable_edges
+    energy = 0
+
+    # Derivatives set to 0....
+    hessian_entries: list[tuple[float, float, float]] = []
+
+    for face_index in range(manifold.num_faces):
+        # Get face vertices
+        F: np.ndarray = manifold.get_faces  # F has int dtype
+        i: int = F[face_index, 0]
+        j: int = F[face_index, 1]
+        k: int = F[face_index, 2]
+
+        # Bundle relevant global variables into per face local vectors (all list of length 3)
+        initial_vertex_positions_T: list[SpatialVector] = build_face_variable_vector(
+            initial_vertex_positions, i, j, k)
+        vertex_positions_T: list[SpatialVector] = build_face_variable_vector(vertex_positions, i, j, k)
+        edge_gradients_T: list[SpatialVector] = edge_gradients[face_index]
+        vertex_gradients_T: list[Matrix2x3r] = build_face_variable_vector(vertex_gradients, i, j, k)
+
+        # GeGet the global uv values for the face vertices
+        face_vertex_uv_positions: list[PlanarPoint] = manifold.get_face_global_uv(face_index)  # length 3
+
+        # Get corner uv positions for the given face corners.
+        # NOTE: These may differ from the edge difference vectors computed from the global
+        # uv by a rotation per vertex due to the local layouts performed at each vertex.
+        # Since vertex gradients are defined in terms of these local vertex charts, we must
+        # use these directions when computing edge direction gradients from the vertex uv
+        # gradients.
+        corner_to_corner_uv_positions: list[Matrix2x3r] = manifold.get_face_corner_charts(face_index)  # length 3
+
+        # Get edge orientations
+        # NOTE: The edge frame is oriented so that one basis vector points along the edge
+        # counterclockwise and the other points perpendicular into the interior of the
+        # triangle. If the given face is the bottom face in the edge chart, the sign of
+        # the midpoint gradient needs to be reversed.
+        reverse_edge_orientations: list[bool] = []  # length 3
+        for i in range(3):
+            chart: EdgeManifoldChart = manifold.get_edge_chart(face_index, i)
+            reverse_edge_orientations.append(chart.top_face_index != face_index)
+
+        # Mark cone vertices
+        is_cone: list[bool] = []  # length 3
+        for i in range(3):
+            vi: int = F[face_index, i]
+            is_cone.append(manifold.get_vertex_chart(vi).is_cone)
+
+        # Mark cone adjacent vertices
+        is_cone_adjacent: list[bool] = []  # length 3
+        for i in range(3):
+            vi = F[face_index, i]
+            is_cone_adjacent.append(manifold.get_vertex_chart(vi).is_cone_adjacent)
+
+        # Get global indices of the local vertex and edge DOFs
+        face_global_vertex_indices: list[int] = build_face_variable_vector(global_vertex_indices, i, j, k)  # length 3
+        face_global_edge_indices: list[int] = global_edge_indices[face_index]  # length 3
+
+        # Check if an edge is collapsing and make sure any collapsing edges have
+        # local vertex indices 0 and 1
+        # WARNING: This is a somewhat fragile operation that must occur after all
+        # of these arrays are build and before the local to global map is built
+        # and is not necessary in the current framework used in the paper but is for
+        # some deprecated experimental methods
+        is_cone_adjacent_face: bool = False
+        for i in range(3):
+            if is_cone[(i + 2) % 3]:
+                shift_local_energy_quadratic_vertices(vertex_positions_T,
+                                                      vertex_gradients_T,
+                                                      edge_gradients_T,
+                                                      initial_vertex_positions_T,
+                                                      face_vertex_uv_positions,
+                                                      corner_to_corner_uv_positions,
+                                                      reverse_edge_orientations,
+                                                      is_cone,
+                                                      is_cone_adjacent,
+                                                      face_global_vertex_indices,
+                                                      face_global_edge_indices,
+                                                      i)
+                is_cone_adjacent_face = True
+                break
+
+        # Get normal for the face
+        # TODO: there is a chance where normal is NOT initialized to ANYTHING.
+        normal: SpatialVector
+        if is_cone_adjacent_face:
+            normal = initial_face_normals.shape[[face_index], :]
+            logger.info("Weighting by normal %s", normal.T)
+
+        # Get local to global map
+        local_to_global_map: list[int] = generate_twelve_split_local_to_global_map(
+            face_global_vertex_indices,
+            face_global_edge_indices,
+            num_variable_vertices)
+
+        # Compute local hessian data
+        local_hessian_data: LocalHessianData = generate_local_hessian_data(
+            face_vertex_uv_positions,
+            corner_to_corner_uv_positions,
+            reverse_edge_orientations,
+            is_cone,
+            is_cone_adjacent,
+            normal,
+            optimization_params)
+
+        # Compute local degree of freedom data
+        local_dof_data: LocalDOFData = generate_local_dof_data(
+            initial_vertex_positions_T,
+            vertex_positions_T,
+            vertex_gradients_T,
+            edge_gradients_T)
+
+        # Compute the local energy quadratic system for the face
+        local_energy: float
+        local_derivatives: TwelveSplitGradient
+        local_hessian: TwelveSplitHessian
+        local_energy, local_derivatives, local_hessian = compute_local_twelve_split_energy_quadratic(
+            local_hessian_data,
+            local_dof_data)
+
+        # Update the energy quadratic with the new face energy
+        energy, derivatives, hessian_entries = update_energy_quadratic(local_energy,
+                                                                       local_derivatives,
+                                                                       local_hessian,
+                                                                       local_to_global_map)
+    # Set hessian from the triplets
+    # hessian.resize
+
+    return energy, derivatives, hessian
     todo()
 
 # ******************************************
@@ -448,11 +594,63 @@ def build_twelve_split_spline_energy_system(initial_V: np.ndarray,
     # TODO: change hessian_inverse to cholmad sparse matrix
 
     num_vertices: int = initial_V.shape[0]  # rows
-    num_faces = affine_
+    num_faces: int = affine_manifold.num_faces
+
+    # Build halfedge
+    he_to_corner: list[tuple[Index, Index]] = affine_manifold.get_he_to_corner
+    halfedge: Halfedge = affine_manifold.get_halfedge
+    num_edges: int = halfedge.num_edges
+
+    # Assume all vertices and edges are variable
+    variable_vertices: list[int] = index_vector_complement([], num_vertices)
+    variable_edges: list[int] = index_vector_complement([], num_edges)
+
+    # Get variable counts
+    num_variable_vertices: int = len(variable_vertices)
+    num_variable_edges: int = len(variable_edges)
+
+    # Initialize variables to optimize
+    vertex_positions: list[SpatialVector] = []
+    initial_vertex_positions: list[SpatialVector] = []
+    for i in range(num_vertices):
+        vertex_positions.append(initial_V[[i], :])  # shape (1, 3) for SpatialVectors
+        initial_vertex_positions.append(initial_V[[i], :])
+
+    vertex_gradients: list[Matrix2x3r] = generate_zero_vertex_gradients(num_vertices)
+    edge_gradients: list[list[SpatialVector]] = generate_zero_edge_gradients(num_faces)
+    # NOTE: assertion == 3 below sicne ASOC code originally has array<int, 3> as elements of edge_gradients
+    assert len(edge_gradients[0]) == 3
+
+    # Build edge variable indices
+    global_vertex_indices: list[int] = build_variable_vertex_indices_map(num_vertices, variable_vertices)
+
+    # Build edge variable indices
+    global_edge_indices: list[list[int]] = build_variable_edge_indices_map(
+        num_faces, variable_edges, halfedge, he_to_corner)
+    assert len(global_edge_indices[0]) == 3
+
+    # Build energy for the affine manifold
+    compute_twelve_split_energy_quadratic(vertex_positions,
+                                          vertex_gradients,
+                                          edge_gradients,
+                                          global_vertex_indices,
+                                          global_edge_indices,
+                                          initial_vertex_positions,
+                                          initial_face_normals,
+                                          affine_manifold,
+                                          optimization_params,
+                                          energy,
+                                          derivatives,
+                                          hessian,
+                                          num_variable_vertices,
+                                          num_variable_edges)
     todo()
 
 
-def generate_optimized_twelve_split_position_data(V: np.ndarray, affine_manifold: AffineManifold, fit_matrix: np.ndarray, hessian_inverse: np.ndarray) -> tuple[list[list[TriangleCornerData]], list[list[TriangleMidpointData]]]:
+def generate_optimized_twelve_split_position_data(V: np.ndarray,
+                                                  ffine_manifold: AffineManifold,
+                                                  fit_matrix: np.ndarray,
+                                                  hessian_inverse: np.ndarray) -> tuple[list[list[TriangleCornerData]], list[list[TriangleMidpointData]]]:
     """
     Compute the optimal per triangle position data for given vertex positions.
 
@@ -503,7 +701,9 @@ def convert_full_edge_gradients_to_reduced(edge_gradients: list[list[Matrix2x3r]
     unimplemented()
 
 
-def convert_reduced_edge_gradients_to_full(reduced_edge_gradients: list[list[SpatialVector]], corner_data: list[list[TriangleCornerData]], affine_manifold: AffineManifold) -> list[list[Matrix2x3r]]:
+def convert_reduced_edge_gradients_to_full(reduced_edge_gradients: list[list[SpatialVector]],
+                                           corner_data: list[list[TriangleCornerData]],
+                                           affine_manifold: AffineManifold) -> list[list[Matrix2x3r]]:
     """
     Given edge direction gradients at triangle edge midpoints, append the gradients in the
     direction of the opposite triangle corners, which are determined by gradients and
