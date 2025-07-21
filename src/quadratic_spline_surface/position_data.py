@@ -276,6 +276,8 @@ def generate_corner_data_matrices(corner_data: list[list[TriangleCornerData]],
     __ref_second_derivative_matrix.reshape(3 * num_faces, 3)
 
     # Organize position data into matrices
+    todo("Wait, why is this modifying by reference? Couldn't this just return the matrices???")
+
     # TODO: could try to use NumPy indexing magic
     for i in range(num_faces):
         for j in range(3):

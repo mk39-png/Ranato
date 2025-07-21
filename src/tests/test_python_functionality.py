@@ -84,24 +84,57 @@ import mathutils
 # global_edge_indices: list[list[int]] = [[-1, -1, -1] for _ in range(num_faces)]
 # print(global_edge_indices)
 # https://stackoverflow.com/questions/8849833/python-list-reserving-space-resizing
-def list_resize(l: list, newsize: int, filling=None) -> None:
-    if newsize > len(l):
-        l.extend([filling for x in range(len(l), newsize)])
-    else:
-        del l[newsize:]
+# def list_resize(l: list, newsize: int, filling=None) -> None:
+#     if newsize > len(l):
+#         l.extend([filling for x in range(len(l), newsize)])
+#     else:
+#         del l[newsize:]
 
 
-corner_data = [[1] for _ in range(6)]
-sizing = 10
+# corner_data = [[1] for _ in range(6)]
+# sizing = 10
 
-list_resize(corner_data, sizing, [])
-print(corner_data)
+# list_resize(corner_data, sizing, [])
+# print(corner_data)
 
 
-v = np.zeros(shape=(1, 2))
-f = np.zeros(shape=(1, 2))
+# v = np.zeros(shape=(1, 2))
+# f = np.zeros(shape=(1, 2))
 
-# F_submesh, V_submesh, _, _ = igl.remove_unreferenced(F, V)
-root_folder = os.getcwd()
+# # F_submesh, V_submesh, _, _ = igl.remove_unreferenced(F, V)
+# root_folder = os.getcwd()
 
 # ret = igl.write_triangle_mesh(os.path.join(root_folder, "data", "bunny_out.obj"), v, f)
+
+HASH_TABLE_SIZE = 2
+
+hash_size_x: int = HASH_TABLE_SIZE
+hash_size_y: int = HASH_TABLE_SIZE
+
+# Clear the hash table
+# NOTE: hash_table just going to be recreated in this method.
+# NOTE: hash_table is HASH_TABLE_SIZE x HASH_TABLE_SIZE 2D list with elements list[int]
+# hash_table: list[list[list[int]]] = [[[] for i in range(hash_size_x)] for j in range(hash_size_x)]
+
+# print(len(hash_table))
+# print(len(hash_table[0]))
+# print(len(hash_table[0][0]))
+
+
+num_patches = 12
+num_boundaries = 3
+num_coeffs = 3
+patch_boundaries: list[list[np.ndarray]] = [
+    [np.zeros(shape=(num_coeffs, 1)) for _ in range(num_boundaries)]
+    for _ in range(num_patches)]
+assert len(patch_boundaries) == 12
+assert len(patch_boundaries[0]) == 3
+
+print(patch_boundaries)
+print(patch_boundaries[0])
+print(patch_boundaries[0][0].shape)
+# assert len(patch_boundaries[0][0].shape) == (3, 1)
+
+N = 3
+l: list[list[float]] = [[0.0 for _ in range(N)] for _ in range(N)]
+print(l)
