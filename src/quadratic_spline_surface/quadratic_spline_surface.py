@@ -154,17 +154,14 @@ class QuadraticSplineSurface:
         """
 
         todo("Parameter modification and return below. So, change V F and N and return them properly according to Python")
-        V = np.zeros(shape=(0, 0))
-        F = np.zeros(shape=(0, 0))
-        N = np.zeros(shape=(0, 0))
+        V: np.ndarray = np.zeros(shape=(0, 0))
+        F: np.ndarray = np.zeros(shape=(0, 0))
+        N: np.ndarray = np.zeros(shape=(0, 0))
         self.get_patch(patch_index).triangulate(num_refinements, V, F, N)
 
         return V, F, N
 
-    def discretize(self, surface_disc_params: SurfaceDiscretizationParameters,
-                   V: np.ndarray,
-                   F: np.ndarray,
-                   N: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def discretize(self, surface_disc_params: SurfaceDiscretizationParameters) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Triangulate the surface.
 
@@ -183,21 +180,46 @@ class QuadraticSplineSurface:
         :return: vertices of the triangulation (V_tri), faces of the triangulation(F_tri), and vertex normals (N_tri)
         :rtype: tuple[np.ndarray, np.ndarray, np.ndarray]
         """
-
-        # TODO: this resizes the V F and N matrices anyways...
-        V_vec: np.ndarray
         num_subdivisions: int = surface_disc_params.num_subdivisions
+
         if (self.empty()):
+            # TODO: adjust return value here...
             return
 
         # Build triangulated surface in place
         patch_index: PatchIndex = 0
+        V: np.ndarray  # dtype float
+        F: np.ndarray  # dtype int
+        N: np.ndarray  # dtype float
+        V, F, N = self.triangulate_patch(patch_index, num_subdivisions)
+        num_patch_vertices: int = V.shape[0]  # rows
+        num_patch_faces: int = F.shape[0]  # rows
+        patch_index += 1
 
-        todo()
+        for _ in range(self.num_patches):
+            V_patch: np.ndarray  # dtype float
+            F_patch: np.ndarray  # dtype int
+            N_patch: np.ndarray  # dtype float
+            V_patch, F_patch, N_patch = self.triangulate_patch(patch_index, num_subdivisions)
+
+            # TODO: double check dimensionality... in fact... add dimensions to types because this is all getting quite confusing.
+            V[num_patch_vertices * patch_index: num_patch_vertices * (patch_index + 1),
+              0: V.shape[1]] = V_patch
+            F[num_patch_faces * patch_index: num_patch_faces * (patch_index + 1),
+              0: F.shape[1]] = F_patch + np.full(shape=(num_patch_faces, F.shape[1]), fill_value=num_patch_vertices * patch_index, dtype=int)
+            N[num_patch_vertices * patch_index: num_patch_vertices * (patch_index + 1),
+              0: N.shape[1]] = N_patch
+
+        logger.info("%s surface vertices", V.shape[0])
+        logger.info("%s surface faces", F.shape[0])
+        logger.info("%s surface normals", N.shape[0])
+
+        return V, F, N
 
     def discretize_patch_boundaries(self) -> tuple[list[SpatialVector], list[list[int]]]:
         """
         Discretize all patch boundaries as polylines.
+        NOTE: This also appears in contour_network folder in discretize.py, but is here for convenience and also for organiztion purposes.
 
         :return points: list of polyline points.
         :rtype points: list[SpatialVector]
@@ -205,6 +227,21 @@ class QuadraticSplineSurface:
         :return polyline: list of lists of polyline edges
         :rtype polyline: list[list[int]]
         """
+        todo()
+        points: list[SpatialVector]
+        polylines: list[list[int]]
+
+        for patch_index in range(self.num_patches):
+            spline_surface_patch: QuadraticSplineSurfacePatch = self.get_patch(patch_index)
+            # list of size 3
+            patch_boundaries: list[LineSegment] = spline_surface_patch.get_domain.parametrize_patch_boundaries()
+
+            for k, _ in enumerate(patch_boundaries):
+                # Get points on the boundary curve
+                list[PlanarPoint] parameter_points_k
+                patch_boundaries[k].sample_points
+
+        return points, polyline
 
     def save_obj(self, filename: str):
         """
@@ -213,8 +250,11 @@ class QuadraticSplineSurface:
         :param filename: filepath to save the obj
         :type filename: str
         """
+        todo("Used in contour_network.py")
 
-    def add_surface_to_viewer(self, color: np.ndarray = SKY_BLUE, num_subdivisions: int = DISCRETIZATION_LEVEL):
+    def add_surface_to_viewer(self,
+                              color: np.ndarray = SKY_BLUE,
+                              num_subdivisions: int = DISCRETIZATION_LEVEL):
         """
         Add the surface to the viewer.
 
@@ -234,6 +274,7 @@ class QuadraticSplineSurface:
         surface_disc_params.num_subdivisions = num_subdivisions;
         discretize(surface_disc_params, V, F, N);
         """
+        todo("Used in twelve_split_spline.py and contour_network.py")
 
     def view(self, color: np.ndarray = SKY_BLUE, num_subdivisions: int = DISCRETIZATION_LEVEL):
         """
@@ -270,7 +311,7 @@ class QuadraticSplineSurface:
         unimplemented()
 
     def write_spline(self):
-        unimplemented()
+        todo("Used in contour_network.py")
 
     def read_spline(self):
         unimplemented()
@@ -279,6 +320,7 @@ class QuadraticSplineSurface:
         """
         Compute hash tables for the surface.
         """
+        todo("Used in twelve_split_spline.py")
 
     def compute_hash_indices(self, point: PlanarPoint) -> tuple[int, int]:
         """
@@ -287,6 +329,7 @@ class QuadraticSplineSurface:
         :param point: point in the plane
         :return: pair
         """
+        todo("Used in compute_ray_intersections.py")
 
     # ***************
     # Private Methods
