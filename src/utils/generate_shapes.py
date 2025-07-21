@@ -322,13 +322,11 @@ def generate_perturbed_quadratic_grid():
 # General utility methods
 # ***********************
 def generate_mesh_from_grid(point_grid: list[list[SpatialVector]],
-                            layout_grid: list[list[PlanarPoint]],
                             closed_surface: bool) -> tuple[np.ndarray,
                                                            np.ndarray,
                                                            list[list[float]]]:
     """
     Generate a VF mesh for a point grid for visualization.
-    param[in] point_grid: input point grid
     param[out] V: vertices of the output mesh (same as the point grid)
     param[out] F: triangulation of the point grid
     param[out] l: uv parametrizatioin lengths for the grid
@@ -336,12 +334,12 @@ def generate_mesh_from_grid(point_grid: list[list[SpatialVector]],
     n: int = len(point_grid)
     assert n > 0
     assert n == len(point_grid[0])
+    V: np.ndarray = np.ndarray(shape=(n * n, len(point_grid[0][0])))
 
-    V: np.ndarray = np.ndarray(shape=(n * n, 3))
     # Flatten vertices in the point grid to a standard vector V of vertices
     for i in range(n):
         for j in range(n):
-            V[flatten(i, j, n), 0] = point_grid[i][j][0].flatten()
+            V[flatten(i, j, n), :] = point_grid[i][j].flatten()
 
     # Use periodic boundary triangulation if closed surface
     N: int
@@ -350,37 +348,44 @@ def generate_mesh_from_grid(point_grid: list[list[SpatialVector]],
     else:
         N = n - 1
 
+    # Create triangulation F for the grid
     F: np.ndarray = np.ndarray(shape=(2 * N * N, 3))
-    l: list[list[float]] = [[0.0 for _ in range(N)] for _ in range(N)]
+    PLACEHOLDER_FLOAT = -1
+
+    # l: list[list[float]] = [[0.0 for _ in range(3)] for _ in range(N)]
+    l: list[list[float]] = [[] for _ in range(2 * N * N)]
+
     for i in range(N):
         for j in range(N):
-            # Below are ndim == 1 np.ndarrays
-            layout_00: VectorX = layout_grid[i][j]
-            layout_10: VectorX = layout_grid[(i + 1) % n][j]
-            layout_01: VectorX = layout_grid[i][(j + 1) % n]
-            layout_11: VectorX = layout_grid[(i + 1) % n][(j + 1) % n]
-
             # Create first face
             F[2*flatten(i, j, N), 0] = flatten(i, j, n)
             F[2*flatten(i, j, N), 1] = flatten((i + 1) % n, j, n)
             F[2*flatten(i, j, N), 2] = flatten(i, (j + 1) % n, n)
-
-            todo()
-            l[2*flatten(i, j, N)].resize(3)
-            l[2*flatten(i, j, N)][0] = np.linalg.norm(layout_01 - layout_10)
-            l[2*flatten(i, j, N)][1] = np.linalg.norm(layout_00 - layout_01)
-            l[2*flatten(i, j, N)][2] = np.linalg.norm(layout_10 - layout_00)
+            l[2*flatten(i, j, N)].extend([PLACEHOLDER_FLOAT,
+                                          PLACEHOLDER_FLOAT,
+                                          PLACEHOLDER_FLOAT])
+            l[2*flatten(i, j, N)][0] = math.sqrt(2)
+            l[2*flatten(i, j, N)][1] = 1.0
+            l[2*flatten(i, j, N)][2] = 1.0
 
             # Create second face
             F[2*flatten(i, j, N) + 1, 0] = flatten((i + 1) % n, j, n)
             F[2*flatten(i, j, N) + 1, 1] = flatten((i + 1) % n, (j + 1) % n, n)
             F[2*flatten(i, j, N) + 1, 2] = flatten(i, (j + 1) % n, n)
-            l[2*flatten(i, j, N) + 1].resize(3)
-            l[2*flatten(i, j, N) + 1][0] = np.linalg.norm(layout_01 - layout_11)
-            l[2*flatten(i, j, N) + 1][1] = np.linalg.norm(layout_10 - layout_01)
-            l[2*flatten(i, j, N) + 1][2] = np.linalg.norm(layout_11 - layout_10)
+            l[2*flatten(i, j, N) + 1].extend([PLACEHOLDER_FLOAT,
+                                              PLACEHOLDER_FLOAT,
+                                              PLACEHOLDER_FLOAT])
+            l[2*flatten(i, j, N) + 1][0] = 1.0
+            l[2*flatten(i, j, N) + 1][1] = math.sqrt(2)
+            l[2*flatten(i, j, N) + 1][2] = 1.0
+
+            assert len(l[2*flatten(i, j, N)]) == 3
+            assert len(l[2*flatten(i, j, N) + 1]) == 3
 
     logger.debug("Faces:\n%s", F)
+
+    assert len(l) == 2 * N * N
+
     return V, F, l
 
 

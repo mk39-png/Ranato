@@ -98,7 +98,9 @@ def generate_linear_monomials(domain_point: PlanarPoint):
     return w
 
 
-def evaluate_quadratic_mapping(dimension: int, quadratic_coeffs: np.ndarray, domain_point: PlanarPoint) -> np.ndarray:
+def evaluate_quadratic_mapping(dimension: int,
+                               quadratic_coeffs: np.ndarray,
+                               domain_point: PlanarPoint) -> np.ndarray:
     """
     Evaluate a quadratic bivariate equation with scalar coefficients.
     Dimension can be greater than 1, as seen in quadratic_spline_surface_patch.py

@@ -1,5 +1,5 @@
 from src.core.common import *
-from PS12_patch_coeffs import *
+from src.quadratic_spline_surface.PS12_patch_coeffs import *
 
 from src.core.affine_manifold import AffineManifold, EdgeManifoldChart
 from src.core.differentiable_variable import *
