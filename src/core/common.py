@@ -1,6 +1,7 @@
 import numpy as np
 import numpy.linalg as LA
 import numpy.typing as npt
+from typing import Annotated, Literal, TypeVar
 
 # from typing import NewType
 import logging
@@ -28,9 +29,13 @@ DISCRETIZATION_LEVEL: int = 2  # Spline surface discretization level
 HASH_TABLE_SIZE: int = 70  # Size of spline surface hash table
 
 # Real number representations
+
+# Includeing typing here for better code.
+# https://stackoverflow.com/questions/71109838/numpy-typing-with-specific-shape-and-datatype
 OneFormXr = np.ndarray  # TODO: what shape is this... I forget
 PlanarPoint = np.ndarray  # shape (1, 2)
 SpatialVector = np.ndarray  # shape (1, 3)
+# SpatialVector = Annotated[npt.NDArray[], Literal[1, 3]]
 VectorX = np.ndarray  # shape (n, )
 Index = int
 FaceIndex = int

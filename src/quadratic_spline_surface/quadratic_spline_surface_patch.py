@@ -380,9 +380,9 @@ class QuadraticSplineSurfacePatch:
         :type num_refinements: int
 
         # TODO: format params below to sphinx format
-        @param[out] V: triangulated patch vertex positions
-        @param[out] F: triangulated patch faces
-        @param[out] N: triangulated patch vertex normals
+        @param[out] V: triangulated patch vertex positions (shape (n, 3))
+        @param[out] F: triangulated patch faces 
+        @param[out] N: triangulated patch vertex normals (shape (n, 3))
 
         # TODO: remove the return note because it is no longer true.
         :return: triangulated patch vertex positions (V), faces (F), and vertex normals (N)

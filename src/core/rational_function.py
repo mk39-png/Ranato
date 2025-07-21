@@ -177,8 +177,20 @@ class RationalFunction:
     def split_at_knot(self):
         pass
 
-    def sample_points(self):
-        pass
+    def sample_points(self, num_points: int, __ref_points: list[np.ndarray]) -> None:
+        """
+        @brief Sample points in the rational function. 
+        @param[in] num_points: number of points to sample
+        @param[out] points: vector of sampled points. list of matrices of shape (1, self.dimension). dtype of elements == float
+        """
+        # Get sample of the domain
+        t_samples: list[float] = self.m_domain.sample_points(num_points)
+
+        # Evaluate the function at the sampled domain points
+        # TODO: is this filling of default np.ndarray of zeros correct?
+        list_resize(__ref_points, num_points, np.zeros(shape=(1, self.get_dimension)))
+        for i in range(num_points):
+            __ref_points[i] = self.__evaluate(t_samples[i])
 
     def start_point(self):
         pass
@@ -270,9 +282,15 @@ class RationalFunction:
         return self.__evaluate(t)
 
     def __evaluate(self, t: float) -> np.ndarray:
-        # Pt = np.ndarray(shape=(1, self.m_dimension))
-        # Qt = np.ndarray(shape=(1,))
+        """
+        @brief Evaluate the function at a domain coordinate
 
+        Pt = np.ndarray(shape=(1, self.m_dimension))
+        Qt = np.ndarray(shape=(1,))
+
+        @param[in] t: coordinate
+        @param[out] point: rational function evaluated at coordinate t. Shape = (1, self.dimension)
+        """
         # NOTE: using evaluate_polynomial_mapping() rather than evaluate_polynomial() for cases where m_dimension > 1
         # NOTE: keep the modification by reference since that helps showcase what shape Pt and Qt should be.
 

@@ -653,9 +653,11 @@ def update_energy_quadratic(local_energy: float,
                             local_derivatives: Gradient,
                             local_hessian: Hessian,
                             local_to_global_map: list[int],
-                            energy: float,
-                            derivatives: VectorX,
-                            hessian_entries: list[tuple[float, float, float]]) -> tuple[float, VectorX, list[tuple[float, float, float]]]:
+                            num_independent_variables: int
+                            # energy: float,
+                            # derivatives: VectorX,
+                            # hessian_entries: list[tuple[float, float, float]]
+                            ) -> tuple[float, VectorX, list[tuple[float, float, float]]]:
     """
     Update global energy, derivatives, and hessian with local per face values
 
@@ -674,22 +676,25 @@ def update_energy_quadratic(local_energy: float,
     derivatives: global energy gradient
     hessian: global energy Hessian
     """
-    # energy: float
-    # derivatives: VectorX
-    # hessian_entries: list[tuple[float, float, float]]
+    energy: float
+    derivatives: VectorX = np.zeros(shape=(num_independent_variables, ))
+    hessian_entries: list[tuple[float, float, float]] = []
     logger.info("Adding local face energy %s", local_energy)
     logger.info("Local to global map: %s", local_to_global_map)
 
     # Update energy
-    energy += local_energy
+    # Originally, energy was passed in, but I don't see another function that calls update_energy_qudaratic() that requires energy to be incremented like before.
+    # Hence, energy just reassigned to local_energy.
+    energy = local_energy
+    # energy += local_energy
 
     # Update derivatives
     num_local_indices: int = len(local_to_global_map)
     for local_index in range(num_local_indices):
-        global_index = local_to_global_map[local_index]
+        global_index: int = local_to_global_map[local_index]
         if global_index < 0:
             continue  # Skip fixed variables with no global index
-        derivatives[global_index] += local_derivatives[local_index]
+        derivatives[global_index] = local_derivatives[local_index]
 
     # Update hessian entries
     for local_index_i in range(num_local_indices):
@@ -705,11 +710,9 @@ def update_energy_quadratic(local_energy: float,
                 continue
 
             # Get Hessian entry value
-            # TODO: what is local_hessian anyways? In fact, what is Hessian in the first place?
             hessian_value: float = local_hessian[local_index_i, local_index_j]
 
             # Assemble global Hessian entry
-            # TODO: below appends tuple, right?
             hessian_entries.append((global_index_i, global_index_j, hessian_value))
 
     return energy, derivatives, hessian_entries

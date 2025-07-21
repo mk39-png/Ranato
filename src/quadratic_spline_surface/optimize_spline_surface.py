@@ -14,6 +14,8 @@ from src.quadratic_spline_surface.compute_local_twelve_split_hessian import *
 from src.quadratic_spline_surface.planarH import planarHfun
 
 import copy  # used for shifting array
+import numpy as np
+import scipy.sparse
 
 
 class OptimizationParameters:
@@ -325,10 +327,9 @@ def compute_twelve_split_energy_quadratic(
     :rtype: tuple[float, np.ndarray, np.ndarray]
     """
     num_independent_variables: int = 9 * num_variable_vertices + 3 * num_variable_edges
-    energy = 0
-
-    # Derivatives set to 0....
-    hessian_entries: list[tuple[float, float, float]] = []
+    energy: float
+    derivatives: VectorX
+    hessian_entries: list[tuple[float, float, float]]
 
     for face_index in range(manifold.num_faces):
         # Get face vertices
@@ -447,10 +448,10 @@ def compute_twelve_split_energy_quadratic(
         energy, derivatives, hessian_entries = update_energy_quadratic(local_energy,
                                                                        local_derivatives,
                                                                        local_hessian,
-                                                                       local_to_global_map)
+                                                                       local_to_global_map,
+                                                                       num_independent_variables)
     # Set hessian from the triplets
-    # hessian.resize
-
+    hessian: np.ndarray = np.ndarray(shape=(num_independent_variables, num_independent_variables))
     return energy, derivatives, hessian
     todo()
 
@@ -647,12 +648,31 @@ def build_twelve_split_spline_energy_system(initial_V: np.ndarray,
     todo()
 
 
+def optimize_twelve_split_sline_surface(
+        initial__V: Matrix,
+        affine_manifold: AffineManifold,
+        halfedge: Halfedge,
+        he_to_corner: list[tuple[Index, Index]],
+        variable_vertices: list[int],
+        variable_edges: list[int],
+        fit_matrix: scipy.sparse.coo_matrix,  # decide between Coo matrix and something else...
+        hessian_inverse: scipy.sparse.coo_matrix
+):
+    """
+    Helper function for generate_optimized_twelve_split_position_data()
+
+    :return: optimized_V, optimized_vertex_gradients, optimized_edge_gradients
+    """
+    todo()
+
+
 def generate_optimized_twelve_split_position_data(V: np.ndarray,
                                                   ffine_manifold: AffineManifold,
                                                   fit_matrix: np.ndarray,
                                                   hessian_inverse: np.ndarray) -> tuple[list[list[TriangleCornerData]], list[list[TriangleMidpointData]]]:
     """
     Compute the optimal per triangle position data for given vertex positions.
+    NOTE: used by twelve_split_spline.py
 
     @param[in] V: vertex positions
     @param[in] affine_manifold: mesh topology and affine manifold structure
@@ -671,24 +691,37 @@ def generate_optimized_twelve_split_position_data(V: np.ndarray,
 def generate_zero_vertex_gradients(num_vertices: int) -> list[Matrix2x3r]:
     """
     Generate zero value gradients for a given number of vertices.
+    Helper function.
 
     @param[in] num_vertices: number of vertices |V|
     @param[out] gradients: |V| trivial vertex gradient matrices
     """
+    gradients: list[Matrix2x3r] = []
+
+    # Set the zero gradient for each vertex
+    for _ in range(num_vertices):
+        gradients.append(np.zeros(shape=(2, 3)))
+
     return gradients
-    todo()
 
 
 def generate_zero_edge_gradients(num_faces: int) -> list[list[SpatialVector]]:
     """
     Generate zero value gradients for a given number of halfedges.
+    Helper function.
 
     @param[in] num_faces: number of faces |F|
     @param[out] gradients: 3|F| trivial edge gradient matrices
     """
-    return edge_gradients
 
-    todo()
+    # Set the zero gradient for each vertex
+    edge_gradients: list[list[SpatialVector]] = []  # list of list of 3 SpatialVector elements
+
+    for _ in range(num_faces):
+        edge_gradients.append([np.zeros(shape=(1, 3)),
+                               np.zeros(shape=(1, 3)),
+                               np.zeros(shape=(1, 3))])
+    return edge_gradients
 
 
 def convert_full_edge_gradients_to_reduced(edge_gradients: list[list[Matrix2x3r]]) -> list[list[SpatialVector]]:
@@ -698,7 +731,7 @@ def convert_full_edge_gradients_to_reduced(edge_gradients: list[list[Matrix2x3r]
     @param[in] edge_gradients: edge and corner directed gradients per edge midpoints
     @param[out] reduced_edge_gradients: opposite corner directed gradients per edge midpoints
     """
-    unimplemented()
+    unimplemented("Method is not used anywhere.")
 
 
 def convert_reduced_edge_gradients_to_full(reduced_edge_gradients: list[list[SpatialVector]],
@@ -714,4 +747,37 @@ def convert_reduced_edge_gradients_to_full(reduced_edge_gradients: list[list[Spa
     @param[in] affine_manifold: mesh topology and affine manifold structure
     @param[out] edge_gradients: edge and corner directed gradients per edge midpoints
     """
-    todo()
+    F: np.ndarray = affine_manifold.get_faces
+    num_faces: int = len(reduced_edge_gradients)
+
+    # Compute the first gradient and copy the second for each edge
+    todo("Should I use the edge_gradients passed in or create new edge_gradients?")
+    edge_gradients: list[list[Matrix2x3r]] = []
+
+    for i in range(num_faces):
+        for j in range(3):
+            chart: EdgeManifoldChart = affine_manifold.get_edge_chart(i, j)
+            f_top: int = chart.top_face_index
+            if f_top != i:
+                continue  # Only process top faces of edge charts to prevent redundancy
+
+            midpoint: SpatialVector
+            midpoint_edge_gradient: SpatialVector
+            midpoint, midpoint_edge_gradient = compute_edge_midpoint_with_gradient(
+                corner_data[i][(j + 1) % 3],
+                corner_data[i][(j + 2) % 3])
+
+            # Copy the gradients
+            edge_gradients[i][j].resize(2, 3)
+            todo("Finish the whole edge gradients initialization, especially in how it's accessed")
+            # edge_gradients[i][j].row(0) = midpoint_edge_gradient;
+            # edge_gradients[i][j].row(1) = reduced_edge_gradients[i][j]
+
+            # If the edge isn't on the boundary, set the other face corner corresponding to it
+            if not chart.is_boundary:
+                f_bottom: int = chart.bottom_face_index
+                v_bottom: int = chart.bottom_vertex_index
+                j_bottom: int = find_face_vertex_index(F[f_bottom, :], v_bottom)
+                edge_gradients[f_bottom][j_bottom] = edge_gradients[i][j]
+    todo("Decide between return edge_gradients or modify by reference.")
+    return edge_gradients
