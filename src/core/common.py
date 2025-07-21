@@ -41,6 +41,10 @@ Index = int
 FaceIndex = int
 VertexIndex = int
 
+# Used for accessing numpy shape for clarity sake
+ROWS = 0
+COLS = 1
+
 # PlanarPoint = NewType('PlanarPoint', npt.NDArray(shape=[(1, 2)], dtype=float))
 # SpatialVector = np.ndarray(shape=(1, 3), dtype=float)
 

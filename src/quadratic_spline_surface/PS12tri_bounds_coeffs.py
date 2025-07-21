@@ -1,8 +1,12 @@
 import numpy as np
 
 
-def PS12tri_bounds_coeffs(bound_coeffs: np.ndarray) -> None:
-    assert bound_coeffs.shape == [12, 3, 3]
+def PS12tri_bounds_coeffs() -> np.ndarray:
+    """
+    Returns np.ndarray of shape (12,3,3), initialized to pre-defined numbers.
+    """
+    bound_coeffs: np.ndarray = np.zeros(shape=(12, 3, 3))
+    # assert bound_coeffs.shape == (12, 3, 3)
 
     bound_coeffs[0][0][0] = -0.1e1 / 0.8e1
     bound_coeffs[0][0][1] = 0.1e1 / 0.4e1
@@ -112,3 +116,5 @@ def PS12tri_bounds_coeffs(bound_coeffs: np.ndarray) -> None:
     bound_coeffs[11][2][0] = 0
     bound_coeffs[11][2][1] = 0
     bound_coeffs[11][2][2] = 0.1e1 / 0.2e1
+
+    return bound_coeffs

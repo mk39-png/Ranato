@@ -1,17 +1,18 @@
 """
 Original ASOC code utilizes the AutoDiff library by Wenzel Jakob. Based on code by Jon Kaldor
 and Eitan Grinspun.
-So, this file focuses on utilizing automatic differentiation via JAX. 
 
-NOTE: really only need this for later on for implementing quadratic_spline_surface() folder
+ORIGINAL PURPOSE: So, this file focuses on utilizing automatic differentiation via JAX. 
+UPDATED PURPOSE: the methods in this class do not seem to be used elsewhere aside from testing.
 """
-
-import jax.numpy as jnp
-from src.core.common import *
+from src.core.common import unimplemented
+# import jax.numpy as jnp
 
 
 def generate_local_variable_matrix_index(row: int, col: int, dimension=3) -> int:
-    # TODO: used in testing.
+    """
+    Used in powell_sabin_local_to_global.py.
+    """
     return dimension * row + col
 
 
@@ -26,8 +27,8 @@ def generate_independent_variable():
      system
      @return constructed differentiable variable
     """
-
-    todo()
+    unimplemented(
+        "Method is used by build_independent_variable_vector() and build_independent_variable_matrix(), both of which are unimplemented. Is also used in tests (which are commented out in original ASOC code)")
 
 
 def build_independent_variable_vector():
@@ -42,7 +43,7 @@ def build_independent_variable_vector():
     @param[in] total_independent_variables: total number of variables in the
     system
     """
-    todo()
+    unimplemented("Only used in tests (that have been commented out in original ASOC code)")
 
 
 def build_independent_variable_matrix():
@@ -57,6 +58,7 @@ def build_independent_variable_matrix():
     @param[in] total_independent_variables: total number of variables in the
     system
     """
+    unimplemented("Only used in tests (that have been commented out in original ASOC code)")
 
 
 def generate_constant_variable():
@@ -65,8 +67,8 @@ def generate_constant_variable():
     @param[in] value: value of the constant
     @return constructed differentiable variable
     """
-    # This is used by build_constant_variable_vector() and build_constant_variable_matrix()
-    todo()
+    unimplemented(
+        "Method is used by build_constant_variable_vector() and build_constant_variable_matrix(), both of which are unimplemented.")
 
 
 def build_constant_variable_vector():
@@ -75,8 +77,7 @@ def build_constant_variable_vector():
     @param[in] value_vector: values of the constants
     @param[out] constant_variable_vector: vector of constant variables
     """
-    # This isn't used anywhere...
-    todo()
+    unimplemented("Method is not used anywhere.")
 
 
 def build_constant_variable_matrix():
@@ -86,7 +87,7 @@ def build_constant_variable_matrix():
     @param[in] value_matrix: values of the constants
     @param[out] constant_variable_matrix: matrix of constant variables
     """
-    todo()
+    unimplemented("Method is not used anywhere.")
 
 
 def compute_variable_value():
@@ -95,82 +96,78 @@ def compute_variable_value():
     @param[in] variable: differentiable variable
     @return value of the variable
     """
-    # TODO: implement this. quite import for tests l8r
-    todo()
+    unimplemented("Only used in tests and internally within differentiable_variable.py")
 
 
 def compute_variable_gradient():
-    # TODO: implement. useful l8r
     """
     Extract the gradient of a differentiable variable with respect to the
     independent variables.
     @param[in] variable: differentiable variable
     @return gradient of the variable
     """
-    todo()
+    unimplemented("Only used in tests (that have been commented out in original ASOC code)")
 
 
 def compute_variable_hessian():
-    # TODO: useful l8r
     """
     Extract the hessian of a differentiable variable with respect to the
     independent variables.
     @param[in] variable: differentiable variable
     @return hessian of the variable
     """
-    todo()
+    unimplemented("Only used in tests (that have been commented out in original ASOC code)")
 
 
 def extract_variable_vector_values():
-    # used by extract_variable_v.... what?
     """
     Extract the values of a vector of differentiable variables.
     @param[in] variable_vector: vector of differentiable variables
     @param[out] values_vector: vector of the values of the variables
     """
-    todo()
+    unimplemented("Method is not used anywhere.")
 
 
 def extract_variable_matrix_values():
-    # TODO: useful
     """
     Extract the values of a matrix of differentiable variables.
     @param[in] variable_matrix: matrix of differentiable variables
     @param[out] values_matrix: matrix of the values of the variables
     """
-    todo()
+    unimplemented("Method is not used anywhere.")
 
 
 def vector_contains_nan():
-    # Overriding something, not needed.
     """
      Determine if a vector of differentiable variables contains NaN.
     @param[in] variable_vector: vector of differentiable variables
     @return true iff the vector contains NaN
     """
-    unimplemented()
+    unimplemented("Overrides common.py method of the same name. Not needed.")
 
 
 def matrix_contains_nan():
-    # n/a
-    unimplemented()
+    """
+    Determine if a matrix of differentiable variables contains NaN.
+    @param[in] variable_matrix: matrix of differentiable variables
+    @return true iff the matrix contains NaN
+    """
+    unimplemented("Overrides common.py method of the same name. Not needed.")
 
 
 def variable_square():
     """
-     Compute the square of a variable
+    Compute the square of a variable
     @param[in] x: differentiable variables
     @return square of the variable
     """
-    # somewhat useful...
+    unimplemented("Helper to variable_square_norm()")
 
 
 def variable_square_norm():
-    # not used anywhere...
     """
-     Compute the square norm of a variable vector.
-///
- @param[in] variable_vector: vector of differentiable variables
- @return square norm of the variable
+    Compute the square norm of a variable vector.
+    @param[in] variable_vector: vector of differentiable variables
+    @return square norm of the variable
     """
-    unimplemented()
+    unimplemented("Method is not used anywhere.")
