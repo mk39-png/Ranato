@@ -161,7 +161,7 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
         num_patches: int = patches_per_face * num_faces
 
         # Get general patch domains to use for all faces
-        patch_boundaries: list[list[np.ndarray]] = __generate_twelve_split_spline_patch_patch_boundaries()
+        patch_boundaries: list[list[np.ndarray]] = generate_twelve_split_spline_patch_patch_boundaries()
         assert len(patch_boundaries) == 12
         assert len(patch_boundaries[0]) == 3
         assert patch_boundaries[0][0].shape == (3, 1)
@@ -172,7 +172,7 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
 
         # Generate map from patches to input mesh corners
         patch_to_corner_map: list[tuple[int, int]]  # list of length 12
-        patch_to_corner_map = __generate_twelve_split_spline_patch_patch_to_corner_map()
+        patch_to_corner_map = generate_twelve_split_spline_patch_patch_to_corner_map()
 
         # Clear face to patch mappings
         # TODO: not really doing much here since we're making new lists to return
@@ -182,7 +182,7 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
         for face_index in range(num_faces):
             # Get surface mappings
             surface_mappings: list[np.ndarray]  # list of length 12 with matrices of shape (6, 3). dtype float
-            surface_mappings = __generate_twelve_split_spline_patch_surface_mapping(
+            surface_mappings = generate_twelve_split_spline_patch_surface_mapping(
                 corner_data[face_index], midpoint_data[face_index])
 
             # Add patches
@@ -306,7 +306,7 @@ def generate_twelve_split_domain_areas(v0: PlanarPoint, v1: PlanarPoint, v2: Pla
 # Private Helpers for init_twelve_split_patches
 # ******************************************************
 
-def __generate_twelve_split_spline_patch_patch_boundaries() -> list[list[np.ndarray]]:
+def generate_twelve_split_spline_patch_patch_boundaries() -> list[list[np.ndarray]]:
     """
     Generate patch boundary equations for the twelve split patches in the same
     order as the patch surface mappings
@@ -344,7 +344,7 @@ def __generate_twelve_split_spline_patch_patch_boundaries() -> list[list[np.ndar
     return patch_boundaries
 
 
-def __generate_twelve_split_spline_patch_patch_to_corner_map() -> list[tuple[int, int]]:
+def generate_twelve_split_spline_patch_patch_to_corner_map() -> list[tuple[int, int]]:
     """
     Generate a map from patches to corners of the face they correspond to, or
     -1 for interior patches, and the vertex of the patch at the corner.
@@ -434,8 +434,8 @@ def __generate_twelve_split_data_matrix(corner_data: list[TriangleCornerData],
     return twelve_split_data
 
 
-def __generate_twelve_split_spline_patch_surface_mapping(corner_data: list[TriangleCornerData],
-                                                         midpoint_data: list[TriangleMidpointData]) -> list[np.ndarray]:
+def generate_twelve_split_spline_patch_surface_mapping(corner_data: list[TriangleCornerData],
+                                                       midpoint_data: list[TriangleMidpointData]) -> list[np.ndarray]:
     """
     Generate twelve spline surface patch mapping coefficient matrix from corner
     and midpoint data according to the twelve-split Powell-Sabin formula.

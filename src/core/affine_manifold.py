@@ -9,7 +9,10 @@ from src.core.vertex_circulator import VertexCirculator
 import polyscope as ps
 import mathutils
 
+from dataclasses import dataclass
 
+
+@dataclass
 class VertexManifoldChart:
     """
     Local layout manifold chart in R2 of the one ring around a central vertex.
@@ -25,29 +28,49 @@ class VertexManifoldChart:
     boundary face, and the nth vertex is generally different from the 0th.
     """
 
-    def __init__(self, vertex_index: int, vertex_one_ring: list[int],  face_one_ring: list[int],
-                 one_ring_uv_positions: np.ndarray,
-                 is_boundary=False, is_cone=False, is_cone_adjacent=False) -> None:
-        # Index of the vertex in the affine manifold
-        self.vertex_index: int = vertex_index
+    # Index of the vertex in the affine manifold
+    vertex_index: int
 
-        # List of manifold vertex indices in the one ring
-        self.vertex_one_ring: list[int] = vertex_one_ring
+    # List of manifold vertex indices in the one ring
+    vertex_one_ring: list[int]
+    # List of manifold face indices in the one ring
+    face_one_ring: list[int]
 
-        # List of manifold face indices in the one ring
-        self.face_one_ring: list[int] = face_one_ring
+    # Local uv coordinates of the one ring vertices
+    one_ring_uv_positions: np.ndarray
 
-        # Local uv coordinates of the one ring vertices
-        self.one_ring_uv_positions: np.ndarray = one_ring_uv_positions
+    # Mark boundary vertices
+    is_boundary: bool = False
 
-        # Mark boundary vertices
-        self.is_boundary: bool = is_boundary
+    # Mark cone vertices
+    is_cone: bool = False
 
-        # Mark cone vertices
-        self.is_cone: bool = is_cone
+    # Mark vertices adjacent to a cone
+    is_cone_adjacent: bool = False
 
-        # Mark vertices adjacent to a cone
-        self.is_cone_adjacent: bool = is_cone_adjacent
+    # def __init__(self, vertex_index: int, vertex_one_ring: list[int],  face_one_ring: list[int],
+    #              one_ring_uv_positions: np.ndarray,
+    #              is_boundary=False, is_cone=False, is_cone_adjacent=False) -> None:
+    #     # Index of the vertex in the affine manifold
+    #     self.vertex_index: int = vertex_index
+
+    #     # List of manifold vertex indices in the one ring
+    #     self.vertex_one_ring: list[int] = vertex_one_ring
+
+    #     # List of manifold face indices in the one ring
+    #     self.face_one_ring: list[int] = face_one_ring
+
+    #     # Local uv coordinates of the one ring vertices
+    #     self.one_ring_uv_positions: np.ndarray = one_ring_uv_positions
+
+    #     # Mark boundary vertices
+    #     self.is_boundary: bool = is_boundary
+
+    #     # Mark cone vertices
+    #     self.is_cone: bool = is_cone
+
+    #     # Mark vertices adjacent to a cone
+    #     self.is_cone_adjacent: bool = is_cone_adjacent
 
 
 class EdgeManifoldChart:
@@ -140,7 +163,7 @@ class AffineManifold:
             return
 
         # Comparing row sizes
-        if F_uv.shape[0] != F.shape[0]:
+        if F_uv.shape[ROWS] != F.shape[ROWS]:
             logger.error("Input mesh and uv mesh have different sizes")
             self.clear()
             return
@@ -672,7 +695,9 @@ class AffineManifold:
     # *****************
     # Protected Methods
     # *****************
-    def _build_vertex_charts_from_lengths(self, F: np.ndarray, l: list[list[float]]) -> list[VertexManifoldChart]:
+    def _build_vertex_charts_from_lengths(self,
+                                          F: np.ndarray,
+                                          l: list[list[float]]) -> list[VertexManifoldChart]:
         """
         Build isometric charts for a surface with a flat metric
         """
@@ -682,36 +707,52 @@ class AffineManifold:
         vertex_circulator = VertexCirculator(F)
 
         # Iterate over vertices
-        vertex_charts: list[VertexManifoldChart] = [
-            VertexManifoldChart() for _ in range(num_vertices)]
+        vertex_charts: list[VertexManifoldChart] = []
 
         for vertex_index in range(num_vertices):
             # Record the given vertex index in the chart
-            vertex_charts[vertex_index].vertex_index = vertex_index
+            __vertex_index: int = vertex_index
 
             # Build one ring in the original surface for the vertex chart
-            vertex_charts[vertex_index].vertex_one_ring, vertex_charts[vertex_index].face_one_ring = vertex_circulator.get_one_ring(
+            __vertex_one_ring: list[int]
+            __face_one_ring: list[int]
+            __vertex_one_ring, __face_one_ring = vertex_circulator.get_one_ring(
                 vertex_index)
 
             # Layout the vertices according to the given flat metric
-            vertex_charts[vertex_index].one_ring_uv_positions = self._layout_one_ring(F,
-                                                                                      l,
-                                                                                      vertex_index,
-                                                                                      vertex_charts[vertex_index].vertex_one_ring,
-                                                                                      vertex_charts[vertex_index].face_one_ring)
+            __one_ring_uv_positions: np.ndarray = self._layout_one_ring(F,
+                                                                        l,
+                                                                        vertex_index,
+                                                                        __vertex_one_ring,
+                                                                        __face_one_ring)
 
             # A vertex is on the boundary iff the vertex one ring is not a closed loop
-            v0: Index = vertex_charts[vertex_index].vertex_one_ring[0]
-            vn: Index = vertex_charts[vertex_index].vertex_one_ring[-1]
-            vertex_charts[vertex_index].is_boundary = (v0 != vn)
+            v0: Index = __vertex_one_ring[0]
+            vn: Index = __vertex_one_ring[-1]
+            __is_boundary: bool = (v0 != vn)
 
-            #  By default, assume not cone adjacent(Changed later)
-            #  FIXME This is dangerous
-            vertex_charts[vertex_index].is_cone_adjacent = False
+            #  By default, assume not cone adjacent (Changed later)
+            #  FIXME This is dangerous... pretty it was dangerous becauase the object construction already sets is_cone_adjacent to False by default.
+            # __is_cone_adjacent = False
+
+            # Construct the VertexManifoldChart object and append to vertex_charts
+            vertex_chart = VertexManifoldChart(
+                __vertex_index,
+                __vertex_one_ring,
+                __face_one_ring,
+                __one_ring_uv_positions,
+                __is_boundary
+                # __is_cone_adjacent
+            )
+
+            vertex_charts.append(vertex_chart)
 
         return vertex_charts
 
-    def _build_edge_charts_from_lengths(self, F: np.ndarray, halfedge: Halfedge, l: list[list[float]]):
+    def _build_edge_charts_from_lengths(self,
+                                        F: np.ndarray,
+                                        halfedge: Halfedge,
+                                        l: list[list[float]]) -> list[EdgeManifoldChart]:
         """
         """
         # Build edge charts

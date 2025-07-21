@@ -1,7 +1,13 @@
+"""
+A lot of the ASOC code seems like deprecated things from the 6-split spline implementation of 
+the quadratic surface.
+"""
+
 
 from src.core.common import *
 from src.quadratic_spline_surface.quadratic_spline_surface import *
 from src.utils.generate_shapes import *
+from src.quadratic_spline_surface.optimize_spline_surface import *
 
 
 def test_quadratic_reproduction(u_curvature: float = 0.0,
@@ -29,4 +35,8 @@ def test_quadratic_reproduction(u_curvature: float = 0.0,
     control_V, control_F, l = generate_mesh_from_grid(control_point_grid, True)
     param_grid = generate_plane_grid(resolution, 0.0, 0.0)
     param_V, param_F, param_l = generate_mesh_from_grid(param_grid, True)
-    quadratic_spline_aparams(spline_type=powell_sabin_six_split)
+
+    # quadratic_spline_params(spline_type=powell_sabin_six_split)
+    optimization_params = OptimizationParameters()
+
+    QuadraticSplineSurface()

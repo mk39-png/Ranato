@@ -121,20 +121,37 @@ hash_size_y: int = HASH_TABLE_SIZE
 # print(len(hash_table[0][0]))
 
 
-num_patches = 12
-num_boundaries = 3
-num_coeffs = 3
-patch_boundaries: list[list[np.ndarray]] = [
-    [np.zeros(shape=(num_coeffs, 1)) for _ in range(num_boundaries)]
-    for _ in range(num_patches)]
-assert len(patch_boundaries) == 12
-assert len(patch_boundaries[0]) == 3
+# num_patches = 12
+# num_boundaries = 3
+# num_coeffs = 3
+# patch_boundaries: list[list[np.ndarray]] = [
+#     [np.zeros(shape=(num_coeffs, 1)) for _ in range(num_boundaries)]
+#     for _ in range(num_patches)]
+# assert len(patch_boundaries) == 12
+# assert len(patch_boundaries[0]) == 3
 
-print(patch_boundaries)
-print(patch_boundaries[0])
-print(patch_boundaries[0][0].shape)
-# assert len(patch_boundaries[0][0].shape) == (3, 1)
+# print(patch_boundaries)
+# print(patch_boundaries[0])
+# print(patch_boundaries[0][0].shape)
+# # assert len(patch_boundaries[0][0].shape) == (3, 1)
 
-N = 3
-l: list[list[float]] = [[0.0 for _ in range(N)] for _ in range(N)]
-print(l)
+# N = 3
+# l: list[list[float]] = [[0.0 for _ in range(N)] for _ in range(N)]
+# print(l)
+
+# root_folder = os.getcwd()
+
+V = np.array([
+    [0., 0, 0],
+    [1, 0, 0],
+    [1, 1, 1],
+    [2, 1, 0]
+])
+
+F = np.array([
+    [0, 1, 2],
+    [1, 3, 2]
+])
+
+print(igl.is_vertex_manifold(F))
+# print(igl.pyigl_cor/e.is_border_vertex(F))

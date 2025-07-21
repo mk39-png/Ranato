@@ -2,6 +2,7 @@ import numpy as np
 import numpy.linalg as LA
 import numpy.typing as npt
 from typing import Annotated, Literal, TypeVar
+import scipy as sp
 
 # from typing import NewType
 import logging
@@ -37,6 +38,7 @@ PlanarPoint = np.ndarray  # shape (1, 2)
 SpatialVector = np.ndarray  # shape (1, 3)
 # SpatialVector = Annotated[npt.NDArray[], Literal[1, 3]]
 VectorX = np.ndarray  # shape (n, )
+MatrixXr = np.ndarray  # shape (n, m)
 Index = int
 FaceIndex = int
 VertexIndex = int
@@ -498,14 +500,17 @@ def is_manifold(F: np.ndarray) -> bool:
     @param[in] F: mesh faces
     @return true iff the mesh is manifold
     """
+
     # Check edge manifold condition
-    if (not igl.is_edge_manifold(F)):
+    # Checks the tuple of elements that are returned. first element tells us if all edges are manifold or not.
+    if not igl.is_edge_manifold(F)[0]:
         logger.error("Mesh is not edge manifold")
         return False
 
     # Check vertex manifold condition
-    invalid_vertices = igl.is_vertex_manifold(F)
-    if not igl.is_vertex_manifold(F).any():
+
+    invalid_vertices: np.ndarray = igl.is_vertex_manifold(F)  # array of bool values
+    if not invalid_vertices.any():
         logger.error("Mesh is not vertex manifold")
         return False
 
