@@ -9,5 +9,5 @@ def test_compute_quadratic_cross_product():
     assert V_coeffs.shape == (3, 3)
     assert W_coeffs.shape == (3, 3)
 
-    N_coeffs = compute_quadratic_cross_product(V_coeffs, W_coeffs)
+    N_coeffs: np.ndarray = compute_quadratic_cross_product(V_coeffs, W_coeffs)
     assert N_coeffs.shape == (6, 3)

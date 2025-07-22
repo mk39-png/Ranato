@@ -10,7 +10,6 @@ from src.core.rational_function import *
 from src.core.bivariate_quadratic_function import *
 
 import polyscope as ps
-# TODO: igl is_vertex_manifold... or maybe mathutils?
 
 
 # **************************************
@@ -371,7 +370,7 @@ class QuadraticSplineSurfacePatch:
                     num_refinements: int,
                     __ref_V: np.ndarray,
                     __ref_F: np.ndarray,
-                    __ref_N: np.ndarray):
+                    __ref_N: np.ndarray) -> None:
         # -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Triangulate the surface patch.
@@ -437,7 +436,7 @@ class QuadraticSplineSurfacePatch:
         # Add patch mesh
         # TODO: does the below already add the patch to the viewer as it should or not?
         ps.init()
-        ps_mesh = ps.register_surface_mesh(patch_name, V, F)
+        ps_mesh: ps.SurfaceMesh = ps.register_surface_mesh(patch_name, V, F)
 
         # ps.show()
 

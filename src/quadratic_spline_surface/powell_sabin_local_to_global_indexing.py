@@ -30,16 +30,18 @@ Hessian = np.ndarray
 # *******************
 
 
-def generate_local_vertex_position_variables_start_index(vertex_index: int, dimension: int = 3) -> int:
+def generate_local_vertex_position_variables_start_index(vertex_index: int,
+                                                         dimension: int = 3) -> int:
     """
     Get the local start index of the block of position variable indices for a
     given vertex
     """
-    relative_vertex_index = 3 * dimension * vertex_index
+    relative_vertex_index: int = 3 * dimension * vertex_index
     return relative_vertex_index
 
 
-def generate_local_vertex_gradient_variables_start_index(vertex_index: int, dimension: int = 3) -> int:
+def generate_local_vertex_gradient_variables_start_index(vertex_index: int,
+                                                         dimension: int = 3) -> int:
     """
     Get the local start index of the block of gradient variable indices for a
     given vertex
@@ -49,13 +51,14 @@ def generate_local_vertex_gradient_variables_start_index(vertex_index: int, dime
     return relative_vertex_index + position_block_size
 
 
-def generate_local_edge_gradient_variables_start_index(edge_index: int, dimension: int = 3) -> int:
+def generate_local_edge_gradient_variables_start_index(edge_index: int,
+                                                       dimension: int = 3) -> int:
     """ 
     Get the local start index of the block of gradient variable indices for a
     given edge
     """
     vertex_block_size: int = 9 * dimension
-    relative_edge_index = dimension * edge_index
+    relative_edge_index: int = dimension * edge_index
 
     return vertex_block_size + relative_edge_index
 
@@ -64,7 +67,9 @@ def generate_local_edge_gradient_variables_start_index(edge_index: int, dimensio
 # **********************
 
 
-def generate_local_vertex_position_variable_index(face_vertex_index: int, coord: int, dimension: int = 3) -> int:
+def generate_local_vertex_position_variable_index(face_vertex_index: int,
+                                                  coord: int,
+                                                  dimension: int = 3) -> int:
     """
     Used in optimize_spline_surface.py
 
@@ -77,13 +82,15 @@ def generate_local_vertex_position_variable_index(face_vertex_index: int, coord:
     @param[in] dimension: number of coordinate dimensions
     @return index of the variable in the local DOF vector
     """
-    start_index = generate_local_vertex_position_variables_start_index(face_vertex_index, dimension)
+    start_index: int = generate_local_vertex_position_variables_start_index(face_vertex_index, dimension)
 
     return start_index + coord
 
 
 def generate_local_vertex_gradient_variable_index(face_vertex_index: int,
-                                                  row: int, col: int, dimension: int = 3) -> int:
+                                                  row: int,
+                                                  col: int,
+                                                  dimension: int = 3) -> int:
     """
     Used in optimize_spline_surface.py
 
@@ -97,13 +104,16 @@ def generate_local_vertex_gradient_variable_index(face_vertex_index: int,
     @param[in] dimension: number of coordinate dimensions
     @return index of the variable in the local DOF vector
     """
-    start_index: int = generate_local_vertex_gradient_variables_start_index(face_vertex_index, dimension)
+    start_index: int = generate_local_vertex_gradient_variables_start_index(
+        face_vertex_index, dimension)
     matrix_index: int = generate_local_variable_matrix_index(row, col, dimension)
 
     return start_index + matrix_index
 
 
-def generate_local_edge_gradient_variable_index(face_edge_index: int, coord: int, dimension: int = 3) -> int:
+def generate_local_edge_gradient_variable_index(face_edge_index: int,
+                                                coord: int,
+                                                dimension: int = 3) -> int:
     """
     Used in optimize_spline_surface.py
 
@@ -117,7 +127,8 @@ def generate_local_edge_gradient_variable_index(face_edge_index: int, coord: int
     @return index of the variable in the local DOF vector
     """
 
-    start_index: int = generate_local_edge_gradient_variables_start_index(face_edge_index, dimension)
+    start_index: int = generate_local_edge_gradient_variables_start_index(
+        face_edge_index, dimension)
 
     return start_index + coord
 
@@ -131,21 +142,24 @@ def generate_global_vertex_position_variables_block_start_index() -> Literal[0]:
     return 0
 
 
-def generate_global_vertex_gradient_variables_block_start_index(num_variable_vertices: int, dimension: int) -> int:
+def generate_global_vertex_gradient_variables_block_start_index(num_variable_vertices: int,
+                                                                dimension: int) -> int:
     """Get the start index of the block of vertex gradient variable indices"""
 
     # There are dimension many position variables per variable vertex
     return dimension * num_variable_vertices
 
 
-def generate_global_edge_gradient_variables_block_start_index(num_variable_vertices: int, dimension: int) -> int:
+def generate_global_edge_gradient_variables_block_start_index(num_variable_vertices: int,
+                                                              dimension: int) -> int:
     """ Get the start index of the block of edge gradient variable indices"""
     # There are dimension many position variables and 2 * dimension many vector
     # gradient variables per variable vertex
     return 3 * dimension * num_variable_vertices
 
 
-def generate_global_vertex_position_variables_start_index(vertex_index: int, dimension: int) -> int:
+def generate_global_vertex_position_variables_start_index(vertex_index: int,
+                                                          dimension: int) -> int:
     """
     Get the start index of the block of position variable indices for a given
     vertex
@@ -156,7 +170,8 @@ def generate_global_vertex_position_variables_start_index(vertex_index: int, dim
     return start_index + relative_vertex_index
 
 
-def generate_global_vertex_gradient_variables_start_index(num_variable_vertices: int, vertex_index: int, dimension: int) -> int:
+def generate_global_vertex_gradient_variables_start_index(num_variable_vertices: int,
+                                                          vertex_index: int, dimension: int) -> int:
     """
     Get the start index of the block of gradient variable indices for a given
     vertex
@@ -184,7 +199,9 @@ def generate_global_edge_gradient_variables_start_index(num_variable_vertices: i
 # Global variable indices
 # ***********************
 
-def generate_global_vertex_position_variable_index(vertex_index: int, coord: int, dimension: int = 3) -> int:
+def generate_global_vertex_position_variable_index(vertex_index: int,
+                                                   coord: int,
+                                                   dimension: int = 3) -> int:
     """
     Used locally.
 
@@ -197,7 +214,8 @@ def generate_global_vertex_position_variable_index(vertex_index: int, coord: int
     @param[in] dimension: number of coordinate dimensions
     @return index of the variable in the global DOF vector
     """
-    start_index: int = generate_global_vertex_position_variables_start_index(vertex_index, dimension)
+    start_index: int = generate_global_vertex_position_variables_start_index(
+        vertex_index, dimension)
 
     return start_index + coord
 
@@ -254,7 +272,9 @@ def generate_global_edge_gradient_variable_index(num_variable_vertices: int,
 # Variable flattening
 # *******************
 
-def generate_six_split_variable_value_vector(vertex_positions: list[SpatialVector], vertex_gradients: list[Matrix2x3r], variable_vertices: list[int]) -> VectorX:
+def generate_six_split_variable_value_vector(vertex_positions: list[SpatialVector],
+                                             vertex_gradients: list[Matrix2x3r],
+                                             variable_vertices: list[int]) -> VectorX:
     """"
     Given vertex positions and gradients and a list of variable vertices, assemble
     the vector of global vertex degrees of freedom
@@ -306,7 +326,13 @@ def generate_six_split_variable_value_vector(vertex_positions: list[SpatialVecto
     return variable_values
 
 
-def generate_twelve_split_variable_value_vector(vertex_positions: list[SpatialVector], vertex_gradients: list[Matrix2x3r], edge_gradients: list[list[SpatialVector]], variable_vertices: list[int], variable_edges: list[int], halfedge: Halfedge, he_to_corner: list[tuple[Index, Index]]) -> VectorX:
+def generate_twelve_split_variable_value_vector(vertex_positions: list[SpatialVector],
+                                                vertex_gradients: list[Matrix2x3r],
+                                                edge_gradients: list[list[SpatialVector]],
+                                                variable_vertices: list[int],
+                                                variable_edges: list[int],
+                                                halfedge: Halfedge,
+                                                he_to_corner: list[tuple[Index, Index]]) -> VectorX:
     """
     Used in optimize_spline_surface.py
 
@@ -363,7 +389,8 @@ def generate_twelve_split_variable_value_vector(vertex_positions: list[SpatialVe
     return variable_values
 
 
-def generate_six_split_local_to_global_map(global_vertex_indices: list[int], num_variable_vertices: int) -> list[int]:
+def generate_six_split_local_to_global_map(global_vertex_indices: list[int],
+                                           num_variable_vertices: int) -> list[int]:
     """
     Given the global vertex indices of a triangle, compute the map from the
     local DOF vector indices for this triangle to their indices in the global
@@ -461,7 +488,9 @@ def generate_twelve_split_local_to_global_map(global_vertex_indices: list[int],
     return local_to_global_map
 
 
-def update_independent_variable_vector(variable_values: VectorX, variable_vector: SpatialVector, start_index: int) -> SpatialVector:
+def update_independent_variable_vector(variable_values: VectorX,
+                                       variable_vector: SpatialVector,
+                                       start_index: int) -> SpatialVector:
     """
     Update variables in a vector from the vector of all variable values from some
     start index
@@ -477,7 +506,9 @@ def update_independent_variable_vector(variable_values: VectorX, variable_vector
     return variable_vector
 
 
-def update_independent_variable_matrix(variable_values: VectorX, variable_matrix: Matrix2x3r, start_index: int) -> Matrix2x3r:
+def update_independent_variable_matrix(variable_values: VectorX,
+                                       variable_matrix: Matrix2x3r,
+                                       start_index: int) -> Matrix2x3r:
     """
     Update variables in a matrix from the vector of all variable values from some
     start index The flattening of the matrix is assumed to be row major.
@@ -493,7 +524,8 @@ def update_independent_variable_matrix(variable_values: VectorX, variable_matrix
     return variable_matrix
 
 
-def update_position_variables(variable_values: VectorX, variable_vertices: list[int]) -> list[SpatialVector]:
+def update_position_variables(variable_values: VectorX,
+                              variable_vertices: list[int]) -> list[SpatialVector]:
     """
     Used in optimize_spline_surface.py
 
@@ -524,7 +556,9 @@ def update_position_variables(variable_values: VectorX, variable_vertices: list[
     return vertex_positions
 
 
-def update_vertex_gradient_variables(variable_values: VectorX, variable_vertices: list[int], vertex_gradients: list[Matrix2x3r]) -> list[Matrix2x3r]:
+def update_vertex_gradient_variables(variable_values: VectorX,
+                                     variable_vertices: list[int],
+                                     vertex_gradients: list[Matrix2x3r]) -> list[Matrix2x3r]:
     """
     Used in optimize_spline_surface.py
 
@@ -547,7 +581,12 @@ def update_vertex_gradient_variables(variable_values: VectorX, variable_vertices
     return vertex_gradients
 
 
-def update_edge_gradient_variables(variable_values: VectorX, variable_vertices: list[int], variable_edges: list[int], halfedge: Halfedge, he_to_corner: list[tuple[Index, Index]], edge_gradients: list[list[SpatialVector]]) -> list[list[SpatialVector]]:
+def update_edge_gradient_variables(variable_values: VectorX,
+                                   variable_vertices: list[int],
+                                   variable_edges: list[int],
+                                   halfedge: Halfedge,
+                                   he_to_corner: list[tuple[Index, Index]],
+                                   edge_gradients: list[list[SpatialVector]]) -> list[list[SpatialVector]]:
     """
     Used in optimize_spline_surface.py
 
@@ -599,7 +638,7 @@ def update_edge_gradient_variables(variable_values: VectorX, variable_vertices: 
     return edge_gradients
 
 
-def build_variable_vertex_indices_map(num_vertices: int, variable_vertices: list[int]):
+def build_variable_vertex_indices_map(num_vertices: int, variable_vertices: list[int]) -> list[int]:
     """
     Used in optimize_spline_surface.py
 
@@ -612,13 +651,17 @@ def build_variable_vertex_indices_map(num_vertices: int, variable_vertices: list
     """
     # Get variable vertex indices
     global_vertex_indices: list[int] = [-1 for _ in range(num_vertices)]
-    for i in range(len(variable_vertices)):
+
+    for i, _ in enumerate(variable_vertices):
         global_vertex_indices[variable_vertices[i]] = i
 
     return global_vertex_indices
 
 
-def build_variable_edge_indices_map(num_faces: int, variable_edges: list[int], halfedge: Halfedge, he_to_corner: list[tuple[Index, Index]]) -> list[list[int]]:
+def build_variable_edge_indices_map(num_faces: int,
+                                    variable_edges: list[int],
+                                    halfedge: Halfedge,
+                                    he_to_corner: list[tuple[Index, Index]]) -> list[list[int]]:
     """
     Used in optimize_spline_surface.py
 
@@ -631,11 +674,13 @@ def build_variable_edge_indices_map(num_faces: int, variable_edges: list[int], h
     @param[out] global_edge_indices: map from edge indices to variable edges
     """
     # TODO: does the below make a list of list[int, int, int] correctly?
-    global_edge_indices: list[list[int]] = [[-1, -1, -1] for _ in range(num_faces)]
+    PLACEHOLDER_INT = -1
+    global_edge_indices: list[list[int]] = [[PLACEHOLDER_INT, PLACEHOLDER_INT, PLACEHOLDER_INT]
+                                            for _ in range(num_faces)]
 
-    for i in range(len(variable_edges)):
-        edge_index = variable_edges[i]
-        h0 = halfedge.edge_to_first_halfedge(edge_index)
+    for i, _ in enumerate(variable_edges):
+        edge_index: Index = variable_edges[i]
+        h0: int = halfedge.edge_to_first_halfedge(edge_index)
         f0 = he_to_corner[h0][0]
         f0_vertex_index = he_to_corner[h0][1]
         global_edge_indices[f0][f0_vertex_index] = i
@@ -730,4 +775,5 @@ def build_face_variable_vector(variables: list, i: int,
     @param[in] k: third variable index
     @param[out] face_variable_vector: variables for face Tijk
     """
-    unimplemented("This function really is not needed in Python since arrays are already vectors.")
+    unimplemented(
+        "This function really is not needed in Python since C++ arrays are already vectors. As in, lists are already vector-like.")

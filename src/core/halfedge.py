@@ -56,7 +56,7 @@ class Halfedge:
     # ************
     # CONSTRUCTORS
     # ************
-    def __init__(self, F: np.ndarray = None) -> None:
+    def __init__(self, F: np.ndarray | None = None) -> None:
         """
         TODO: deal with actually default constructor where Default trivial halfedge is made.
         Build halfedge mesh from mesh faces F with.
@@ -81,8 +81,8 @@ class Halfedge:
         #         return
 
         # Build maps between corners and halfedges
-        # NOTE: self.corner_to_he is type list[list[Index]]
-        # NOTE: self.he_to_corner is type list[tuple[int, int]]
+        self.corner_to_he: list[list[Index]]
+        self.he_to_corner: list[tuple[int, int]]
         self.corner_to_he, self.he_to_corner = self.build_corner_to_he_maps(
             num_faces)
 

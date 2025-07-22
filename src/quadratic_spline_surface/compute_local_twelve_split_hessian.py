@@ -219,15 +219,15 @@ def get_R_quad(uv: np.ndarray) -> np.ndarray:
 
     # Compute 3x3 matrix q_l mapping second derivatives wrt barycentric coordinates
     # to second derivatives wrt parametric coordinates
-    q_l = np.array([
+    q_l: np.ndarray = np.array([
         [R[0, 0] * R[1, 1] + R[0, 1] * R[1, 0], 2 * R[0, 0] * R[0, 1], 2 * R[1, 0] * R[1, 1]],
         [2 * R[0, 0] * R[1, 0], 2 * R[0, 0] * R[0, 0], 2 * R[1, 0] * R[1, 0]],
         [2 * R[0, 1] * R[1, 1], 2 * R[0, 1] * R[0, 1], 2 * R[1, 1] * R[1, 1]]
     ])
     assert q_l.shape == (3, 3)
 
-    #  Build R_quad as 12 block copies of q_l
-    # TODO: could use numpy indexing somehow
+    # Build R_quad as 12 block copies of q_l
+    # TODO: could use NumPy indexing somehow
     R_quad: np.ndarray = np.zeros(shape=(36, 36))
     for i in range(12):
         for j in range(3):
@@ -243,7 +243,7 @@ def get_S_weighted(A: float) -> np.ndarray:
 
     Return np.ndarray of shape (36, 36)
     """
-    S = np.zeros(shape=(36, 36))
+    S: np.ndarray = np.zeros(shape=(36, 36), dtype=float)
 
     # TODO: optimize with numpy indexing
     for i in range(36):

@@ -25,10 +25,10 @@ class QuadraticPositionFunction:
         """
         Method that allows for translation of coeffs into UV point space... I think.
         """
-        point: SpatialVector = np.array([
-            [u],
-            [v],
-            [self.uv_coeff * u * v + self.uu_coeff * u * u + self.vv_coeff * v * v],
+        point: SpatialVector = np.array([[
+            u,
+            v,
+            self.uv_coeff * u * v + self.uu_coeff * u * u + self.vv_coeff * v * v]
         ], dtype=float)
 
         assert point.shape == (1, 3)
@@ -141,14 +141,14 @@ def generate_parametric_affine_manifold_corner_data(position_func: QuadraticPosi
         uvk: PlanarPoint = parametric_affine_manifold.get_vertex_global_uv(k)
 
         # Get vertex positions
-        vi: SpatialVector = position_func(uvi[0], uvi[1])
-        vj: SpatialVector = position_func(uvj[0], uvj[1])
-        vk: SpatialVector = position_func(uvk[0], uvk[1])
+        vi: SpatialVector = position_func(uvi[0][0], uvi[0][1])
+        vj: SpatialVector = position_func(uvj[0][0], uvj[0][1])
+        vk: SpatialVector = position_func(uvk[0][0], uvk[0][1])
 
         # Get vertex gradients
-        Gi: Matrix2x3r = gradient_func(uvi[0], uvi[1])
-        Gj: Matrix2x3r = gradient_func(uvj[0], uvj[1])
-        Gk: Matrix2x3r = gradient_func(uvk[0], uvk[1])
+        Gi: Matrix2x3r = gradient_func(uvi[0][0], uvi[0][1])
+        Gj: Matrix2x3r = gradient_func(uvj[0][0], uvj[0][1])
+        Gk: Matrix2x3r = gradient_func(uvk[0][0], uvk[0][1])
 
         # Get uv directions
         dij: PlanarPoint = uvj - uvi
@@ -160,16 +160,16 @@ def generate_parametric_affine_manifold_corner_data(position_func: QuadraticPosi
 
         # Building corner data
         first_corner_data = TriangleCornerData(input_function_value=vi,
-                                               input_first_edge_derivative=dij * Gi,
-                                               input_second_edge_derivative=dik * Gi)
+                                               input_first_edge_derivative=dij @ Gi,
+                                               input_second_edge_derivative=dik @ Gi)
 
         second_corner_data = TriangleCornerData(input_function_value=vj,
-                                                input_first_edge_derivative=djk * Gj,
-                                                input_second_edge_derivative=dji * Gj)
+                                                input_first_edge_derivative=djk @ Gj,
+                                                input_second_edge_derivative=dji @ Gj)
 
         third_corner_data = TriangleCornerData(input_function_value=vk,
-                                               input_first_edge_derivative=dki * Gk,
-                                               input_second_edge_derivative=dkj * Gk)
+                                               input_first_edge_derivative=dki @ Gk,
+                                               input_second_edge_derivative=dkj @ Gk)
         corner_data[face_index] = [first_corner_data, second_corner_data, third_corner_data]
 
     return corner_data
@@ -205,9 +205,10 @@ def generate_parametric_affine_manifold_midpoint_data(gradient_func: QuadraticGr
         uvki: PlanarPoint = 0.5 * (uvk + uvi)
 
         # Get midpoint gradients
-        Gij: Matrix2x3r = gradient_func(uvij[0], uvij[1])
-        Gjk: Matrix2x3r = gradient_func(uvjk[0], uvjk[1])
-        Gki: Matrix2x3r = gradient_func(uvki[0], uvki[1])
+        # TODO: again with the confusing index accessing for PlanarPoint...
+        Gij: Matrix2x3r = gradient_func(uvij[0][0], uvij[0][1])
+        Gjk: Matrix2x3r = gradient_func(uvjk[0][0], uvjk[0][1])
+        Gki: Matrix2x3r = gradient_func(uvki[0][0], uvki[0][1])
 
         # Get uv directions
         nij: PlanarPoint = uvk - uvij
@@ -215,8 +216,8 @@ def generate_parametric_affine_manifold_midpoint_data(gradient_func: QuadraticGr
         nki: PlanarPoint = uvj - uvki
 
         # Build midpoint normals (indexed opposite the edge)
-        midpoint_data[face_index] = [TriangleMidpointData(njk * Gjk),
-                                     TriangleMidpointData(nki * Gki),
-                                     TriangleMidpointData(nij * Gij)]
+        midpoint_data[face_index] = [TriangleMidpointData(njk @ Gjk),
+                                     TriangleMidpointData(nki @ Gki),
+                                     TriangleMidpointData(nij @ Gij)]
 
     return midpoint_data

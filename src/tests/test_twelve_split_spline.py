@@ -49,10 +49,7 @@ def twelve_split_quadratic_reproduction(
         midpoint_data[0])  # length 12 list
     assert len(surface_mappings) == 12
 
-    domain_point: PlanarPoint = np.array([
-        [0.2],
-        [0.3]
-    ])
+    domain_point: PlanarPoint = np.array([[0.2, 0.3]])
     assert domain_point.shape == (1, 2)
     q: SpatialVector = evaluate_quadratic_mapping(3, surface_mappings[0], domain_point)
     assert q.shape == (1, 3)
@@ -68,16 +65,11 @@ def twelve_split_quadratic_reproduction(
 
 def test_twelve_split_spline_constant_surface():
     # Build constant function triangle data
-    p: SpatialVector = np.array([
-        [1.0],
-        [2.0],
-        [3.0]])
+    p: SpatialVector = np.array([[1.0, 2.0, 3.0]])
+    zero: SpatialVector = np.array([[0.0, 0.0, 0.0]])
+    assert p.shape == (1, 3)
+    assert zero.shape == (1, 3)
 
-    zero: SpatialVector = np.array([
-        [0.0],
-        [0.0],
-        [0.0]
-    ])
     corner_data: list[TriangleCornerData] = [
         TriangleCornerData(p, zero, zero),
         TriangleCornerData(p, zero, zero),
@@ -95,7 +87,7 @@ def test_twelve_split_spline_constant_surface():
         corner_data,
         midpoint_data)
 
-    domain_point: PlanarPoint = np.array([[0.25], [0.25]])
+    domain_point: PlanarPoint = np.array([[0.25, 0.25]])
     q: SpatialVector = evaluate_quadratic_mapping(3, surface_mappings[0], domain_point)
 
     assert len(surface_mappings) == 12

@@ -43,7 +43,7 @@ class QuadraticSplineSurface:
     - (de)serialization
     """
 
-    def __init__(self, patches: list[QuadraticSplineSurfacePatch]):
+    def __init__(self, patches: list[QuadraticSplineSurfacePatch]) -> None:
         """
         Constructor from patches
         @param[in] patches: quadratic surface patches

@@ -48,31 +48,8 @@ class VertexManifoldChart:
     # Mark vertices adjacent to a cone
     is_cone_adjacent: bool = False
 
-    # def __init__(self, vertex_index: int, vertex_one_ring: list[int],  face_one_ring: list[int],
-    #              one_ring_uv_positions: np.ndarray,
-    #              is_boundary=False, is_cone=False, is_cone_adjacent=False) -> None:
-    #     # Index of the vertex in the affine manifold
-    #     self.vertex_index: int = vertex_index
 
-    #     # List of manifold vertex indices in the one ring
-    #     self.vertex_one_ring: list[int] = vertex_one_ring
-
-    #     # List of manifold face indices in the one ring
-    #     self.face_one_ring: list[int] = face_one_ring
-
-    #     # Local uv coordinates of the one ring vertices
-    #     self.one_ring_uv_positions: np.ndarray = one_ring_uv_positions
-
-    #     # Mark boundary vertices
-    #     self.is_boundary: bool = is_boundary
-
-    #     # Mark cone vertices
-    #     self.is_cone: bool = is_cone
-
-    #     # Mark vertices adjacent to a cone
-    #     self.is_cone_adjacent: bool = is_cone_adjacent
-
-
+@dataclass
 class EdgeManifoldChart:
     """
     Local layout manifold chart in R2 of the triangles around an edge.
@@ -83,36 +60,50 @@ class EdgeManifoldChart:
     the empty vector.
     """
 
-    def __init__(self, top_face_index: Index, bottom_face_index: Index,
-                 left_vertex_index: Index, right_vertex_index: Index, top_vertex_index: Index, bottom_vertex_index: Index,
-                 left_vertex_uv_position: PlanarPoint, right_vertex_uv_position: PlanarPoint, top_vertex_uv_position: PlanarPoint, bottom_vertex_uv_position: PlanarPoint,
-                 is_boundary: bool) -> None:
+    # -- Face indices --
+    top_face_index: Index
+    bottom_face_index: Index
 
-        # -- Face indices --
-        self.top_face_index: Index = top_face_index
-        self.bottom_face_index: Index = bottom_face_index
+    # -- Vertex indices --
+    left_vertex_index: Index
+    right_vertex_index: Index
+    top_vertex_index: Index
+    bottom_vertex_index: Index
 
-        # -- Vertex indices --
-        self.left_vertex_index: Index = left_vertex_index
-        self.right_vertex_index: Index = right_vertex_index
-        self.top_vertex_index: Index = top_vertex_index
-        self.bottom_vertex_index: Index = bottom_vertex_index
+    # -- Vertex positions --
+    left_vertex_uv_position: PlanarPoint
+    right_vertex_uv_position: PlanarPoint
+    top_vertex_uv_position: PlanarPoint
+    bottom_vertex_uv_position: PlanarPoint
 
-        # -- Vertex positions --
-        self.left_vertex_uv_position: PlanarPoint = left_vertex_uv_position
-        self.right_vertex_uv_position: PlanarPoint = right_vertex_uv_position
-        self.top_vertex_uv_position: PlanarPoint = top_vertex_uv_position
-        self.bottom_vertex_uv_position: PlanarPoint = bottom_vertex_uv_position
-
-        # True iff the edge is on the boundary
-        self.is_boundary: bool = is_boundary
+    # True iff the edge is on the boundary
+    is_boundary: bool
 
 
+# @dataclass
 class FaceManifoldChart:
     """
     Local layout manifold chart in R2 of a triangle.
     This is the same as global uv positions when these are provided.
     """
+    # # -- Face indices --
+    # face_index: Index
+
+    # # -- Vertex positions --
+    # # NOTE: self_uv_position must be a size 3 list with PlanarPoint elements
+    # # assert len(face_uv_positions) == 3
+    # # NOTE: placeholder values below to denote that face_uv_positions is list of length 3
+    # face_uv_positions: list[PlanarPoint] = [PlanarPoint(shape=(1, 2)),
+    #                                         PlanarPoint(shape=(1, 2)),
+    #                                         PlanarPoint(shape=(1, 2))]
+
+    # # -- Global information --
+    # # True iff the edge is on the boundary
+    # is_boundary: bool = False
+    # # Mark faces adjacent to a cone
+    # is_cone_adjacent: bool = False
+    # # Mark individual corners adjacent to a cone
+    # is_cone_corner: list[bool] = [False, False, False]
 
     def __init__(self, face_index: Index, face_uv_positions: list[PlanarPoint],
                  is_boundary: bool = False, is_cone_adjacent: bool = False,
@@ -355,7 +346,9 @@ class AffineManifold:
         @param[out] face_edge_uv_positions: uv positions contained in the given
         face
         """
-        face_edge_uv_positions: list[np.ndarray] = [None, None, None]
+        face_edge_uv_positions: list[PlanarPoint] = [PlanarPoint(shape=(1, 2)),
+                                                     PlanarPoint(shape=(1, 2)),
+                                                     PlanarPoint(shape=(1, 2))]
 
         # Iterate over edges
         for i in range(3):
@@ -407,8 +400,10 @@ class AffineManifold:
         cone_angle: float = 0.0
 
         for j in range(len(chart.face_one_ring)):
-            cone_angle += angle_from_positions(2, zero, chart.one_ring_uv_positions[[
-                                               j], :], chart.one_ring_uv_positions[[j + 1], :])
+            cone_angle += angle_from_positions(2,
+                                               zero,
+                                               chart.one_ring_uv_positions[[j], :],
+                                               chart.one_ring_uv_positions[[j + 1], :])
 
         # Compute geodesic curvature for boundary vertices and Gaussian curvature for
         # interior vertices
@@ -742,7 +737,6 @@ class AffineManifold:
                 __face_one_ring,
                 __one_ring_uv_positions,
                 __is_boundary
-                # __is_cone_adjacent
             )
 
             vertex_charts.append(vertex_chart)
@@ -757,8 +751,7 @@ class AffineManifold:
         """
         # Build edge charts
         num_edges: Index = halfedge.num_edges
-        edge_charts: list[EdgeManifoldChart] = [
-            EdgeManifoldChart() for _ in range(num_edges)]
+        edge_charts: list[EdgeManifoldChart] = []  # length num_edges
 
         for edge_index in range(num_edges):
             # Get relevant halfedges for the face
@@ -768,95 +761,125 @@ class AffineManifold:
             he_bottom_next: int = halfedge.next_halfedge(he_bottom)
 
             # Get indices for the faces and vertices around the edge
-            chart = EdgeManifoldChart()
-            chart.top_face_index = halfedge.halfedge_to_face(he_top)
-            chart.bottom_face_index = halfedge.halfedge_to_face(he_bottom)
-            chart.left_vertex_index = halfedge.halfedge_to_tail_vertex(he_top)
-            chart.right_vertex_index = halfedge.halfedge_to_head_vertex(he_top)
-            chart.top_vertex_index = halfedge.halfedge_to_head_vertex(
+            # chart = EdgeManifoldChart()
+            __top_face_index: Index = halfedge.halfedge_to_face(he_top)
+            __bottom_face_index: Index = halfedge.halfedge_to_face(he_bottom)
+            __left_vertex_index: Index = halfedge.halfedge_to_tail_vertex(he_top)
+            __right_vertex_index: Index = halfedge.halfedge_to_head_vertex(he_top)
+            __top_vertex_index: Index = halfedge.halfedge_to_head_vertex(
                 he_top_next)
-            chart.bottom_vertex_index = halfedge.halfedge_to_head_vertex(
+            __bottom_vertex_index: Index = halfedge.halfedge_to_head_vertex(
                 he_bottom_next)
-            chart.is_boundary = halfedge.is_boundary_edge(edge_index)
+            __is_boundary: bool = halfedge.is_boundary_edge(edge_index)
 
             # Get lengths of the edges of the top triangle
             # TODO: indexing issue perhaps below
-            j_top: int = find_face_vertex_index(F[(chart.top_face_index), :],
-                                                chart.left_vertex_index)
+            j_top: int = find_face_vertex_index(F[__top_face_index, :],
+                                                __left_vertex_index)
             assert j_top >= 0
-            lij: float = l[chart.top_face_index][(j_top + 2) % 3]
-            ljk: float = l[chart.top_face_index][(j_top + 0) % 3]
-            lki: float = l[chart.top_face_index][(j_top + 1) % 3]
+            lij: float = l[__top_face_index][(j_top + 2) % 3]
+            ljk: float = l[__top_face_index][(j_top + 0) % 3]
+            lki: float = l[__top_face_index][(j_top + 1) % 3]
 
             # Layout vertices starting at vi. Note that here, unlike in the vertex
             # chart case, we start from axis aligned edge with length 1
-            chart.left_vertex_uv_position = np.array([[0.0, 0.0]])
-            chart.right_vertex_uv_position = np.array([[1.0, 0.0]])
+            __left_vertex_uv_position: PlanarPoint = np.array([[0.0, 0.0]])
+            __right_vertex_uv_position: PlanarPoint = np.array([[1.0, 0.0]])
             assert lij > 0
-            chart.top_vertex_uv_position = self._layout_next_vertex(
-                chart.right_vertex_uv_position, ljk / lij, lki / lij)
+            __top_vertex_uv_position: PlanarPoint = self._layout_next_vertex(
+                __right_vertex_uv_position,
+                ljk / lij,
+                lki / lij)
 
             # Get center of the target edge for a later shift
             center: PlanarPoint = np.ndarray(shape=(1, 2))
-            center[:, :] = 0.5 * chart.right_vertex_uv_position
+            center[:, :] = 0.5 * __right_vertex_uv_position
 
             # If the edge is not on the boundary, build the bottom triangle
-            if (not chart.is_boundary):
+            if (not __is_boundary):
                 # Get lengths of the edges of the bottom triangle if it
                 # TODO: might be problem with slicing
                 j_bottom: int = find_face_vertex_index(
-                    F[chart.bottom_face_index, :], chart.left_vertex_index)
+                    F[__bottom_face_index, :], __left_vertex_index)
                 assert j_bottom >= 0
-                lil: float = l[chart.bottom_face_index][(j_bottom + 2) % 3]
-                llj: float = l[chart.bottom_face_index][(j_bottom + 0) % 3]
+                lil: float = l[__bottom_face_index][(j_bottom + 2) % 3]
+                llj: float = l[__bottom_face_index][(j_bottom + 0) % 3]
                 assert (float_equal(
-                    lij, l[chart.bottom_face_index][(j_bottom + 1) % 3]))
+                    lij, l[__bottom_face_index][(j_bottom + 1) % 3]))
 
                 # Construct the last vertex counterclockwise and then reflect it
                 uvl_reflected: PlanarPoint = self._layout_next_vertex(
-                    chart.right_vertex_uv_position, llj / lij, lil / lij)
-
-                # TODO: implement the functon below
-                chart.bottom_vertex_uv_position = reflect_across_x_axis(
+                    __right_vertex_uv_position,
+                    llj / lij,
+                    lil / lij)
+                __bottom_vertex_uv_position: PlanarPoint = reflect_across_x_axis(
                     uvl_reflected)
 
                 # Shift all vertices so the midpoint is at the origin
-                chart.left_vertex_uv_position -= center
-                chart.right_vertex_uv_position -= center
-                chart.top_vertex_uv_position -= center
-                chart.bottom_vertex_uv_position -= center
+                __left_vertex_uv_position -= center
+                __right_vertex_uv_position -= center
+                __top_vertex_uv_position -= center
+                __bottom_vertex_uv_position -= center
             else:
                 # Shift all constructed vertices so the midpoint is at the origin
-                chart.left_vertex_uv_position -= center
-                chart.right_vertex_uv_position -= center
-                chart.top_vertex_uv_position -= center
+                __left_vertex_uv_position -= center
+                __right_vertex_uv_position -= center
+                __top_vertex_uv_position -= center
 
                 # Set the bottom uv position to the zero vector
                 # TODO: make this some sort of PlanarPoint class constructor full of 0s
-                chart.bottom_vertex_uv_position = np.zeros(shape=(1, 2))
+                __bottom_vertex_uv_position = np.zeros(shape=(1, 2))
 
             # Set chart
-            edge_charts[edge_index] = chart
+            chart = EdgeManifoldChart(
+                __top_face_index,
+                __bottom_face_index,
+                __left_vertex_index,
+                __right_vertex_index,
+                __top_vertex_index,
+                __bottom_vertex_index,
+                __left_vertex_uv_position,
+                __right_vertex_uv_position,
+                __top_vertex_uv_position,
+                __bottom_vertex_uv_position,
+                __is_boundary
+            )
+
+            edge_charts.append(chart)
 
         # Done creating chart, return.
         return edge_charts
 
-    def _build_face_charts(self, F: np.ndarray, global_uv: np.ndarray, F_uv: np.ndarray) -> list[FaceManifoldChart]:
+    def _build_face_charts(self,
+                           F: np.ndarray,
+                           global_uv: np.ndarray,
+                           F_uv: np.ndarray) -> list[FaceManifoldChart]:
         """
         """
         num_faces: Index = F.shape[0]
 
         # FIXME: type issue below when allocating space in list
-        face_charts: list[FaceManifoldChart] = [FaceManifoldChart] * num_faces
+        face_charts: list[FaceManifoldChart] = []
+        # [FaceManifoldChart] * num_faces
 
         for face_index in range(num_faces):
-            face_charts[face_index].face_index = face_index
+            __face_index: int = face_index
+            __face_uv_positions: list[PlanarPoint] = [PlanarPoint(shape=(1, 2)),
+                                                      PlanarPoint(shape=(1, 2)),
+                                                      PlanarPoint(shape=(1, 2))]
+
             for face_vertex_index in range(3):
                 uv_vertex_index: Index = F_uv[face_index, face_vertex_index]
 
                 # FIXME: may be  issue with translation from Eigen:row() to NP slicin
-                face_charts[face_index].face_uv_positions[face_vertex_index] = global_uv[uv_vertex_index, :]
+                assert global_uv[[uv_vertex_index], :].shape == (1, 2)  # checking to see if same shape as PlanarPoint
 
+                __face_uv_positions[face_vertex_index] = global_uv[[uv_vertex_index], :]
+
+            # append to face_charts
+            face_charts.append(FaceManifoldChart(__face_index,
+                                                 __face_uv_positions))
+        assert len(face_charts) == num_faces
         return face_charts
 
     def _build_corner_to_edge_map(self, corner_to_he: list[list[Index]], he_to_edge: list[Index]) -> list[list[int]]:
@@ -869,9 +892,10 @@ class AffineManifold:
 
         num_faces: Index = len(corner_to_he)
 
-        # FIXME: Typing issue
+        PLACEHOLDER_INDEX = -1
         corner_to_edge: list[list[Index]] = [
-            [None, None, None] for _ in range(num_faces)]
+            [PLACEHOLDER_INDEX, PLACEHOLDER_INDEX, PLACEHOLDER_INDEX] for _ in range(num_faces)
+        ]
 
         for face_index in range(num_faces):
             for face_vertex_index in range(3):
@@ -975,16 +999,20 @@ class AffineManifold:
         num_faces: Index = F.shape[0]
         face_size: Index = F.shape[1]
         assert face_size == 3
-        l: list[list[float]] = [[None, None, None] for _ in range(num_faces)]
+
+        PLACEHOLDER_VALUE = -1
+        l: list[list[float]] = [
+            [PLACEHOLDER_VALUE, PLACEHOLDER_VALUE, PLACEHOLDER_VALUE] for _ in range(num_faces)
+        ]
 
         # Iterate over faces
         for i in range(num_faces):
             # Iterate over vertices in face i
             for j in range(face_size):
                 # Get the length of the edge opposite face vertex j
-                prev_uv = global_uv[F[i, (j + 2) % face_size], :]
-                next_uv = global_uv[F[i, (j + 1) % face_size], :]
-                edge_vector = prev_uv - next_uv
+                prev_uv: PlanarPoint = global_uv[F[i, (j + 2) % face_size], :]
+                next_uv: PlanarPoint = global_uv[F[i, (j + 1) % face_size], :]
+                edge_vector: PlanarPoint = prev_uv - next_uv
                 l[i][j] = LA.norm(edge_vector)
 
         return l
@@ -997,17 +1025,17 @@ class AffineManifold:
         for vertex_index in range(self.num_vertices):
             # Get the (transposed) similarity map that maps [1, 0]^T to the first local
             # uv edge
-            local_layout = self.get_vertex_chart(
+            local_layout: MatrixXr = self.get_vertex_chart(
                 vertex_index).one_ring_uv_positions
 
             # FIXME: problem with shape below because of slicing... maybe
-            local_edge = local_layout[[0], :]
+            local_edge: PlanarPoint = local_layout[[0], :]
             assert local_edge.shape == (1, 2)
 
             # TODO: confirm that the elements in this matrix matched position of elements in ASOC code
             # Documentation confirms that "comma intialization" in Eigen inserts row by row.
             # https://eigen.tuxfamily.org/dox-devel/group__TutorialAdvancedInitialization.html
-            local_similarity_map = np.array(
+            local_similarity_map: Matrix2x2r = np.array(
                 [[local_edge[0][0], local_edge[0][1]], [-local_edge[0][1], local_edge[0][0]]])
             assert local_similarity_map.shape == (2, 2)
 
@@ -1028,8 +1056,8 @@ class AffineManifold:
             assert global_edge.shape == (1, 2)
 
             # TODO: confirm that the elements in this matrix matched position of elements in ASOC code
-            global_similarity_map = np.array([[global_edge[0, 0], global_edge[0, 1]],
-                                              [-global_edge[0, 1], global_edge[0, 0]]])
+            global_similarity_map: Matrix2x2r = np.array([[global_edge[0, 0], global_edge[0, 1]],
+                                                          [-global_edge[0, 1], global_edge[0, 0]]])
             assert global_similarity_map.shape == (2, 2)
 
             # Apply composite similarity maps to the local uv positions
@@ -1040,17 +1068,17 @@ class AffineManifold:
                 vertex_index].one_ring_uv_positions @ similarity_map
 
         # Check validity after direct member variable manipulation
-        is_valid = self._is_valid_affine_manifold()
+        is_valid: bool = self._is_valid_affine_manifold()
         assert is_valid
 
     def _mark_cones(self) -> None:
         """
         Mark cones and surrounding elements in the vertex and face charts
         """
-        F = self.get_faces
+        F: np.ndarray = self.get_faces
         cones: list[Index] = self.compute_cones()
 
-        for i, ci in enumerate(cones):
+        for _, ci in enumerate(cones):
             self.m_vertex_charts[ci].is_cone = True
             chart: VertexManifoldChart = self.get_vertex_chart(ci)
             logger.debug("Marking cone at %s", ci)
@@ -1078,8 +1106,8 @@ class AffineManifold:
         """
         vn: Index = self.m_F_uv[face_index, (face_vertex_index + 1) % 3]
         vp: Index = self.m_F_uv[face_index, (face_vertex_index + 2) % 3]
-        next_uv = self.m_global_uv[[vn], :]
-        prev_uv = self.m_global_uv[[vp], :]
+        next_uv: PlanarPoint = self.m_global_uv[[vn], :]
+        prev_uv: PlanarPoint = self.m_global_uv[[vp], :]
         assert next_uv.shape == (1, 2)
         assert prev_uv.shape == (1, 2)
         edge_vector = next_uv - prev_uv
@@ -1097,7 +1125,7 @@ class AffineManifold:
         length_threshold: float = 1e-6
 
         # Zero uv coordinate
-        zero = np.zeros(shape=(1, 2))
+        zero: PlanarPoint = np.zeros(shape=(1, 2))
 
         # Face containment helper lambda
         def contains_vertex(face: np.ndarray, index: Index) -> bool:
@@ -1159,7 +1187,7 @@ class AffineManifold:
             # Check that each one ring face contains the central vertex, the vertex with
             # the same index in the vertex one ring, and the vertex with one larger index
             for i, face_index in enumerate(chart.face_one_ring):
-                face_vertex_index = find_face_vertex_index(
+                face_vertex_index: Index = find_face_vertex_index(
                     self.m_F[face_index, :], vertex_index)
                 vi: Index = chart.vertex_one_ring[i]
                 vj: Index = chart.vertex_one_ring[i + 1]
@@ -1284,6 +1312,8 @@ def remove_cones(V: np.ndarray,
 
     NOTE: this method is not used anywhere.
     """
+    unimplemented("This method is not used anywhere else.")
+
     # Compute the cones
     # TODO: why do we even need to pass in cones if they're just going to be removed anyways?
     cones = affine_manifold.compute_cones()
@@ -1291,13 +1321,14 @@ def remove_cones(V: np.ndarray,
     logger.debug("Remove cones at %s", cones)
 
     # Create boolean arrays of cone adjacent vertices
-    is_cone_adjacent_vertex: list[bool] = [bool] * affine_manifold.num_vertices
+    PLACEHOLDER_BOOL: bool = False
+    is_cone_adjacent_vertex: list[bool] = [PLACEHOLDER_BOOL] * affine_manifold.num_vertices
     for vi in range(affine_manifold.num_vertices):
         is_cone_adjacent_vertex[vi] = affine_manifold.get_vertex_chart(
             vi).is_cone_adjacent
 
     # Create boolean arrays of cone adjacent faces
-    is_cone_adjacent_face: list[bool] = [bool] * affine_manifold.num_faces
+    is_cone_adjacent_face: list[bool] = [PLACEHOLDER_BOOL] * affine_manifold.num_faces
     for fi in range(affine_manifold.num_faces):
         is_cone_adjacent_face[fi] = affine_manifold.get_face_chart(
             fi).is_cone_adjacent
@@ -1315,8 +1346,12 @@ def remove_cones(V: np.ndarray,
     pruned_V, F = remove_mesh_faces(V, F_orig, removed_faces)
 
     # Remove faces from the cone adjacent arrays
-    is_cone_adjacent_face_reindexed: list[bool] = remove_vector_values(removed_faces, is_cone_adjacent_face)
-    is_cone_adjacent_vertex_reindexed: list[bool] = remove_vector_values(cones, is_cone_adjacent_vertex)
+    is_cone_adjacent_face_reindexed: list[bool] = remove_vector_values(
+        removed_faces,
+        is_cone_adjacent_face)
+    is_cone_adjacent_vertex_reindexed: list[bool] = remove_vector_values(
+        cones,
+        is_cone_adjacent_vertex)
 
     # Make new affine manifold with cones removed
     pruned_affine_manifold = AffineManifold(F, global_uv, F_uv)
@@ -1330,5 +1365,3 @@ def remove_cones(V: np.ndarray,
     for vi, _ in enumerate(is_cone_adjacent_vertex_reindexed):
         if (is_cone_adjacent_vertex_reindexed[vi]):
             pruned_affine_manifold.mark_cone_adjacent_vertex(vi)
-
-    unimplemented("This method is not used anywhere else.")
