@@ -47,6 +47,7 @@ VertexIndex = int
 ROWS = 0
 COLS = 1
 
+
 # PlanarPoint = NewType('PlanarPoint', npt.NDArray(shape=[(1, 2)], dtype=float))
 # SpatialVector = np.ndarray(shape=(1, 3), dtype=float)
 
@@ -222,18 +223,22 @@ def cross_product(v: np.ndarray, w: np.ndarray) -> np.ndarray:
     @tparam Scalar: scalar field (must support addition and multiplication)
     @param[in] v: first vector to cross product
     @param[in] w: second vector to cross product
-    @return cross product v x w
+    @return cross product v x w in shape (3, 1)
     """
-    assert v.shape == (3, 1)
-    assert w.shape == (3, 1)
+    # Flatten (1, 3) or (3, 1) matrices into (3, ) arrays
+    v = v.flatten()
+    w = w.flatten()
+    assert v.size == 3
+    assert w.size == 3
 
     # TODO: make these 2D matrices act like Eigen matrices with shape (n, 1) where they can be accessed like vectors and whatnot
     # TODO: use NumPy's version of cross products
-    n = np.array([
-        [v[1][0] * w[2][0] - v[2][0] * w[1][0]],
-        [-(v[0][0] * w[2][0] - v[2][0] * w[0][0])],
-        [v[0][0] * w[1][0] - v[1][0] * w[0][0]]])
+    n: np.ndarray = np.array([
+        [v[1] * w[2] - v[2] * w[1]],
+        [-(v[0] * w[2] - v[2] * w[0])],
+        [v[0] * w[1] - v[1] * w[0]]])
 
+    # TODO: decide on flattening n to shape (3, ) or keep as shape (3, 1)
     assert n.shape == (3, 1)
     return n
 
@@ -255,7 +260,7 @@ def reflect_across_x_axis(vector: PlanarPoint) -> PlanarPoint:
     @brief  Reflect a vector in the plane across the x-axis.
 
     @param[in] vector: vector to reflect
-    @return reflected vector    
+    @return reflected vector of shape (1, 2)
     """
     reflected_vector = PlanarPoint(shape=(1, 2))
     # FIXME maybe problem with index accessing

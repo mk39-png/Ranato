@@ -34,11 +34,13 @@ class TriangleCornerData:
         """
         Default constructor
         NOTE: made arguments optional to have some sort of default constructor.
+        Because there is behavior in position_data.py with midpoint_data that I do not completely understand and that seems to not create a new midpoint_data but rather modifies the original. Hence, this having default values so that TriangleCornerData() can be called and to implement the code as is.
 
         :param function_value: position value vector at the corner
         :param first_edge_derivative: derivative in the counter-clockwise edge direction
         :param second_edge_derivative: derivative in the clockwise edge direction
         """
+
         assert input_function_value.shape[0] == 1
         assert input_first_edge_derivative.shape[0] == 1
         assert input_second_edge_derivative.shape[0] == 1
@@ -67,7 +69,7 @@ class TriangleMidpointData:
         self.normal_derivative: VectorX = input_normal_derivative
 
 
-def view_triangle_corner_data():
+def view_triangle_corner_data() -> None:
     unimplemented()
 
 
@@ -276,8 +278,7 @@ def generate_corner_data_matrices(corner_data: list[list[TriangleCornerData]],
     __ref_second_derivative_matrix.reshape(3 * num_faces, 3)
 
     # Organize position data into matrices
-    todo("Wait, why is this modifying by reference? Couldn't this just return the matrices???")
-
+    # todo("Wait, why is this modifying by reference? Couldn't this just return the matrices???")
     # TODO: could try to use NumPy indexing magic
     for i in range(num_faces):
         for j in range(3):

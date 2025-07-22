@@ -114,6 +114,7 @@ def evaluate_quadratic_mapping(dimension: int,
     """
 
     assert quadratic_coeffs.shape == (6, dimension)
+    assert domain_point.shape == (1, 2)
     w = generate_quadratic_monomials(domain_point)
     assert w.shape == (1, 6)
 
@@ -182,7 +183,7 @@ def compute_linear_product(L1_coeffs: np.ndarray, L2_coeffs: np.ndarray):
     return product_coeffs
 
 
-def compute_quadratic_cross_product(V_coeffs: np.ndarray, W_coeffs: np.ndarray) -> np.ndarray:
+def compute_quadratic_cross_product(V_coeffs: Matrix3x3r, W_coeffs: Matrix3x3r) -> np.ndarray:
     """
     /// Compute the quadratic coefficients for the cross product of two linear row
     /// vector functions V(u,v) and W(u,v) with coefficients in order [1, u, v]
@@ -194,32 +195,30 @@ def compute_quadratic_cross_product(V_coeffs: np.ndarray, W_coeffs: np.ndarray) 
     assert V_coeffs.shape == (3, 3)
     assert W_coeffs.shape == (3, 3)
 
-    N_coeffs = np.ndarray(shape=(6, 3))
-
     # Can't I just use NumPy's cross product... again???
     # Something might come up with the shaping... again...
     # FIXME: the whole row accessing is wrong.
-    N_coeffs = np.array([
+    N_coeffs: Matrix6x3r = np.array([
         # 1 coefficient
-        cross_product(V_coeffs[[0], :], W_coeffs[[0], :]),
+        cross_product(V_coeffs[[0], :], W_coeffs[[0], :]).flatten(),  # row 0
 
         # u coefficient
-        cross_product(V_coeffs[[0], :], W_coeffs[[1], :]) +
-        cross_product(V_coeffs[[1], :], W_coeffs[[0], :]),
+        cross_product(V_coeffs[[0], :], W_coeffs[[1], :]).flatten() +  # row 1
+        cross_product(V_coeffs[[1], :], W_coeffs[[0], :]).flatten(),
 
         # v coefficient
-        cross_product(V_coeffs[[0], :], W_coeffs[[2], :]) +
-        cross_product(V_coeffs[[2], :], W_coeffs[[0], :]),
+        cross_product(V_coeffs[[0], :], W_coeffs[[2], :]).flatten() +  # row 2
+        cross_product(V_coeffs[[2], :], W_coeffs[[0], :]).flatten(),
 
         # uv coefficient
-        cross_product(V_coeffs[[1], :], W_coeffs[[2], :]) +
-        cross_product(V_coeffs[[2], :], W_coeffs[[1], :]),
+        cross_product(V_coeffs[[1], :], W_coeffs[[2], :]).flatten() +  # row 3
+        cross_product(V_coeffs[[2], :], W_coeffs[[1], :]).flatten(),
 
         # u^2 coefficient
-        cross_product(V_coeffs[[1], :], W_coeffs[[1], :]),
+        cross_product(V_coeffs[[1], :], W_coeffs[[1], :]).flatten(),  # row 4
 
         # v^2 coefficient
-        cross_product(V_coeffs[[2], :], W_coeffs[[2], :])
+        cross_product(V_coeffs[[2], :], W_coeffs[[2], :]).flatten()  # row 5
     ])
 
     assert N_coeffs.shape == (6, 3)

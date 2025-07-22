@@ -8,7 +8,6 @@ def planarHfun(nx: float, ny: float, nz: float) -> np.ndarray:
     Returns np.ndarray of shape (36, 36)    
     """
     H: np.ndarray = np.ndarray(shape=(36, 36), dtype=float)
-    assert H.shape == [36, 36]
 
     H[0][0] = 32 * nx * nx
     H[0][1] = 0
@@ -1307,4 +1306,6 @@ def planarHfun(nx: float, ny: float, nz: float) -> np.ndarray:
     H[35][34] = 0
     H[35][35] = 0
 
+    # Redundant check
+    assert H.shape == (36, 36)
     return H

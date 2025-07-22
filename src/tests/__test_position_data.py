@@ -1,3 +1,9 @@
+"""
+File simply tests that  gradients can be found through constant and linear vertices.
+So, dependent on the assertions made in methods like compute_least_squares_vertex_gradient()
+
+"""
+
 import math
 from src.quadratic_spline_surface.position_data import *
 from src.core.common import *
