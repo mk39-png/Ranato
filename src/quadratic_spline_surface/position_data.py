@@ -77,7 +77,7 @@ def generate_affine_manifold_chart_corner_data(V: np.ndarray,
                                                F: np.ndarray,
                                                chart: VertexManifoldChart,
                                                gradient: Matrix2x3r,
-                                               __ref_corner_data: list[list[TriangleCornerData]]) -> None:
+                                               corner_data_ref: list[list[TriangleCornerData]]) -> None:
     """
     Helper function to add corner data for a given chart.
     Used by genenerate_affine_manifold_corner_data().
@@ -112,16 +112,16 @@ def generate_affine_manifold_chart_corner_data(V: np.ndarray,
         logger.info("Second edge derivative: %s", dik)
 
         # Build position data
-        __ref_corner_data[f][face_vertex_index] = TriangleCornerData(pi, dij, dik)
+        corner_data_ref[f][face_vertex_index] = TriangleCornerData(pi, dij, dik)
 
     # Quickly checking that the element list is of size 3.
-    assert len(__ref_corner_data[-1]) == 3
+    assert len(corner_data_ref[-1]) == 3
 
 
 def generate_affine_manifold_corner_data(V: np.ndarray,
                                          affine_manifold: AffineManifold,
                                          gradients: list[Matrix2x3r],
-                                         __ref_corner_data: list[list[TriangleCornerData]]) -> None:
+                                         corner_data_ref: list[list[TriangleCornerData]]) -> None:
     """
     Generate corner position data for a mesh with an affine manifold structure and per-vertex position and gradients.
     NOTE: Used in optimize_spline_surface.py
@@ -140,7 +140,7 @@ def generate_affine_manifold_corner_data(V: np.ndarray,
     :rtype: list[tuple[TriangleCornerData, TriangleCornerData, TriangleCornerData]]
     """
     # Resize the gradient and position data
-    list_resize(__ref_corner_data, affine_manifold.num_faces, [
+    list_resize(corner_data_ref, affine_manifold.num_faces, [
                 TriangleCornerData(), TriangleCornerData(), TriangleCornerData()])
 
     # Compute the gradient and position data per vertesx
@@ -150,12 +150,12 @@ def generate_affine_manifold_corner_data(V: np.ndarray,
             affine_manifold.get_faces,
             affine_manifold.get_vertex_chart(i),
             gradients[i],
-            __ref_corner_data)
+            corner_data_ref)
 
 
 def generate_affine_manifold_midpoint_data(affine_manifold: AffineManifold,
                                            edge_gradients: list[tuple[Matrix2x3r, Matrix2x3r, Matrix2x3r]],
-                                           __ref_midpoint_data: list[list[TriangleMidpointData]]) -> None:
+                                           midpoint_data_ref: list[list[TriangleMidpointData]]) -> None:
     """
     Generate midpoint position data for a mesh with an affine manifold structure and
     per edge gradients.
@@ -175,7 +175,7 @@ def generate_affine_manifold_midpoint_data(affine_manifold: AffineManifold,
 
     # Set midpoint data per face corner
     todo("resize midpoint_data")
-    list_resize(__ref_midpoint_data, affine_manifold.num_faces, [
+    list_resize(midpoint_data_ref, affine_manifold.num_faces, [
                 TriangleMidpointData(), TriangleMidpointData(), TriangleMidpointData()])
 
     for i in range(affine_manifold.num_faces):
@@ -195,9 +195,9 @@ def generate_affine_manifold_midpoint_data(affine_manifold: AffineManifold,
 
             # Compute midpoint to opposite corner derivative for the top face
             uv_top: PlanarPoint = chart.top_vertex_uv_position
-            __ref_midpoint_data[f_top][j_top].normal_derivative = uv_top * edge_gradients[i][j]
+            midpoint_data_ref[f_top][j_top].normal_derivative = uv_top * edge_gradients[i][j]
             logger.info("Midpoint data for corner (%s, %s) is %s = %s\n%s", f_top, j_top,
-                        __ref_midpoint_data[f_top][j_top].normal_derivative.transpose(),
+                        midpoint_data_ref[f_top][j_top].normal_derivative.transpose(),
                         uv_top,
                         edge_gradients[i][j])
 
@@ -210,12 +210,12 @@ def generate_affine_manifold_midpoint_data(affine_manifold: AffineManifold,
 
                 # Compute midpoint to opposite corner derivative for the bottom face
                 uv_bottom = chart.bottom_vertex_uv_position
-                __ref_midpoint_data[f_bottom][j_bottom].normal_derivative = uv_bottom * edge_gradients[i][j]
+                midpoint_data_ref[f_bottom][j_bottom].normal_derivative = uv_bottom * edge_gradients[i][j]
 
                 logger.info("Midpoint data for corner (%s, %s) is %s",
                             f_bottom,
                             j_bottom,
-                            __ref_midpoint_data[f_bottom][j_bottom].normal_derivative)
+                            midpoint_data_ref[f_bottom][j_bottom].normal_derivative)
 
 
 def compute_edge_midpoint_with_gradient(edge_origin_corner_data: TriangleCornerData,
@@ -254,9 +254,9 @@ def compute_edge_midpoint_with_gradient(edge_origin_corner_data: TriangleCornerD
 
 
 def generate_corner_data_matrices(corner_data: list[list[TriangleCornerData]],
-                                  __ref_position_matrix: np.ndarray,
-                                  __ref_first_derivative_matrix: np.ndarray,
-                                  __ref_second_derivative_matrix: np.ndarray
+                                  position_matrix_ref: np.ndarray,
+                                  first_derivative_matrix_ref: np.ndarray,
+                                  second_derivative_matrix_ref: np.ndarray
                                   ) -> None:
     """
     Given per corner position data, rearrange it into matrices with row i
@@ -273,9 +273,9 @@ def generate_corner_data_matrices(corner_data: list[list[TriangleCornerData]],
     num_faces: int = len(corner_data)
 
     # Resize the corner data matrices
-    __ref_position_matrix.reshape(3 * num_faces, 3)
-    __ref_first_derivative_matrix.reshape(3 * num_faces, 3)
-    __ref_second_derivative_matrix.reshape(3 * num_faces, 3)
+    position_matrix_ref.reshape(3 * num_faces, 3)
+    first_derivative_matrix_ref.reshape(3 * num_faces, 3)
+    second_derivative_matrix_ref.reshape(3 * num_faces, 3)
 
     # Organize position data into matrices
     # todo("Wait, why is this modifying by reference? Couldn't this just return the matrices???")
@@ -284,18 +284,18 @@ def generate_corner_data_matrices(corner_data: list[list[TriangleCornerData]],
         for j in range(3):
             # TODO: is slicing done correctly?
             # TODO: may be error with Vectors not necessarily being vectors...
-            __ref_position_matrix[3 * i + j, :] = corner_data[i][j].function_value
-            __ref_first_derivative_matrix[3 * i +
-                                          j, :] = corner_data[i][j].first_edge_derivative
-            __ref_second_derivative_matrix[3 * i +
-                                           j, :] = corner_data[i][j].second_edge_derivative
+            position_matrix_ref[3 * i + j, :] = corner_data[i][j].function_value
+            first_derivative_matrix_ref[3 * i +
+                                        j, :] = corner_data[i][j].first_edge_derivative
+            second_derivative_matrix_ref[3 * i +
+                                         j, :] = corner_data[i][j].second_edge_derivative
 
 
 def generate_midpoint_data_matrices(corner_data: list[list[TriangleCornerData]],
                                     midpoint_data: list[list[TriangleMidpointData]],
-                                    __ref_position_matrix: np.ndarray,
-                                    __ref_tangent_derivative_matrix: np.ndarray,
-                                    __ref_normal_derivative_matrix: np.ndarray) -> None:
+                                    position_matrix_ref: np.ndarray,
+                                    tangent_derivative_matrix_ref: np.ndarray,
+                                    normal_derivative_matrix_ref: np.ndarray) -> None:
     """
     Given position data, rearrange the edge midpoint data into matrices with row i
     corresponding to the data for edge i.
@@ -320,9 +320,9 @@ def generate_midpoint_data_matrices(corner_data: list[list[TriangleCornerData]],
     num_faces: int = len(corner_data)
 
     # Resize the corner data matrices
-    __ref_position_matrix.reshape(3 * num_faces, 3)
-    __ref_tangent_derivative_matrix.reshape(3 * num_faces, 3)
-    __ref_normal_derivative_matrix.reshape(3 * num_faces, 3)
+    position_matrix_ref.reshape(3 * num_faces, 3)
+    tangent_derivative_matrix_ref.reshape(3 * num_faces, 3)
+    normal_derivative_matrix_ref.reshape(3 * num_faces, 3)
 
     # Organize position data into matrices
     # TODO: could try to use NumPy indexing magic
@@ -334,7 +334,7 @@ def generate_midpoint_data_matrices(corner_data: list[list[TriangleCornerData]],
             midpoint_edge_gradient: SpatialVector
             midpoint, midpoint_edge_gradient = compute_edge_midpoint_with_gradient(
                 corner_data[i][(j + 1) % 3], corner_data[i][(j + 2) % 3])
-            __ref_position_matrix[3 * i + j, :] = midpoint
-            __ref_tangent_derivative_matrix[3 * i + j, :] = midpoint_edge_gradient
-            __ref_normal_derivative_matrix[3 * i + j,
-                                           :] = midpoint_data[i][j].normal_derivative
+            position_matrix_ref[3 * i + j, :] = midpoint
+            tangent_derivative_matrix_ref[3 * i + j, :] = midpoint_edge_gradient
+            normal_derivative_matrix_ref[3 * i + j,
+                                         :] = midpoint_data[i][j].normal_derivative

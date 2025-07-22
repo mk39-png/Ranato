@@ -1,8 +1,10 @@
+from scipy.sparse import csr_matrix, coo_matrix
 import os
 import scipy as sp
 import igl
 import numpy as np
 import mathutils
+from cholespy import CholeskySolverD, MatrixType
 
 
 # #
@@ -141,17 +143,98 @@ hash_size_y: int = HASH_TABLE_SIZE
 
 # root_folder = os.getcwd()
 
-V = np.array([
-    [0., 0, 0],
-    [1, 0, 0],
-    [1, 1, 1],
-    [2, 1, 0]
-])
+# V = np.array([
+#     [0., 0, 0],
+#     [1, 0, 0],
+#     [1, 1, 1],
+#     [2, 1, 0]
+# ])
 
-F = np.array([
-    [0, 1, 2],
-    [1, 3, 2]
-])
+# F = np.array([
+#     [0, 1, 2],
+#     [1, 3, 2]
+# ])
 
-print(igl.is_vertex_manifold(F))
-# print(igl.pyigl_cor/e.is_border_vertex(F))
+# print(igl.is_vertex_manifold(F))
+# # print(igl.pyigl_cor/e.is_border_vertex(F))
+
+# r_alpha_flat = np.ones(shape=(36, 1))
+# w_p = 2
+# H_p = 2
+
+# print((w_p * H_p) * np.dot(r_alpha_flat.T, r_alpha_flat)[0, 0])
+# print(np.dot(r_alpha_flat.T, (w_p * H_p) * r_alpha_flat)[0, 0])
+
+
+# alist = [(18, 53, 39), (42, 78, 51), (132, 38, 235)]
+
+# # Expand each tuple (i, t, t) where i is the row index
+# i, j, data = zip(*((i, t, t) for i, row in enumerate(alist) for t in row))
+# print(i)
+# print(j)
+
+
+# # Build CSR matrix
+# mat = csr_matrix((data, (i, j)), shape=(200, 150))
+
+# print(mat.todense().shape)
+# print(mat)
+
+print(np.arange(20))
+print(np.arange(20))
+n_rows = 20
+rows = np.arange(n_rows)
+cols = np.arange(n_rows)
+data = np.ones(n_rows)
+
+
+hessian: csr_matrix = csr_matrix((data, (rows, cols)),
+                                 shape=(n_rows, n_rows),
+                                 dtype=float)
+# hessian_coo = hessian.tocoo()
+
+rows = hessian.indices
+# cols = hessian.
+# data = hessian.data
+print(hessian.asformat("coo"))
+num_rows = hessian.get_shape()[0]
+# print()
+# print(rows)
+# print(cols)
+# print(data)
+
+solver = CholeskySolverD(num_rows - 1, rows, cols, data, MatrixType.CSR)
+
+# hessian_entries = [(18.0, 53.0, 1), (42.2, 78.2, 1), (132, 38, 1)]
+# indeX_rows, indeX_cols, values = zip(*hessian_entries)
+# print(np.array(indeX_rows))
+
+# # res = coo_matrix((values, (rows, cols)), shape=(133, 79)).tocsr()
+# # reser = csr_matrix((values, (indeX_rows, indeX_cols)), shape=(133, 79), dtype=float)
+# # resert: coo_matrix = reser.tocoo()
+# resert = coo_matrix((values, (indeX_rows, indeX_cols)), shape=(133, 79), dtype=float)
+# num_rows = n_rows
+# print(resert.row)
+# print(resert.col)
+# print(resert.data)
+
+# num_rows = resert.shape[0]
+# rows = resert.row
+# cols = resert.col
+# data = resert.data
+
+# print(resert.shape[0])  # rows
+# print(np.array((1, 2, 3, 4)))
+# solver = CholeskySolverD(n_rows, rows, cols, data, MatrixType.COO)
+b = np.ones(n_rows, dtype=np.float64)
+x = np.zeros_like(b, dtype=np.float64)
+
+# NOTE: b in this case would be hessian
+# Meanwhile x... well... that would be rhs!
+
+print(solver.solve(b, x))
+print(b)
+print(x)
+
+
+# print(reser)

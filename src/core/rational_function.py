@@ -177,7 +177,7 @@ class RationalFunction:
     def split_at_knot(self):
         pass
 
-    def sample_points(self, num_points: int, __ref_points: list[np.ndarray]) -> None:
+    def sample_points(self, num_points: int, points_ref: list[np.ndarray]) -> None:
         """
         @brief Sample points in the rational function. 
         @param[in] num_points: number of points to sample
@@ -188,9 +188,9 @@ class RationalFunction:
 
         # Evaluate the function at the sampled domain points
         # TODO: is this filling of default np.ndarray of zeros correct?
-        list_resize(__ref_points, num_points, np.zeros(shape=(1, self.get_dimension)))
+        list_resize(points_ref, num_points, np.zeros(shape=(1, self.get_dimension)))
         for i in range(num_points):
-            __ref_points[i] = self.__evaluate(t_samples[i])
+            points_ref[i] = self.__evaluate(t_samples[i])
 
     def start_point(self):
         pass

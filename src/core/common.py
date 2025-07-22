@@ -9,8 +9,13 @@ import logging
 import mathutils
 import math
 
-# TODO: there's something wrong with the IGL import statement here that's causing everything to error...
-# And that was because I accidentally uninstall SciPy...
+
+#
+#
+from scipy.sparse import linalg as splinalg
+import scipy.sparse as sparse
+import sys
+
 import igl
 
 logger = logging.getLogger(__name__)
@@ -61,12 +66,38 @@ Matrix6x3r = np.ndarray  # shape (6, 3)
 TwelveSplitGradient = np.ndarray  # shape (36, 1)
 TwelveSplitHessian = np.ndarray  # shape (36, 36)
 
+
+# **********************
+# Math-itensive Methods
+# **********************
+
+def sparse_cholesky(A):
+    """
+    https://gist.github.com/omitakahiro/c49e5168d04438c5b20c921b928f1f5d#file-sparsecholesky-md
+    I can't seem to install scikit-sparse since it relies on CHOLMOD from SuiteSparse and Cython, which does not really help for my purposes of this project being a Blender addon and also scikit-sparse being a process to install on Windows.
+
+    :param A: input sparse matrix that must be sparse symmetric positive-definite
+    """
+    deprecated()
+    sparse_matrix = A.T @ A
+    sparse_matrix += 1e-6 * sparse.identity(sparse_matrix.shape[0])  # force the sparse matrix is positive definite
+    n = sparse_matrix.shape[0]
+    LU = sparse.linalg.splu(sparse_matrix, diag_pivot_thresh=0.0, permc_spec="NATURAL")  # sparse LU decomposition
+
+    L = LU.L @ sparse.diags(LU.U.diagonal()**0.5)
+
+    return L  # return L (lower triangular matrix)
+
+
 # **********************
 # Debug/Helper Methods
 # **********************
+def deprecated(msg: str = "Method no longer in use"):
+    raise Exception(msg)
 
 
 def unimplemented(msg: str = "Method yet to be implemented"):
+
     raise Exception(msg)
 
 
