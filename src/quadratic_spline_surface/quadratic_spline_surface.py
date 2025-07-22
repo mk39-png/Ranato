@@ -330,6 +330,7 @@ class QuadraticSplineSurface:
 
         :return: None
         """
+        todo()
 
     def screenshot(self, filename: str,
                    camera_postion: SpatialVector = np.array(

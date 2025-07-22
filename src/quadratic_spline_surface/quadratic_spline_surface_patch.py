@@ -242,14 +242,14 @@ class QuadraticSplineSurfacePatch:
         assert len(domain_boundaries) == 3
 
         # Lift the domain boundaries to the surface
-        __ref_surface_mapping_coeffs: Matrix6x3r = self.get_surface_mapping()
+        __surface_mapping_coeffs_ref: Matrix6x3r = self.get_surface_mapping()
 
         patch_boundaries: list[RationalFunction] = []
 
         # FIXME: Something might go wrong with the things below, especially since I'm unsure about surface_mapping_coeffs
         for i, domain_boundary in enumerate(domain_boundaries):
             patch_boundaries.append(domain_boundary.pullback_quadratic_function(
-                3, __ref_surface_mapping_coeffs))
+                3, __surface_mapping_coeffs_ref))
 
         assert len(patch_boundaries) == 3
         assert patch_boundaries[0].get_degree == 4
@@ -294,8 +294,8 @@ class QuadraticSplineSurfacePatch:
         # Replace with actual logic
         todo()
         # Get domain triangle vertices
-        __ref_domain: ConvexPolygon = self.get_domain
-        domain_vertices = __ref_domain.get_vertices
+        __domain_ref: ConvexPolygon = self.get_domain
+        domain_vertices = __domain_ref.get_vertices
         v0: PlanarPoint = domain_vertices[[0], :]
         v1: PlanarPoint = domain_vertices[[1], :]
         v2: PlanarPoint = domain_vertices[[2], :]
@@ -368,9 +368,9 @@ class QuadraticSplineSurfacePatch:
 
     def triangulate(self,
                     num_refinements: int,
-                    __ref_V: np.ndarray,
-                    __ref_F: np.ndarray,
-                    __ref_N: np.ndarray) -> None:
+                    V_ref: np.ndarray[tuple[int, int], np.dtype[np.float64]],
+                    F_ref: np.ndarray[tuple[int, int], np.dtype[np.int64]],
+                    N_ref: np.ndarray[tuple[int, int], np.dtype[np.float64]]) -> None:
         # -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Triangulate the surface patch.
@@ -380,7 +380,7 @@ class QuadraticSplineSurfacePatch:
 
         # TODO: format params below to sphinx format
         @param[out] V: triangulated patch vertex positions (shape (n, 3))
-        @param[out] F: triangulated patch faces 
+        @param[out] F: triangulated patch faces
         @param[out] N: triangulated patch vertex normals (shape (n, 3))
 
         # TODO: remove the return note because it is no longer true.
@@ -391,30 +391,26 @@ class QuadraticSplineSurfacePatch:
         # Triangulate the domain
         V_domain: np.ndarray
         F: np.ndarray
-        # __ref_F: np.ndarray
 
         # TODO: will F be changed by reference or what? What will happen to F as it gets reassigned here?
         V_domain, F = self.m_domain.triangulate(num_refinements)
 
         # Lift the domain vertices to the surface and also compute the normals
         # reshape to (V_domain.rows(), self.dimension)
-        __ref_V.reshape((V_domain.shape[0], self.dimension))
-        __ref_N.reshape((V_domain.shape[0], self.dimension))
+        V_ref.reshape((V_domain.shape[ROWS], self.dimension))
+        N_ref.reshape((V_domain.shape[ROWS], self.dimension))
 
-        for i in range(V_domain.shape[0]):  # V_domain.rows()
+        for i in range(V_domain.shape[ROWS]):  # V_domain.rows()
             # V_domain of shape
             surface_point: SpatialVector = self.evaluate(V_domain[[i], :])
             surface_normal: SpatialVector = self.evaluate_normal(V_domain[[i], :])
 
             # TODO: something might go wrong with the broadcasting shapes
-            __ref_V[i, :] = surface_point.flatten()
-            __ref_N[i, :] = surface_normal.flatten()
+            V_ref[i, :] = surface_point.flatten()
+            N_ref[i, :] = surface_normal.flatten()
 
-        # TODO: have the change in the method be reflected back into the parameter!
-        todo("Have the changes to __ref_F be reflected OUTSIDE of the method since it's being  binded to the local np.ndarray and not modified by reference.")
-        todo("So, have this return the triangulated V, F, and N arrays?")
-        np.copyto(__ref_F, F)
-        __ref_F.copy(F)
+        # Have changes in F reflected back in F_ref parameter
+        np.copyto(F_ref, F)
 
     def add_patch_to_viewer(self, patch_name: str = "surface_patch") -> None:
         """
@@ -434,11 +430,8 @@ class QuadraticSplineSurfacePatch:
         self.triangulate(num_refinements, V, F, N)
 
         # Add patch mesh
-        # TODO: does the below already add the patch to the viewer as it should or not?
         ps.init()
-        ps_mesh: ps.SurfaceMesh = ps.register_surface_mesh(patch_name, V, F)
-
-        # ps.show()
+        ps.register_surface_mesh(patch_name, V, F)
 
     def serialize(self) -> str:
         """

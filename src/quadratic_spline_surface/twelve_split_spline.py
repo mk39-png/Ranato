@@ -19,6 +19,8 @@ from src.quadratic_spline_surface.position_data import *
 from src.quadratic_spline_surface.quadratic_spline_surface import *
 
 from igl import per_vertex_normals
+from cholespy import CholeskySolverD, MatrixType
+import scipy.sparse as sparse
 
 
 class TwelveSplitSplineSurface(QuadraticSplineSurface):
@@ -35,9 +37,9 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
                  optimization_params: OptimizationParameters,
                  face_to_patch_indices: list[list[int]],
                  patch_to_face_indices: list[int],
-                 fit_matrix: np.ndarray,
-                 energy_hessian: np.ndarray,
-                 energy_hessian_inverse=np.ndarray,
+                 fit_matrix: sparse.csr_matrix,
+                 energy_hessian: sparse.csr_matrix,
+                 energy_hessian_inverse: CholeskySolverD,  # np.ndarray,
                  corner_data: list[list[TriangleCornerData]] | None = None,
                  midpoint_data: list[list[TriangleMidpointData]] | None = None) -> None:
         # TODO: fitmatrix and energy_hessian originally sparse matrices in Eigen ASOC code... may be useful to have them sparse here somehow.
@@ -70,6 +72,10 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
         optimization_params_fit.parametrized_quadratic_surface_mapping_factor = 0.0
 
         # self_bui
+        build_twelve_split_spline_energy_system(V,
+                                                N,
+                                                affine_manifold,
+                                                optimization_params_fit,)
         todo()
         # Constructor for the spline directly from position data.
         self.m_affine_manifold: AffineManifold

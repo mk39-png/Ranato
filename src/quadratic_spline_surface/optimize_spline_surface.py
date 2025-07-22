@@ -15,13 +15,17 @@ from src.quadratic_spline_surface.planarH import planarHfun
 
 import copy  # used for shifting array
 import numpy as np
-import scipy.sparse
+from scipy.sparse import csr_matrix, coo_matrix
+from cholespy import CholeskySolverD, MatrixType
+
+from dataclasses import dataclass
 
 
+@dataclass
 class OptimizationParameters:
-    # NOTE: It's OK having these member variables "global" throughout all OptimizationParameter objects
-    # TODO: wait, it might not be depending on how this all works...
-    # Meaning, I may have to make a constructor method for this class.
+    """
+    Parameters for surface spline optimization.
+    """
 
     # -- Main optimization weight options --
     position_difference_factor: float = 1.0
@@ -88,7 +92,7 @@ def generate_local_hessian_data(face_vertex_uv_positions: list[PlanarPoint],
                                 is_cone_adjacent: list[bool],
                                 face_normal: SpatialVector,
                                 optimization_params: OptimizationParameters) -> LocalHessianData:
-    todo("This could be placed inside its class and serve as a constructor of some sort.")
+    # TODO This could be placed inside its class and serve as a constructor of some sort
     # Build uv from global positions
 
     # Each face_vertex_uv_position element is shape (1, 2)
@@ -108,7 +112,7 @@ def generate_local_hessian_data(face_vertex_uv_positions: list[PlanarPoint],
     local_hessian_data.H_f = build_local_fit_hessian(is_cone, is_cone_adjacent, optimization_params)
 
     # H_p: planar fitting term
-    # DEPRECATED
+    # DEPRECATED (according to ASOC code)
     if (optimization_params.cone_normal_orthogonality_factor != 0.0):
         local_hessian_data.H_p = build_planar_constraint_hessian(uv,
                                                                  corner_to_corner_uv_positions,
@@ -131,10 +135,11 @@ def generate_local_dof_data(initial_vertex_positions_T: list[SpatialVector],
                             vertex_positions_T: list[SpatialVector],
                             vertex_gradients_T: list[Matrix2x3r],
                             edge_gradients_T: list[SpatialVector]) -> LocalDOFData:
-    todo("This could be placed as a constructor inside the class itself...")
     """
     Assemble the local degree of freedom data.
     """
+    todo("This could be placed as a constructor inside the class itself...")
+
     assert len(initial_vertex_positions_T) == 3
     assert len(vertex_positions_T) == 3
     assert len(vertex_gradients_T) == 3
@@ -173,19 +178,19 @@ def generate_local_dof_data(initial_vertex_positions_T: list[SpatialVector],
 
 def compute_local_twelve_split_energy_quadratic(local_hessian_data: LocalHessianData,
                                                 local_dof_data: LocalDOFData) -> tuple[float, TwelveSplitGradient, TwelveSplitHessian]:
-    todo("So, there is probably some issue with the matrix multiplication here")
-
     """
     Compute the local twelve split energy quadratic from Hessian and local
     degree of freedom data
-
+    TODO: finish docstring
 
     out: local_energy
-    out: local_derivatives
-    out: local_hessian
+    out: local_derivatives (shape 36, 1)
+    out: local_hessian (shape 36, 36)
     """
+    todo("So, there is probably some issue with the matrix multiplication here")
+
     local_derivatives: TwelveSplitGradient = np.ndarray(shape=(36, 1))
-    local_hessian: TwelveSplitHessian = np.ndarray(shape=(36, 36))
+    local_hessian: TwelveSplitHessian = np.zeros(shape=(36, 36))
 
     assert local_derivatives.shape == (36, 1)
     assert local_hessian.shape == (36, 36)
@@ -208,7 +213,6 @@ def compute_local_twelve_split_energy_quadratic(local_hessian_data: LocalHessian
                                               fill_value=2 * (w_s * H_s + w_f * H_f))
 
     # Add smoothness and fitting term blocks to the full local hessian per coordinate
-    local_hessian[:, :] = 0
     for i in range(12):
         for j in range(12):
             for k in range(3):
@@ -217,9 +221,9 @@ def compute_local_twelve_split_energy_quadratic(local_hessian_data: LocalHessian
     # Add 36x36 planar constraint term to the local hessian
     local_hessian += 2.0 * w_p * H_p
 
-    # build per coordinate gradients for smoothness and fit terms
-    # TODO: below, does it make a copy by values of r_alpha or no?
+    # Build per coordinate gradients for smoothness and fit terms
     g_alpha: np.ndarray = 2 * (w_s * H_s) * r_alpha
+    assert g_alpha.shape == (12, 3)
     logger.info("Block gradient after adding smoothness term:\n%s", g_alpha)
     g_alpha += 2 * (w_f * H_f) * (r_alpha - r_alpha_0)
     logger.info("Block gradient after adding fit term:\n%s", g_alpha)
@@ -236,23 +240,22 @@ def compute_local_twelve_split_energy_quadratic(local_hessian_data: LocalHessian
     # Add smoothness term
     smoothness_term: float = 0.0
     for i in range(3):
-        # r_alpha shape = (1, 12) * (w_s * H_s) * (12, 1)
-        # TODO: matmul @ or regular *????
-        smoothness_term += (r_alpha[:, [i]].T * (w_s * H_s) * r_alpha[:, [i]])[0, 0]
+        # r_alpha shape sliced = (12, 1)
+        smoothness_term += (w_s * H_s) * np.dot(r_alpha[:, [i]].T, r_alpha[:, [i]])[0, 0]
+
     logger.info("Smoothness term is %s", smoothness_term)
 
     # Add fit term
     fit_term: float = 0.0
     for i in range(3):
-        # r_alpha_diff shape = (12, 1)
+        # r_alpha_diff shape sliced = (12, 1)
         r_alpha_diff: np.ndarray = r_alpha[:, [i]] - r_alpha_0[:, [i]]  # gets columns
-
-        fit_term += (r_alpha_diff.T * (w_f * H_f) * r_alpha_diff)[0, 0]
+        fit_term += (w_f * H_f) * np.dot(r_alpha_diff.T, r_alpha_diff)[0, 0]
     logger.info("Fit term is %s", fit_term)
 
     # Add planar fitting term
     planar_term: float = 0.0
-    planar_term += r_alpha_flat.T * (w_p * H_p) * r_alpha_flat
+    planar_term += (w_p * H_p) * np.dot(r_alpha_flat.T, r_alpha_flat)
     logger.info("Planar orthogonality term is %s", planar_term)
 
     # Compute final energy
@@ -260,7 +263,7 @@ def compute_local_twelve_split_energy_quadratic(local_hessian_data: LocalHessian
     return local_energy, local_derivatives, local_hessian
 
 
-def shift_array(__ref_arr: list, shift: int) -> None:
+def shift_array(arr_ref: list, shift: int) -> None:
     """
     Helper function to cyclically shift an array of three elements.
 
@@ -268,9 +271,9 @@ def shift_array(__ref_arr: list, shift: int) -> None:
 
     TODO: check that this modifies by reference
     """
-    arr_copy: list = copy.deepcopy(__ref_arr)
+    arr_copy: list = copy.deepcopy(arr_ref)
     for i in range(3):
-        __ref_arr[i] = arr_copy[(i + shift) % 3]
+        arr_ref[i] = arr_copy[(i + shift) % 3]
 
     # return arr
 
@@ -319,17 +322,19 @@ def compute_twelve_split_energy_quadratic(
         optimization_params: OptimizationParameters,
         num_variable_vertices: int,
         num_variable_edges: int
-) -> tuple[float, np.ndarray, np.ndarray]:
+) -> tuple[float, np.ndarray, csr_matrix, CholeskySolverD]:
     """
     Compute the energy system for a twelve-split spline.
+    NEW BEHAVIOR: also calculates the hessian_inverse because that is needed.
 
-    :return: tuple of energy and derivatives (shape (n, ), ndim 1) (and maybe hessian)
+    :return: tuple of energy and derivatives (shape (n, ), ndim 1) and hessian
     :rtype: tuple[float, np.ndarray, np.ndarray]
     """
     num_independent_variables: int = 9 * num_variable_vertices + 3 * num_variable_edges
-    energy: float
-    derivatives: VectorX
-    hessian_entries: list[tuple[float, float, float]]
+    energy: float = 0.0
+    # shape (num_independent_variables, 1) because trying to be similar to TwelveSplitGradient shape of (36, 1)
+    derivatives: VectorX = np.zeros(shape=(num_independent_variables, 1))
+    hessian_entries: list[tuple[float, float, float]] = []
 
     for face_index in range(manifold.num_faces):
         # Get face vertices
@@ -407,17 +412,16 @@ def compute_twelve_split_energy_quadratic(
                 break
 
         # Get normal for the face
-        # TODO: there is a chance where normal is NOT initialized to ANYTHING.
-        normal: SpatialVector
+        normal: SpatialVector = np.zeros(shape=(1, 3))
         if is_cone_adjacent_face:
-            normal = initial_face_normals.shape[[face_index], :]
+            normal = initial_face_normals[[face_index], :]
             logger.info("Weighting by normal %s", normal.T)
 
         # Get local to global map
         local_to_global_map: list[int] = generate_twelve_split_local_to_global_map(
             face_global_vertex_indices,
             face_global_edge_indices,
-            num_variable_vertices)
+            num_variable_vertices)  # length = 36
 
         # Compute local hessian data
         local_hessian_data: LocalHessianData = generate_local_hessian_data(
@@ -442,23 +446,57 @@ def compute_twelve_split_energy_quadratic(
         local_hessian: TwelveSplitHessian
         local_energy, local_derivatives, local_hessian = compute_local_twelve_split_energy_quadratic(
             local_hessian_data,
-            local_dof_data)
+            local_dof_data
+        )
 
         # Update the energy quadratic with the new face energy
-        energy, derivatives, hessian_entries = update_energy_quadratic(local_energy,
-                                                                       local_derivatives,
-                                                                       local_hessian,
-                                                                       local_to_global_map,
-                                                                       num_independent_variables)
+        # NOTE: update_energy_quadratic is only used here.
+        energy = update_energy_quadratic(local_energy,
+                                         local_derivatives,
+                                         local_hessian,
+                                         local_to_global_map,
+                                         energy,
+                                         derivatives,
+                                         hessian_entries)
     # Set hessian from the triplets
-    hessian: np.ndarray = np.ndarray(shape=(num_independent_variables, num_independent_variables))
-    return energy, derivatives, hessian
-    todo()
+    # https://stackoverflow.com/questions/65126682/create-sparse-matrix-from-list-of-tuples
+    # TODO: might be more efficient to just modify hessian by reference and resize when needed... which then overrides the elements in hessian as we setFromTriplets
+
+    global_indices_i: tuple[float]  # equivalent to rows
+    global_indices_j: tuple[float]  # equivalent to cols
+    hessian_value: tuple[float]  # equivalent to data
+    global_indices_i, global_indices_j, hessian_value = zip(*hessian_entries)
+
+    rows = np.array(global_indices_i, dtype=np.float64)
+    cols = np.array(global_indices_j, dtype=np.float64)
+    data = np.array(hessian_value, dtype=np.float64)
+
+    hessian: csr_matrix = csr_matrix((data, (rows, cols)),
+                                     shape=(num_independent_variables, num_independent_variables),
+                                     dtype=float)
+    num_rows: int = hessian.get_shape()[ROWS]
+
+    # TODO: I don't know the shape of derivatives...
+    assert derivatives.shape == (num_independent_variables, 1)
+
+    # What the heck does compute mean in this case? What is the equivalent?
+
+    # Build the inverse... kind of.
+    # Just have the solver available is all.
+    # TODO: This is very finicky with CSR sparse matrices...
+    # NOTE: - 1 to num_rows or else it acts up.
+    hessian_inverse: CholeskySolverD = CholeskySolverD(num_rows - 1,
+                                                       rows,
+                                                       cols,
+                                                       data,
+                                                       MatrixType.COO)
+
+    return energy, derivatives, hessian, hessian_inverse
+
 
 # ******************************************
 # methods translated from .h are below
 # ******************************************
-
 
 def build_local_fit_hessian(is_cone: list[bool], is_cone_adjacent: list[bool], optimization_params: OptimizationParameters) -> np.ndarray:
     """
@@ -576,7 +614,8 @@ def build_planar_constraint_hessian(uv: np.ndarray,
 def build_twelve_split_spline_energy_system(initial_V: np.ndarray,
                                             initial_face_normals: np.ndarray,
                                             affine_manifold: AffineManifold,
-                                            optimization_params: OptimizationParameters) -> tuple[float, VectorX, np.ndarray, np.ndarray]:
+                                            optimization_params: OptimizationParameters
+                                            ) -> tuple[float, VectorX, csr_matrix, CholeskySolverD]:
     """
     Build the quadratic energy system for the twelve-split spline with thin
     plate, fitting, and planarity energies.
@@ -591,10 +630,8 @@ def build_twelve_split_spline_energy_system(initial_V: np.ndarray,
     @param[out] hessian: energy Hessian (i.e., quadratic term)
     @param[out] hessian_inverse: solver for inverting the Hessian
     """
-    # TODO: change hessian to sparse matrix
-    # TODO: change hessian_inverse to cholmad sparse matrix
 
-    num_vertices: int = initial_V.shape[0]  # rows
+    num_vertices: int = initial_V.shape[ROWS]
     num_faces: int = affine_manifold.num_faces
 
     # Build halfedge
@@ -614,6 +651,7 @@ def build_twelve_split_spline_energy_system(initial_V: np.ndarray,
     vertex_positions: list[SpatialVector] = []
     initial_vertex_positions: list[SpatialVector] = []
     for i in range(num_vertices):
+        assert initial_V[[i], :].shape == (1, 3)
         vertex_positions.append(initial_V[[i], :])  # shape (1, 3) for SpatialVectors
         initial_vertex_positions.append(initial_V[[i], :])
 
@@ -630,46 +668,95 @@ def build_twelve_split_spline_energy_system(initial_V: np.ndarray,
         num_faces, variable_edges, halfedge, he_to_corner)
     assert len(global_edge_indices[0]) == 3
 
-    # Build energy for the affine manifold
-    compute_twelve_split_energy_quadratic(vertex_positions,
-                                          vertex_gradients,
-                                          edge_gradients,
-                                          global_vertex_indices,
-                                          global_edge_indices,
-                                          initial_vertex_positions,
-                                          initial_face_normals,
-                                          affine_manifold,
-                                          optimization_params,
-                                          energy,
-                                          derivatives,
-                                          hessian,
-                                          num_variable_vertices,
-                                          num_variable_edges)
-    todo()
+    # Build energy for the affine manifold (all below)
+    energy: float
+    derivatives: VectorX  # shape (n, 1)
+    hessian: csr_matrix
+    hessian_inverse: CholeskySolverD
+
+    # Build the inverse as well...
+    energy, derivatives, hessian, hessian_inverse = compute_twelve_split_energy_quadratic(
+        vertex_positions,
+        vertex_gradients,
+        edge_gradients,
+        global_vertex_indices,
+        global_edge_indices,
+        initial_vertex_positions,
+        initial_face_normals,
+        affine_manifold,
+        optimization_params,
+        num_variable_vertices,
+        num_variable_edges)
+
+    return energy, derivatives, hessian, hessian_inverse
 
 
 def optimize_twelve_split_sline_surface(
-        initial__V: Matrix,
+        initial_V: np.ndarray,  # matrix... fyi
         affine_manifold: AffineManifold,
         halfedge: Halfedge,
         he_to_corner: list[tuple[Index, Index]],
         variable_vertices: list[int],
         variable_edges: list[int],
-        fit_matrix: scipy.sparse.coo_matrix,  # decide between Coo matrix and something else...
-        hessian_inverse: scipy.sparse.coo_matrix
-):
+        fit_matrix: csr_matrix,
+        hessian_inverse: CholeskySolverD
+) -> tuple[np.ndarray, list[Matrix2x3r, list[list[SpatialVector]]]]:
     """
     Helper function for generate_optimized_twelve_split_position_data()
 
     :return: optimized_V, optimized_vertex_gradients, optimized_edge_gradients
     """
+    # Get variable coutns
+    num_vertices: int = initial_V.shape[ROWS]
+    num_faces: int = affine_manifold.num_faces
+
+    # Initialize variables to optimize
+    vertex_positions: list[SpatialVector] = []
+    initial_vertex_positions: list[SpatialVector] = []
+    for i in range(num_vertices):
+        assert initial_V[[i], :].shape == (1, 3)
+        vertex_positions.append(initial_V[[i], :])
+        initial_vertex_positions.append(initial_V[[i], :])
+    assert len(vertex_positions) == num_vertices
+    assert len(initial_vertex_positions) == num_vertices
+
+    vertex_gradients: list[Matrix2x3r] = generate_zero_vertex_gradients(num_vertices)
+    edge_gradients: list[list[SpatialVector]] = generate_zero_edge_gradients(num_vertices)
+    assert len(edge_gradients[0]) == 3
+
+    # Build variable values gradient as H
+    initial_variable_values: VectorX = generate_twelve_split_variable_value_vector(vertex_positions,
+                                                                                   vertex_gradients,
+                                                                                   edge_gradients,
+                                                                                   variable_vertices,
+                                                                                   variable_edges,
+                                                                                   halfedge,
+                                                                                   he_to_corner)
+    todo("sizing might go haywire")
+    assert initial_variable_values.ndim == 2
+    logger.info("Initial variable value vector:\n%s", initial_variable_values)
+
+    # Solve hessian system to get optimized values
+    right_hand_side = fit_matrix * initial_variable_values
+    optimized_variable_values: np.ndarray = np.ndarray(shape=right_hand_side.shape)
+
+    # TODO: deal with hessian... which I  am not sure if we need after making hessian_inverse...
+    hessian_inverse.solve(right_hand_side, optimized_variable_values)
+
+    # Update variables
+    optimized_vertex_positions: list[SpatialVector]
+    optimized_vertex_gradients: list[Matrix2x3r] = vertex_gradients
+    optimized_edge_gradients: list[list[SpatialVector]] = edge_gradients
+
+    update_position_variables
     todo()
 
 
 def generate_optimized_twelve_split_position_data(V: np.ndarray,
-                                                  ffine_manifold: AffineManifold,
+                                                  affine_manifold: AffineManifold,
                                                   fit_matrix: np.ndarray,
-                                                  hessian_inverse: np.ndarray) -> tuple[list[list[TriangleCornerData]], list[list[TriangleMidpointData]]]:
+                                                  hessian_inverse: np.ndarray
+                                                  ) -> tuple[list[list[TriangleCornerData]], list[list[TriangleMidpointData]]]:
     """
     Compute the optimal per triangle position data for given vertex positions.
     NOTE: used by twelve_split_spline.py

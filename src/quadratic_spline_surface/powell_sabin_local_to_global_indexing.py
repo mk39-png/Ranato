@@ -459,13 +459,17 @@ def generate_twelve_split_local_to_global_map(global_vertex_indices: list[int],
     @param[in] num_variable_vertices: number of variable vertices
     @param[out] local_to_global_map: map from local to global DOF indices
     """
+    # Making sure that "arrays" of length 3 are passed in.
+    assert len(global_vertex_indices) == 3
+    assert len(global_edge_indices) == 3
+
     # Get index map for the Powell-Sabin shared variables
     dimension: int = 3
 
     six_split_local_to_global_map: list[int] = generate_six_split_local_to_global_map(
         global_vertex_indices, num_variable_vertices)
 
-    # TODO: should be returning a copy by value since both objects are list[int]
+    # NOTE: six_split_local_to_global_map should be returning a copy by value since both objects are list[int]
     local_to_global_map: list[int] = six_split_local_to_global_map.copy()
     assert len(local_to_global_map) == 36
 
@@ -525,7 +529,8 @@ def update_independent_variable_matrix(variable_values: VectorX,
 
 
 def update_position_variables(variable_values: VectorX,
-                              variable_vertices: list[int]) -> list[SpatialVector]:
+                              variable_vertices: list[int],
+                              vertex_positions_ref: list) -> list[SpatialVector]:
     """
     Used in optimize_spline_surface.py
 
@@ -551,7 +556,9 @@ def update_position_variables(variable_values: VectorX,
 
         # FIXME: below accepts parameter, modifies it, then returns it. Is this the way to go?
         vertex_positions[variable_vertices[vertex_index]] = update_independent_variable_vector(
-            variable_values, vertex_positions[variable_vertices[vertex_index]], start_index)
+            variable_values,
+            vertex_positions[variable_vertices[vertex_index]],
+            start_index)
 
     return vertex_positions
 
@@ -695,23 +702,23 @@ def build_variable_edge_indices_map(num_faces: int,
 
 
 def update_energy_quadratic(local_energy: float,
-                            local_derivatives: Gradient,
-                            local_hessian: Hessian,
+                            local_derivatives: Gradient,  # shape (n, 1)
+                            local_hessian: Hessian,  # shape (w, l)
                             local_to_global_map: list[int],
-                            num_independent_variables: int
-                            # energy: float,
-                            # derivatives: VectorX,
-                            # hessian_entries: list[tuple[float, float, float]]
-                            ) -> tuple[float, VectorX, list[tuple[float, float, float]]]:
+                            energy: float,
+                            derivatives_ref: VectorX,
+                            hessian_entries_ref: list[tuple[float, float, float]]
+                            ) -> float:
     """
     Update global energy, derivatives, and hessian with local per face values
 
+    TODO: redo docstring
     @param[in] local_energy: local energy value
     @param[in] local_derivatives: local energy gradient
     @param[in] local_hessian: local energy Hessian
     @param[in] local_to_global_map: map from local to global DOF indices
 
-    @param[out] energy: global energy value
+    @return[out] energy: global energy value
     @param[out] derivatives: global energy gradient
     @param[out] hessian: global energy Hessian
 
@@ -721,17 +728,19 @@ def update_energy_quadratic(local_energy: float,
     derivatives: global energy gradient
     hessian: global energy Hessian
     """
-    energy: float
-    derivatives: VectorX = np.zeros(shape=(num_independent_variables, ))
-    hessian_entries: list[tuple[float, float, float]] = []
+    # derivatives: VectorX = np.zeros(shape=(num_independent_variables, ))
+    # hessian_entries: list[tuple[float, float, float]] = []
     logger.info("Adding local face energy %s", local_energy)
     logger.info("Local to global map: %s", local_to_global_map)
+    assert derivatives_ref.ndim == 2
+    assert derivatives_ref.shape[1] == 1
+    assert local_derivatives.ndim == 2
+    assert local_derivatives.shape[1] == 1
+    assert local_hessian.ndim == 2
 
     # Update energy
-    # Originally, energy was passed in, but I don't see another function that calls update_energy_qudaratic() that requires energy to be incremented like before.
-    # Hence, energy just reassigned to local_energy.
-    energy = local_energy
-    # energy += local_energy
+    # NOTE: since update_energy_quadratic() is called in a loop, we cannot simply just reassign energy to some value.
+    energy += local_energy
 
     # Update derivatives
     num_local_indices: int = len(local_to_global_map)
@@ -739,7 +748,8 @@ def update_energy_quadratic(local_energy: float,
         global_index: int = local_to_global_map[local_index]
         if global_index < 0:
             continue  # Skip fixed variables with no global index
-        derivatives[global_index] = local_derivatives[local_index]
+        # NOTE: Accessing column 0 because derivatives are 2D shapes with 1 column.
+        derivatives_ref[global_index, 0] = local_derivatives[local_index, 0]
 
     # Update hessian entries
     for local_index_i in range(num_local_indices):
@@ -758,9 +768,9 @@ def update_energy_quadratic(local_energy: float,
             hessian_value: float = local_hessian[local_index_i, local_index_j]
 
             # Assemble global Hessian entry
-            hessian_entries.append((global_index_i, global_index_j, hessian_value))
+            hessian_entries_ref.append((global_index_i, global_index_j, hessian_value))
 
-    return energy, derivatives, hessian_entries
+    return energy
 
 
 def build_face_variable_vector(variables: list, i: int,
