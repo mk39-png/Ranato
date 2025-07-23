@@ -18,20 +18,27 @@ import polyscope as ps
 
 def compute_normalized_surface_mapping(surface_mapping_coeffs: Matrix6x3r, domain: ConvexPolygon) -> Matrix6x3r:
     """
-    Compute the surface mapping with normalized domain
+    Compute the surface mapping with normalized domain.
+
+    :return: normalized_surface_mapping_coeffs of shape (6, 3)
     """
+    assert surface_mapping_coeffs.shape == (6, 3)
     domain_vertices: Matrix3x2r = domain.get_vertices
     v0: PlanarPoint = domain_vertices[[0], :]  # gets shape (1, 2)
     v1: PlanarPoint = domain_vertices[[1], :]
     v2: PlanarPoint = domain_vertices[[2], :]
-    change_of_basis_matrix = generate_quadratic_coordinate_domain_triangle_normalization_matrix(v0, v1, v2)
-    todo()
+    change_of_basis_matrix: Matrix6x6r = generate_quadratic_coordinate_domain_triangle_normalization_matrix(v0, v1, v2)
 
+    # shape (6, 3) = (6, 6) @ (6, 3)
+    normalized_surface_mapping_coeffs = change_of_basis_matrix @ surface_mapping_coeffs
     return normalized_surface_mapping_coeffs
 
 
 def compute_bezier_points(normalized_surface_mapping_coeffs: Matrix6x3r) -> Matrix6x3r:
-    todo()
+    monomial_to_bezier_matrix: Matrix6x6r = generate_monomial_to_bezier_matrix()
+
+    # shape (6, 3) = (6, 6) @ (6, 3)
+    bezier_points: Matrix6x3r = monomial_to_bezier_matrix @ normalized_surface_mapping_coeffs
     return bezier_points
 
 
@@ -406,8 +413,8 @@ class QuadraticSplineSurfacePatch:
 
         # Lift the domain vertices to the surface and also compute the normals
         # reshape to (V_domain.rows(), self.dimension)
-        V_ref.reshape((V_domain.shape[ROWS], self.dimension))
-        N_ref.reshape((V_domain.shape[ROWS], self.dimension))
+        V_ref.resize((V_domain.shape[ROWS], self.dimension))
+        N_ref.resize((V_domain.shape[ROWS], self.dimension))
 
         for i in range(V_domain.shape[ROWS]):  # V_domain.rows()
             # V_domain of shape
@@ -419,6 +426,7 @@ class QuadraticSplineSurfacePatch:
             N_ref[i, :] = surface_normal.flatten()
 
         # Have changes in F reflected back in F_ref parameter
+        # TODO: does this work for F_ref of any size?
         np.copyto(F_ref, F)
 
     def add_patch_to_viewer(self, patch_name: str = "surface_patch") -> None:
@@ -442,7 +450,7 @@ class QuadraticSplineSurfacePatch:
         ps.init()
         ps.register_surface_mesh(patch_name, V, F)
 
-    def serialize(self) -> str:
+    def serialize(self, out) -> str:
         """
         Write the patch information to the output stream in the format
             c a_0 a_u a_v a_uv a_uu a_vv
@@ -453,7 +461,7 @@ class QuadraticSplineSurfacePatch:
         :return: stream to write serialization to
         :rtype: str
         """
-        todo()
+        todo("figure out python's way of writing to a file")
 
     def write_patch(self, filename: str):
         """
