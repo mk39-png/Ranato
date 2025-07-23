@@ -1,4 +1,5 @@
 from igl.pyigl_core import is_vertex_manifold, writeOBJ
+from polyscope.curve_network import CurveNetwork
 from polyscope.surface_mesh import SurfaceMesh
 
 from src.core.common import *
@@ -6,25 +7,19 @@ from src.core.evaluate_surface_normal import generate_quadratic_surface_normal_c
 from src.quadratic_spline_surface.position_data import *
 from src.quadratic_spline_surface.quadratic_spline_surface_patch import *
 from src.quadratic_spline_surface.quadratic_spline_surface_patch import QuadraticSplineSurfacePatch
+from dataclasses import dataclass
 
 
+@dataclass
 class SurfaceDiscretizationParameters:
     """
     Parameters for the discretization of a quadratic spline
     """
+    # Number of subdivisions per triangle of the domain
+    num_subdivisions: int = 2
 
-    def __init__(self,
-                 #  TODO: adjust naming of parameters
-                 num_subdivisions: int = 2,
-                 normalize_surface_normals: bool = True) -> None:
-        # self.clear()
-        # self.m_patches: list[QuadraticSplineSurfacePatch] = patches
-
-        # Number of subdivisions per triangle of the domain
-        self.num_subdivisions: int = num_subdivisions
-
-        # If true, compute unit length surface normal vectors
-        self.normalize_surface_normals: bool = normalize_surface_normals
+    # If true, compute unit length surface normal vectors
+    normalize_surface_normals: bool = True
 
 
 class QuadraticSplineSurface:
@@ -53,7 +48,7 @@ class QuadraticSplineSurface:
         #  Hash table data
         # hash_table is a 2D list of list[int]
         # NOTE: hash_table is HASH_TABLE_SIZE x HASH_TABLE_SIZE 2D list with elements list[int]
-        todo("Rename member variables below to show that they are part of the class...")
+        # TODO: todo("Rename member variables below to show that they are part of the class...")
         self.hash_table: list[list[list[int]]] = self.compute_patch_hash_tables()
 
         # TODO: what about the below? what is the reverse exactly?
@@ -158,7 +153,7 @@ class QuadraticSplineSurface:
         :rtype: tuple[np.ndarray, np.ndarray, np.ndarray]
         """
 
-        todo("Parameter modification and return below. So, change V F and N and return them properly according to Python")
+        # TODO: todo("Parameter modification and return below. So, change V F and N and return them properly according to Python")
         V: np.ndarray = np.zeros(shape=(0, 0))
         F: np.ndarray = np.zeros(shape=(0, 0))
         N: np.ndarray = np.zeros(shape=(0, 0))
@@ -188,9 +183,11 @@ class QuadraticSplineSurface:
         """
         num_subdivisions: int = surface_disc_params.num_subdivisions
 
-        if (self.empty()):
-            # TODO: adjust return value here...
-            return
+        if self.empty():
+            V = np.ndarray(shape=(0, 0))
+            F = np.ndarray(shape=(0, 0))
+            N = np.ndarray(shape=(0, 0))
+            return V, F, N
 
         # Build triangulated surface in place
         patch_index: PatchIndex = 0
@@ -261,14 +258,15 @@ class QuadraticSplineSurface:
 
         return points, polylines
 
-    def save_obj(self, filename: str):
+    def save_obj(self, filename: str) -> None:
         """
         Save the triangulated surface as an obj.
+
+        NOTE: Used in contour_network.py
 
         :param filename: filepath to save the obj
         :type filename: str
         """
-        todo("Used in contour_network.py")
         # Generate mesh discretization
         V: np.ndarray
         # NOTE: TC and FTC intialization... is it equivalent to ASOC eigen code?
@@ -283,8 +281,8 @@ class QuadraticSplineSurface:
         igl.writeOBJ(filename, V, F, N, F, TC, FTC)
 
     def add_surface_to_viewer(self,
-                              color: np.ndarray = SKY_BLUE,
-                              num_subdivisions: int = DISCRETIZATION_LEVEL):
+                              color: Matrix3x1r = SKY_BLUE,
+                              num_subdivisions: int = DISCRETIZATION_LEVEL) -> None:
         """
         Add the surface to the viewer.
         NOTE: Used in twelve_split_spline.py and contour_network.py
@@ -308,18 +306,25 @@ class QuadraticSplineSurface:
         ps.init()
         surface: SurfaceMesh = ps.register_surface_mesh("surface", V, F)
         surface.set_edge_width(0)
-        surface.set_color(color)
+        surface.set_color(color.flatten())
 
         # Discretize patch boundaries
         boundary_points: list[SpatialVector]
-        boundary_poly_lines: list[list[int]]
-        boundary_points, boundary_poly_lines = self.discretize_patch_boundaries()
+        boundary_polylines: list[list[int]]
+        boundary_points, boundary_polylines = self.discretize_patch_boundaries()
 
         # View contour curve network
-        # boundary_points_mat = convert_nested_vector_to_matrix
-        todo()
+        boundary_points_matrix: np.ndarray = convert_nested_vector_to_matrix(boundary_points)
+        boundary_edges: list[list[int]] = convert_polylines_to_edges(boundary_polylines)
+        patch_boundaries: CurveNetwork = ps.register_curve_network("patch_boundaries",
+                                                                   boundary_points_matrix,
+                                                                   boundary_edges)
+        patch_boundaries.set_color((0.670, 0.673, 0.292))
+        patch_boundaries.set_radius(0.0005)
+        patch_boundaries.set_radius(0.0005)
+        patch_boundaries.set_enabled(False)
 
-    def view(self, color: np.ndarray = SKY_BLUE, num_subdivisions: int = DISCRETIZATION_LEVEL) -> None:
+    def view(self, color: Matrix3x1r = SKY_BLUE, num_subdivisions: int = DISCRETIZATION_LEVEL) -> None:
         """
         View the surface.
 
@@ -331,11 +336,12 @@ class QuadraticSplineSurface:
 
         :return: None
         """
-        todo()
+        self.add_surface_to_viewer(color, num_subdivisions)
+        ps.show()
 
     def screenshot(self,
                    filename: str,
-                   camera_postion: SpatialVector = np.array([[0.0, 0.0, 2.0]], dtype=np.float64),
+                   camera_position: SpatialVector = np.array([[0.0, 0.0, 2.0]], dtype=np.float64),
                    camera_target: SpatialVector = np.array([[0.0, 0.0, 0.0]], dtype=np.float64),
                    use_orthographic: bool = False) -> None:
         # TODO: include types in docstring
@@ -347,35 +353,52 @@ class QuadraticSplineSurface:
         :param camera_target: camera target for the screenshot.
         :param use_orthographic: use orthographic perspective if true.
         """
-        todo()
+        self.add_surface_to_viewer()
 
-    def serialize(self):
+        ps.look_at(camera_position, camera_target)
+        if use_orthographic:
+            ps.set_view_projection_mode("orthographic")
+        else:
+            ps.set_view_projection_mode("perspective")
+        ps.screenshot(filename)
+        logger.info("Screenshot saved to %s", filename)
+        ps.remove_all_structures()
+
+    def serialize(self, output_file) -> None:
         """
         Serialize the surface
+        NOTE: used by write_spline()
+
         @param[in] out: output stream for the surface
         """
-        unimplemented()
+        for i, _ in enumerate(self.m_patches):
+            self.m_patches[i].serialize(output_file)
 
-    def deserialize(self):
+    def deserialize(self) -> None:
         """
         Deserialize a surface
         @param[in] in: input stream for the surface
         """
-        unimplemented()
+        unimplemented("Method used in read_spline(), but read_spline() is not used anywhere.")
 
-    def write_spline(self):
+    def write_spline(self, filename: str) -> None:
         """
         Write the surface serialization to file
+        NOTE: used in contour_network.py
+
         @param[in] filename: file path for the serialized surface
         """
-        todo("Used in contour_network.py")
+        logger.info("Writing spline to %s", filename)
+        with open(filename, "w") as output_file:
+            self.serialize(output_file)
+        output_file.close()
 
-    def read_spline(self):
+    def read_spline(self) -> None:
         """
         Read a surface serialization from file
         @param[in] filename: file path for the serialized surface
         """
-        unimplemented()
+        unimplemented("Method not used anywhere.")
 
     def compute_patch_hash_tables(self) -> list[list[list[int]]]:
         """

@@ -52,9 +52,11 @@ Vector1D = np.ndarray  # shape (n, )
 MatrixXr = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (n, m)
 MatrixNx3 = np.ndarray[tuple[int, int], np.dtype[np.float64]]
 Matrix6x6r = np.ndarray
+Matrix3x6r = np.ndarray
 Index = int
 FaceIndex = int
 VertexIndex = int
+Edge = list[int]  # length 2
 
 # NOTE: VectorX also encompasses SpatialVectors as well.
 # VectorX = np.ndarray
@@ -259,7 +261,7 @@ def dot_product():
     todo()
 
 
-def cross_product(v: np.ndarray, w: np.ndarray) -> np.ndarray:
+def cross_product(v_ref: Matrix3x1r, w_ref: Matrix3x1r) -> Matrix3x1r:
     """
     @brief  Compute the cross product of two vectors of arbitrary scalars.
     @tparam Scalar: scalar field (must support addition and multiplication)
@@ -268,17 +270,18 @@ def cross_product(v: np.ndarray, w: np.ndarray) -> np.ndarray:
     @return cross product v x w in shape (3, 1)
     """
     # Flatten (1, 3) or (3, 1) matrices into (3, ) arrays
-    v = v.flatten()
-    w = w.flatten()
+    v: Vector1D = v_ref.flatten()
+    w: Vector1D = w_ref.flatten()
     assert v.size == 3
     assert w.size == 3
 
     # TODO: make these 2D matrices act like Eigen matrices with shape (n, 1) where they can be accessed like vectors and whatnot
     # TODO: use NumPy's version of cross products
-    n: np.ndarray = np.array([
+    n: Matrix3x1r = np.array([
         [v[1] * w[2] - v[2] * w[1]],
         [-(v[0] * w[2] - v[2] * w[0])],
-        [v[0] * w[1] - v[1] * w[0]]])
+        [v[0] * w[1] - v[1] * w[0]]],
+        dtype=np.float64)
 
     # TODO: decide on flattening n to shape (3, ) or keep as shape (3, 1)
     assert n.shape == (3, 1)
@@ -469,8 +472,28 @@ def nested_vector_size():
     todo()
 
 
-def convert_nested_vector_to_matrix():
-    todo()
+def convert_nested_vector_to_matrix(vec: list[Vector2D]) -> np.ndarray:
+    """
+    WARNING: Do not use this method, implementation does not generalize to a list types.
+    Especially with list[np.ndarray] where ndarray is some shape (n, 1) or (1, n)
+
+    """
+    # n: int = len(vec)
+    # if (n <= 0):
+    #     return np.ndarray(shape=(0, 0))
+
+    # # TODO: problem may arise when vec is list of np.ndarray ndim >= 2
+    # # TODO: below is supposed to be size3...
+    # matrix = np.ndarray(shape=(len(vec), vec[0].size))
+    # for i in range(n):
+    #     # inner_vec_size = len(vec[i])
+    #     inner_vec: np.ndarray = vec[i].flatten()
+    #     for j in range(inner_vec.size):
+    #         matrix[i, j] = vec[i].flatten()[j]
+    matrix = np.array(vec).squeeze()
+    # assert matrix.shape == (len(vec))
+
+    return matrix
 
 
 def append_matrix():
@@ -792,5 +815,14 @@ def vector_contains_nan(vec: np.ndarray) -> bool:
     return np.isnan(vec).any()
 
 
-def convert_polylines_to_edges():
-    todo()
+def convert_polylines_to_edges(polylines: list[list[int]]) -> list[Edge]:
+    """
+    TODO: is this really needed? check if polylines are just list of edges in Python cuz the ASOC code may just be some vector to array conversion.
+    """
+    edges: list[Edge] = []
+    for i, _ in enumerate(polylines):
+        for j, _ in enumerate(polylines[i]):
+            edge: Edge = [polylines[i][j - 1], polylines[i][j]]
+            edges.append(edge)
+
+    return edges

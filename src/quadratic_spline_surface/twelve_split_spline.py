@@ -4,6 +4,7 @@ Methods to generate a quadratic surface with twelve split Powell-Sabin basis
 coefficients
 """
 
+from polyscope.point_cloud import PointCloud
 from src.core.affine_manifold import AffineManifold
 from src.quadratic_spline_surface.PS12_patch_coeffs import PS12_patch_coeffs
 from src.quadratic_spline_surface.PS12tri_bounds_coeffs import PS12tri_bounds_coeffs
@@ -62,6 +63,10 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
         @param[in] corner_data: quadratic vertex position and derivative data
         @param[in] midpoint_data: quadratic edge midpoint derivative data
         """
+        # Constructor for the spline directly from position data.
+        self.m_affine_manifold: AffineManifold = affine_manifold
+        self.m_corner_data: list[list[TriangleCornerData]] = []
+        self.m_midpoint_data: list[list[TriangleMidpointData]] = []
 
         # Constructor for VF representation with uv coordinates and with additional data for the spline inferred as determined by the parameters.
         # Generate normals
@@ -78,10 +83,12 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
                                                 affine_manifold,
                                                 optimization_params_fit,)
         todo()
-        # Constructor for the spline directly from position data.
-        self.m_affine_manifold: AffineManifold
-        self.m_corner_data: list[list[TriangleCornerData]]
-        self.m_midpoint_data: list[list[TriangleMidpointData]]
+        generate_optimized_twelve_split_position_data(V,
+                                                      affine_manifold,
+                                                      fit_matrix,
+                                                      energy_hessian_inverse,
+                                                      self.m_corner_data,
+                                                      self.m_midpoint_data)
 
     @property
     def affine_manifold(self) -> AffineManifold:
@@ -95,7 +102,7 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
                          V: np.ndarray,
                          fit_matrix: csr_matrix,
                          energy_hessian_inverse: CholeskySolverD
-                         ):
+                         ) -> None:
         """
         Update the spline surface vertex positions for the fit.
 
@@ -112,7 +119,6 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
         N: np.ndarray = self.__generate_face_normals(V, affine_manifold)
 
         # Build optimized corner and midpoint data
-        todo("Finish optimize_spline_surface.py")
         generate_optimized_twelve_split_position_data(
             V,
             affine_manifold,
@@ -121,20 +127,42 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
             self.m_corner_data,
             self.m_midpoint_data)
 
-        return fit_matrix, energy_hessian_inverse
+        # Get cone corners
+        is_cone_corner: list[list[bool]] = affine_manifold.compute_cone_corners()  # list[bool] length 3
+        assert len(is_cone_corner[0]) == 3
 
-    def add_position_data_to_viewer(self):
+        # Initialize position data and patches
+        face_to_patch_indices: list[list[int]]
+        patch_to_face_indices: list[int]
+        # TODO: return values are not used... maybe rename to some placeholder thing like "_"
+        face_to_patch_indices, patch_to_face_indices = self.__init_twelve_split_patches(self.m_corner_data,
+                                                                                        self.m_midpoint_data,
+                                                                                        is_cone_corner)
+        # TODO: add a return value or not?
+        # return fit_matrix, energy_hessian_inverse
+
+    def add_position_data_to_viewer(self) -> None:
         """
         Add the position data for the surface to the viewer
         """
         # Add corner position data if it exists
         if (len(self.m_corner_data) != 0):
-            todo("rework the generation of corner data matrices in position_data.py")
-            # position_matrix, first_derivative_matrix, second_derivative_matrix = generate_corner_data_matrices
+            position_matrix, first_derivative_matrix, second_derivative_matrix = generate_corner_data_matrices(
+                self.m_corner_data)
 
-        todo()
+            corner_data: PointCloud = ps.register_point_cloud("corner data", position_matrix)
+            corner_data.add_vector_quantity("first derivatives", first_derivative_matrix)
+            corner_data.add_vector_quantity("second derivatives", second_derivative_matrix)
 
-    def clear(self):
+        # Add midpoint position data if it (and the corner data) exists
+        if (not (len(self.m_corner_data) == 0)) and (not (len(self.m_midpoint_data) == 0)):
+            position_matrix, tangent_derivative_matrix, normal_derivative_matrix = generate_midpoint_data_matrices(
+                self.m_corner_data, self.m_midpoint_data)
+            midpoint_data: PointCloud = ps.register_point_cloud("midpoint data", position_matrix)
+            midpoint_data.add_vector_quantity("tangent derivatives", tangent_derivative_matrix)
+            midpoint_data.add_vector_quantity("normal derivatives", normal_derivative_matrix)
+
+    def clear(self) -> None:
         """Clear the surface data."""
         self.m_affine_manifold.clear()
         self.m_corner_data.clear()
