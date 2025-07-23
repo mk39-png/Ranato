@@ -17,7 +17,16 @@ import polyscope as ps
 # **************************************
 
 def compute_normalized_surface_mapping(surface_mapping_coeffs: Matrix6x3r, domain: ConvexPolygon) -> Matrix6x3r:
+    """
+    Compute the surface mapping with normalized domain
+    """
+    domain_vertices: Matrix3x2r = domain.get_vertices
+    v0: PlanarPoint = domain_vertices[[0], :]  # gets shape (1, 2)
+    v1: PlanarPoint = domain_vertices[[1], :]
+    v2: PlanarPoint = domain_vertices[[2], :]
+    change_of_basis_matrix = generate_quadratic_coordinate_domain_triangle_normalization_matrix(v0, v1, v2)
     todo()
+
     return normalized_surface_mapping_coeffs
 
 
@@ -295,13 +304,13 @@ class QuadraticSplineSurfacePatch:
         todo()
         # Get domain triangle vertices
         __domain_ref: ConvexPolygon = self.get_domain
-        domain_vertices = __domain_ref.get_vertices
+        domain_vertices: Matrix3x2r = __domain_ref.get_vertices
         v0: PlanarPoint = domain_vertices[[0], :]
         v1: PlanarPoint = domain_vertices[[1], :]
         v2: PlanarPoint = domain_vertices[[2], :]
 
         # Generate affine transformation mapping the standard triangle to the domain triangle
-        linear_transformation = np.array([[v1 - v0], [v2 - v0]])
+        linear_transformation: Matrix2x2r = np.array([[v1 - v0], [v2 - v0]], dtype=np.float64)
         assert linear_transformation.shape == (2, 2)
         translation: PlanarPoint = v0
 

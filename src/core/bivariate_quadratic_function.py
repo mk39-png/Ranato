@@ -100,7 +100,7 @@ def generate_linear_monomials(domain_point: PlanarPoint):
 
 def evaluate_quadratic_mapping(dimension: int,
                                quadratic_coeffs: np.ndarray,
-                               domain_point: PlanarPoint) -> np.ndarray:
+                               domain_point: PlanarPoint) -> Vector1D:
     """
     Evaluate a quadratic bivariate equation with scalar coefficients.
     Dimension can be greater than 1, as seen in quadratic_spline_surface_patch.py
@@ -365,7 +365,8 @@ def formatted_bivariate_linear_mapping(dimension: int, line_coeffs: np.ndarray, 
     return line_string
 
 
-def generate_quadratic_coordinate_affine_transformation_matrix(linear_transformation: np.ndarray, translation: np.ndarray):
+def generate_quadratic_coordinate_affine_transformation_matrix(linear_transformation: Matrix2x2r,
+                                                               translation: PlanarPoint) -> Matrix6x6r:
     """
     Given an affine transformation [u, v]^T = A*[u', v']^T + b of R^2, generate
     the change of basis matrix C for the bivariate quadratic monomial
@@ -381,37 +382,29 @@ def generate_quadratic_coordinate_affine_transformation_matrix(linear_transforma
     assert translation == (1, 2)
 
     # Get matrix information
-    b11 = linear_transformation[0, 0]
-    b12 = linear_transformation[0, 1]
-    b21 = linear_transformation[1, 0]
-    b22 = linear_transformation[1, 1]
-    b1 = translation[0][0]
-    b2 = translation[0][1]
+    b11: float = linear_transformation[0, 0]
+    b12: float = linear_transformation[0, 1]
+    b21: float = linear_transformation[1, 0]
+    b22: float = linear_transformation[1, 1]
+    b1: float = translation[0][0]
+    b2: float = translation[0][1]
 
-    # TODO: below are some sort of Scalar datatype, according to ASOC code.
-    # TODO: so, create the Scalar type somehow.
-    one = 1.0
-    zero = 0.0
-
-    #  Set matrix
+    # Set matrix
     # TODO: check order that change_of_basis_matrix is being filled.
-    change_of_basis_matrix = np.array([[one, b1, b2, b1 * b2, b1 * b1, b2 * b2],
-                                      [zero, b11, b12, b11 * b2 + b12 *
-                                          b1, 2 * b1 * b11, 2 * b2 * b12],
-                                      [zero, b21, b22, b22 * b1 + b21 *
-                                          b2, 2 * b1 * b21, 2 * b2 * b22],
-                                      [zero, zero, zero, b11 * b22 + b21 *
-                                          b12, 2 * b11 * b21, 2 * b12 * b22],
-                                      [zero, zero, zero, b11 * b12,
-                                          b11 * b11, b12 * b12],
-                                      [zero, zero, zero, b21 * b22, b21 * b21, b22 * b22]])
+    change_of_basis_matrix: Matrix6x6r = np.array([
+        [1.0, b1, b2, b1 * b2, b1 * b1, b2 * b2],
+        [0.0, b11, b12, b11 * b2 + b12 * b1, 2 * b1 * b11, 2 * b2 * b12],
+        [0.0, b21, b22, b22 * b1 + b21 * b2, 2 * b1 * b21, 2 * b2 * b22],
+        [0.0, 0.0, 0.0, b11 * b22 + b21 * b12, 2 * b11 * b21, 2 * b12 * b22],
+        [0.0, 0.0, 0.0, b11 * b12, b11 * b11, b12 * b12],
+        [0.0, 0.0, 0.0, b21 * b22, b21 * b21, b22 * b22]],
+        dtype=np.float64)
 
-    # NOTE: double checking that I made the matrix correctly.
     assert change_of_basis_matrix.shape == (6, 6)
     return change_of_basis_matrix
 
 
-def generate_quadratic_coordinate_translation_matrix(du: float, dv: float) -> np.ndarray:
+def generate_quadratic_coordinate_translation_matrix(du: float, dv: float) -> Matrix6x6r:
     """
     Generate the matrix to transform quadratic monomial coefficients for
     coordinates (u, v) to coefficients for translated coordinates (u', v') = (u
@@ -422,9 +415,9 @@ def generate_quadratic_coordinate_translation_matrix(du: float, dv: float) -> np
     @param[out] change_of_basis_matrix: change of coefficient basis matrix
     """
     # Makes sure we're dealing with
-    translation: np.ndarray = np.array([[-du], [dv]])
+    translation: PlanarPoint = np.array([[-du], [dv]])
     assert translation.shape == (2, 1)
-    identity = np.identity(2)
+    identity: Matrix2x2r = np.identity(2, dtype=np.float64)
     # TODO: redundant check below
     assert identity.shape == (2, 2)
 
@@ -473,7 +466,9 @@ def generate_quadratic_coordinate_barycentric_transformation_matrix(barycentric_
     return change_of_basis_matrix
 
 
-def generate_quadratic_coordinate_domain_triangle_normalization_matrix(v0: np.ndarray, v1: np.ndarray, v2: np.ndarray):
+def generate_quadratic_coordinate_domain_triangle_normalization_matrix(v0: PlanarPoint,
+                                                                       v1: PlanarPoint,
+                                                                       v2: PlanarPoint) -> Matrix6x6r:
     """
     of basis matrix C for the bivariate quadratic monomial coefficients vector
     Given vertex positions in R^2 for a domain triangle, generate the change
@@ -486,19 +481,23 @@ def generate_quadratic_coordinate_domain_triangle_normalization_matrix(v0: np.nd
     @param[in] v2: third domain triangle vertex position
     @param[out] change_of_basis_matrix: change of coefficient basis matrix
     """
+    assert v0.shape == (1, 2)
+    assert v1.shape == (1, 2)
+    assert v2.shape == (1, 2)
+
     # Generate affine transformation mapping the standard triangle to the new
     # triangle
-    linear_transformation = np.array(
-        [v1 - v0, v1 - v0],
-        [v2 - v0, v2 - v0])
+    linear_transformation: Matrix2x2r = np.array(
+        [(v1 - v0).flatten(),
+         (v2 - v0).flatten()],
+        dtype=np.float64)
+    translation: PlanarPoint = v0
     assert linear_transformation.shape == (2, 2)
 
-    translation = np.array([[v0], [v0]])
-    assert translation.shape == (2, 1)
-
     # Get change of basis matrix from the affine transformation
-    change_of_basis_matrix = generate_quadratic_coordinate_affine_transformation_matrix(
+    change_of_basis_matrix: Matrix6x6r = generate_quadratic_coordinate_affine_transformation_matrix(
         linear_transformation, translation)
+    assert change_of_basis_matrix.shape == (6, 6)
 
     return change_of_basis_matrix
 

@@ -7,8 +7,6 @@ from src.quadratic_spline_surface.position_data import *
 from src.quadratic_spline_surface.quadratic_spline_surface_patch import *
 from src.quadratic_spline_surface.quadratic_spline_surface_patch import QuadraticSplineSurfacePatch
 
-PatchIndex = int
-
 
 class SurfaceDiscretizationParameters:
     """
@@ -84,7 +82,7 @@ class QuadraticSplineSurface:
         """
         return self.m_patches[patch_index]
 
-    def evaluate_patch(self, patch_index: PatchIndex, domain_point: PlanarPoint):
+    def evaluate_patch(self, patch_index: PatchIndex, domain_point: PlanarPoint) -> SpatialVector:
         """
         Evaluate the surface at a given patch and domain point
         @param[in] patch_index: index of the patch to evaluate
@@ -145,7 +143,9 @@ class QuadraticSplineSurface:
         subsurface_spline = QuadraticSplineSurface(sub_patches)
         return subsurface_spline
 
-    def triangulate_patch(self, patch_index: PatchIndex, num_refinements: int) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def triangulate_patch(self,
+                          patch_index: PatchIndex,
+                          num_refinements: int) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Triangulate a given patch.
 
@@ -166,7 +166,8 @@ class QuadraticSplineSurface:
 
         return V, F, N
 
-    def discretize(self, surface_disc_params: SurfaceDiscretizationParameters) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def discretize(self, surface_disc_params: SurfaceDiscretizationParameters
+                   ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Triangulate the surface.
 
@@ -318,7 +319,7 @@ class QuadraticSplineSurface:
         # boundary_points_mat = convert_nested_vector_to_matrix
         todo()
 
-    def view(self, color: np.ndarray = SKY_BLUE, num_subdivisions: int = DISCRETIZATION_LEVEL):
+    def view(self, color: np.ndarray = SKY_BLUE, num_subdivisions: int = DISCRETIZATION_LEVEL) -> None:
         """
         View the surface.
 
@@ -332,10 +333,10 @@ class QuadraticSplineSurface:
         """
         todo()
 
-    def screenshot(self, filename: str,
-                   camera_postion: SpatialVector = np.array(
-                       [[0.], [0.], [2.]]),
-                   camera_target=np.array([[0.], [0.], [0.]]),
+    def screenshot(self,
+                   filename: str,
+                   camera_postion: SpatialVector = np.array([[0.0, 0.0, 2.0]], dtype=np.float64),
+                   camera_target: SpatialVector = np.array([[0.0, 0.0, 0.0]], dtype=np.float64),
                    use_orthographic: bool = False) -> None:
         # TODO: include types in docstring
         """
@@ -346,6 +347,7 @@ class QuadraticSplineSurface:
         :param camera_target: camera target for the screenshot.
         :param use_orthographic: use orthographic perspective if true.
         """
+        todo()
 
     def serialize(self):
         """
@@ -457,7 +459,7 @@ class QuadraticSplineSurface:
     # Private Methods
     # ***************
 
-    def __is_valid_patch_index(self, patch_index: PatchIndex):
+    def __is_valid_patch_index(self, patch_index: PatchIndex) -> bool:
         """
         Determine if a patch index is valid
         """
@@ -466,7 +468,7 @@ class QuadraticSplineSurface:
 
         return True
 
-    def __compute_patches_bbox(self):
+    def __compute_patches_bbox(self) -> None:
         """
         Compute bounding boxes for the patches.
         As in, calculates values for member variables below:
