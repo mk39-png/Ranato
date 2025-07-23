@@ -3,6 +3,12 @@ powell_sabin_local_to_global_indexing.py
 Methods to generate local to global indexing maps for six and twelve split
 Powell-Sabin spline surfaces.
 
+The variables we are optimizing need to be linearized and initialized with
+some values. Similarly, the final optimized results need to be extracted.
+Furthermore, for the optimization it is useful to combine the variable values
+into a single vector so that, e.g., gradient descent or Newton's method can
+be applied.
+
 Used by optimize_spline_surface.py
 """
 
@@ -15,20 +21,10 @@ from src.quadratic_spline_surface.position_data import *
 
 import numpy as np
 
-# TODO: determine what the translation of autodiff.h Gradient and Hessian would be in NumPy.
-Gradient = np.ndarray
-Hessian = np.ndarray
-
-# The variables we are optimizing need to be linearized and initialized with
-# some values. Similarly, the final optimized results need to be extracted.
-# Furthermore, for the optimization it is useful to combine the variable values
-# into a single vector so that, e.g., gradient descent or Newton's method can
-# be applied.
 
 # *******************
 # Local block indices
 # *******************
-
 
 def generate_local_vertex_position_variables_start_index(vertex_index: int,
                                                          dimension: int = 3) -> int:
@@ -62,10 +58,10 @@ def generate_local_edge_gradient_variables_start_index(edge_index: int,
 
     return vertex_block_size + relative_edge_index
 
+
 # **********************
 # Local variable indices
 # **********************
-
 
 def generate_local_vertex_position_variable_index(face_vertex_index: int,
                                                   coord: int,
@@ -274,7 +270,7 @@ def generate_global_edge_gradient_variable_index(num_variable_vertices: int,
 
 def generate_six_split_variable_value_vector(vertex_positions: list[SpatialVector],
                                              vertex_gradients: list[Matrix2x3r],
-                                             variable_vertices: list[int]) -> VectorX:
+                                             variable_vertices: list[int]) -> Vector1D:
     """"
     Given vertex positions and gradients and a list of variable vertices, assemble
     the vector of global vertex degrees of freedom
@@ -283,29 +279,27 @@ def generate_six_split_variable_value_vector(vertex_positions: list[SpatialVecto
     a subset of the degrees of freedom for the twelve split.
 
     i.e. Get flat vector of all current variable values for the six-split
-    NOTE: Also used as a subroutine to generate the twelve split maps
+    NOTE: Also used as a subroutine to generate the twelve split maps.
+    NOTE: keeping variable_values as 1D array since generate_twelve_split_variable_value_vector() expects 1D array back.
 
-    @param[in] vertex_positions: list of vertex position values
-    @param[in] vertex_gradients: list of vertex gradient matrices 
-    @param[in] variable_vertices: list of variable vertex indices
-    @param[out] variable_values: vertex DOF vector
+    :param vertex_positions:  (in) list of vertex position values. SpatialVector shape (1, 3)
+    :param vertex_gradients:  (in) list of vertex gradient matrices 
+    :param variable_vertices: (in)  list of variable vertex indices
+    :return variable_values: vertex DOF vector of shape (n, )
     """
-
-    num_variable_vertices = len(variable_vertices)
+    num_variable_vertices: int = len(variable_vertices)
     if num_variable_vertices == 0:
         logger.warning("Building value vector for zero variable vertices")
-        raise Exception("Does this ever happen?")
-        return
-
+        variable_values: Vector1D = np.ndarray(shape=(0, 0))
+        return variable_values
     dimension: int = 3
-
-    # FIXME: right now, variable_values is shape (n, )... may want to change that so it's at least (n, 1) or (1, n) depending on its use case
-    variable_values: VectorX = np.ndarray(shape=(3 * dimension * num_variable_vertices, ))
+    variable_values: Vector1D = np.ndarray(shape=(3 * dimension * num_variable_vertices, ))
 
     # Get postion values
     for vertex_index in range(num_variable_vertices):
         start_index: int = generate_global_vertex_position_variables_start_index(
-            vertex_index, dimension)
+            vertex_index,
+            dimension)
 
         for i in range(dimension):
             # NOTE: SpatialVector shape is (1, 3)
@@ -315,14 +309,17 @@ def generate_six_split_variable_value_vector(vertex_positions: list[SpatialVecto
     # Get gradient values
     for vertex_index in range(num_variable_vertices):
         start_index: int = generate_global_vertex_gradient_variables_start_index(
-            num_variable_vertices, vertex_index, dimension)
+            num_variable_vertices,
+            vertex_index,
+            dimension)
         variable_matrix: Matrix2x3r = vertex_gradients[variable_vertices[vertex_index]]
         # TODO: change below to use numpy indexing?
-        for i in range(variable_matrix.shape[0]):  # rows
-            for j in range(variable_matrix.shape[1]):  # columns
+        for i in range(variable_matrix.shape[ROWS]):  # rows
+            for j in range(variable_matrix.shape[COLS]):  # columns
                 local_index: int = generate_local_variable_matrix_index(i, j, dimension)
                 variable_values[start_index + local_index] = variable_matrix[i, j]
 
+    assert variable_values.ndim == 1
     return variable_values
 
 
@@ -332,7 +329,7 @@ def generate_twelve_split_variable_value_vector(vertex_positions: list[SpatialVe
                                                 variable_vertices: list[int],
                                                 variable_edges: list[int],
                                                 halfedge: Halfedge,
-                                                he_to_corner: list[tuple[Index, Index]]) -> VectorX:
+                                                he_to_corner: list[tuple[Index, Index]]) -> Vector1D:
     """
     Used in optimize_spline_surface.py
 
@@ -341,19 +338,23 @@ def generate_twelve_split_variable_value_vector(vertex_positions: list[SpatialVe
     degrees of freedom for the twelve split
     i.e. Get flat vector of all current variable values for the twelve-split
 
-    @param[in] vertex_positions: list of vertex position values
-    @param[in] vertex_gradients: list of vertex gradient matrices 
-    @param[in] edge_gradients: list of edge gradient normal vectors 
-    @param[in] variable_vertices: list of variable vertex indices
-    @param[in] variable_edges: list of variable edge indices
-    @param[in] halfedge: halfedge data structure
-    @param[in] he_to_corner: map from halfedges to opposite triangle corners
-    @param[out] variable_values: twelve-split DOF vector
+    NOTE: keeping variable_values as a 1D array since optimize_twelve_split_spline_surface() expects a 1D array back for initial_variable_values
+
+    :param vertex_positions:  (in) list of vertex position values
+    :param vertex_gradients:  (in) list of vertex gradient matrices 
+    :param edge_gradients:    (in) list of edge gradient normal vectors 
+    :param variable_vertices: (in) list of variable vertex indices
+    :param variable_edges:    (in) list of variable edge indices
+    :param halfedge:          (in) halfedge data structure
+    :param he_to_corner:      (in) map from halfedges to opposite triangle corners
+    :return variable_values: twelve-split DOF vector of shape (n, )
     """
-    #  Get the variable values shared with the six-split
+    # Get the variable values shared with the six-split
     # TODO: wait, can the below be None or no?
-    six_split_variable_values: VectorX = generate_six_split_variable_value_vector(
-        vertex_positions, vertex_gradients, variable_vertices)
+    six_split_variable_values: Vector1D = generate_six_split_variable_value_vector(
+        vertex_positions,
+        vertex_gradients,
+        variable_vertices)
 
     #  Add six split to the variable value vector
     #  Build a halfedge representation to get unique edge values
@@ -361,10 +362,10 @@ def generate_twelve_split_variable_value_vector(vertex_positions: list[SpatialVe
     num_variable_edges: int = len(variable_edges)
     dimension: int = 3
 
-    # TODO: address the face that VectorX here is shape (n,) rather than (n,1) like in the other files....
-    variable_values: VectorX = np.ndarray(shape=(3 * dimension * num_variable_vertices +
-                                                 dimension * num_variable_edges,))
+    variable_values: Vector1D = np.ndarray(shape=(3 * dimension * num_variable_vertices +
+                                                  dimension * num_variable_edges,))
     variable_values[:six_split_variable_values.size] = six_split_variable_values
+    assert variable_values.ndim == 1
 
     # Get flat values for edge gradients
     for variable_edge_index in range(num_variable_edges):
@@ -384,8 +385,7 @@ def generate_twelve_split_variable_value_vector(vertex_positions: list[SpatialVe
             # Extract variable value of the edge to the corner
             variable_values[variable_index] = edge_gradients[face_index][face_vertex_index][coord]
 
-    # TODO: address the shaping of variable values, which is (n,) right now
-    # i.e. it might need to be (1, n) or (n, 1)
+    assert variable_values.ndim == 1
     return variable_values
 
 
@@ -401,13 +401,14 @@ def generate_six_split_local_to_global_map(global_vertex_indices: list[int],
     i.e. Map local triangle vertex indices to their global variable indices
     NOTE: Also used as a subroutine to generate the twelve split maps
 
-    @param[in] global_vertex_indices: global indices of the triangle vertices
+    @param[in] global_vertex_indices: global indices of the triangle vertices 
     @param[in] num_variable_vertices: number of variable vertices
     @param[out] local_to_global_map: map from local to global DOF indices
     """
 
     dimension: int = 3
     # TODO: check if having -1 initialized into local_to_global_map is the way to go
+    # TODO: seems like it since the below sets global_index to -1... somewhere.
     local_to_global_map: list[int] = [-1 for _ in range(27)]
 
     for local_vertex_index in range(3):
@@ -492,60 +493,66 @@ def generate_twelve_split_local_to_global_map(global_vertex_indices: list[int],
     return local_to_global_map
 
 
-def update_independent_variable_vector(variable_values: VectorX,
-                                       variable_vector: SpatialVector,
-                                       start_index: int) -> SpatialVector:
+def update_independent_variable_vector(variable_values: Vector1D,
+                                       variable_vector_ref: SpatialVector,
+                                       start_index: int) -> None:
     """
     Update variables in a vector from the vector of all variable values from some
-    start index
+    start index.
+    NOTE: modifies variable_vector_ref by reference!
+    NOTE: variable_values 1D since this method is used by update_position_variables(), which is then used  in optimize_twelve_split_spline_surface() with optimized_variable_values passed into this method.
+    optimized_variable_values is generated from hessian_inverse.solve,  which "returns" a 1D array.
+
+    :param variable_values: (in)
+    :param variable_vector_ref: (out)
+    :param start_index: (in)
     """
-    # TODO: again, is it advised to edit a parameter and return said parameter?
+    assert variable_vector_ref.shape == (1, 3)
+    assert variable_values.ndim == 1
+
     # TODO: could probably do this with NumPy indexing
-    for i in range(variable_vector.size):
+    for i in range(variable_vector_ref.size):
         variable_index: int = start_index + i
-        # NOTE: SpatialVector is of shape (1,3)
-        # TODO: is shape of VectorX still 1D like (n, )???
-        variable_vector[0][i] = variable_values[variable_index]
-
-    return variable_vector
+        # NOTE: SpatialVector is of shape (1, 3)
+        variable_vector_ref[0][i] = variable_values[variable_index]
 
 
-def update_independent_variable_matrix(variable_values: VectorX,
-                                       variable_matrix: Matrix2x3r,
-                                       start_index: int) -> Matrix2x3r:
+def update_independent_variable_matrix(variable_values: Vector1D,
+                                       variable_matrix_ref: Matrix2x3r,
+                                       start_index: int) -> None:
     """
     Update variables in a matrix from the vector of all variable values from some
     start index The flattening of the matrix is assumed to be row major.
+
+    NOTE: modifies variable_matrix_ref by reference.
     """
-    dimension: int = variable_matrix.shape[1]  # Columns
-    for i in range(variable_matrix.shape[0]):  # rows
-        for j in range(variable_matrix.shape[1]):  # columns
+    assert variable_values.ndim == 1
+    assert variable_matrix_ref.shape == (2, 3)
+
+    dimension: int = variable_matrix_ref.shape[COLS]  # Columns
+    for i in range(variable_matrix_ref.shape[ROWS]):  # rows
+        for j in range(variable_matrix_ref.shape[COLS]):  # columns
             local_index: int = generate_local_variable_matrix_index(i, j, dimension)
             variable_index: int = start_index + local_index
-            # TODO: is variable_values still 1D shape (n, )????
-            variable_matrix[i, j] = variable_values[variable_index]
-
-    return variable_matrix
+            variable_matrix_ref[i, j] = variable_values[variable_index]
 
 
-def update_position_variables(variable_values: VectorX,
+def update_position_variables(variable_values: Vector1D,
                               variable_vertices: list[int],
-                              vertex_positions_ref: list) -> list[SpatialVector]:
+                              vertex_positions_ref: list[SpatialVector]) -> None:
     """
     Used in optimize_spline_surface.py
 
     Extract vertex positions from the global DOF vector.
     i.e. Update all position variables
+    NOTE: modifies vertex_positions_ref by reference.
 
-    @param[in] variable_values: twelve-split DOF vector
-    @param[in] variable_vertices: list of variable vertex indices
-    @param[out] vertex_positions: list of vertex position values
+    :param variable_values: (in) twelve-split DOF vector
+    :param variable_vertices: (in) list of variable vertex indices
+    :param vertex_positions: (out) list of vertex position values
     """
-    vertex_positions: list[SpatialVector] = []
-    if (len(vertex_positions) == 0):
-        # TODO: is it supposed to be such that it returns an empty vertex_position list?
-        # Or does it modify vertex_positions as an argument and the returns it?
-        return vertex_positions
+    if (len(vertex_positions_ref) == 0):
+        return
 
     num_variable_vertices: int = len(variable_vertices)
     dimension: int = 3
@@ -554,23 +561,22 @@ def update_position_variables(variable_values: VectorX,
         start_index: int = generate_global_vertex_position_variables_start_index(
             vertex_index, dimension)
 
-        # FIXME: below accepts parameter, modifies it, then returns it. Is this the way to go?
-        vertex_positions[variable_vertices[vertex_index]] = update_independent_variable_vector(
+        update_independent_variable_vector(
             variable_values,
-            vertex_positions[variable_vertices[vertex_index]],
+            vertex_positions_ref[variable_vertices[vertex_index]],
             start_index)
 
-    return vertex_positions
 
-
-def update_vertex_gradient_variables(variable_values: VectorX,
+def update_vertex_gradient_variables(variable_values: Vector1D,
                                      variable_vertices: list[int],
-                                     vertex_gradients: list[Matrix2x3r]) -> list[Matrix2x3r]:
+                                     vertex_gradients_ref: list[Matrix2x3r]) -> None:
     """
     Used in optimize_spline_surface.py
 
     Extract vertex gradients from the global DOF vector.
     i.e. Update all vertex gradient variables
+
+    NOTE: modifies vertex_gradients by reference.
 
     @param[in] variable_values: twelve-split DOF vector
     @param[in] variable_vertices: list of variable vertex indices
@@ -582,33 +588,33 @@ def update_vertex_gradient_variables(variable_values: VectorX,
         start_index: int = generate_global_vertex_gradient_variables_start_index(
             num_variable_vertices, vertex_index, dimension)
 
-        vertex_gradients[variable_vertices[vertex_index]] = update_independent_variable_matrix(
-            variable_values, vertex_gradients[variable_vertices[vertex_index]], start_index)
+        update_independent_variable_matrix(
+            variable_values,
+            vertex_gradients_ref[variable_vertices[vertex_index]],
+            start_index)
 
-    return vertex_gradients
 
-
-def update_edge_gradient_variables(variable_values: VectorX,
+def update_edge_gradient_variables(variable_values: Vector1D,
                                    variable_vertices: list[int],
                                    variable_edges: list[int],
                                    halfedge: Halfedge,
                                    he_to_corner: list[tuple[Index, Index]],
-                                   edge_gradients: list[list[SpatialVector]]) -> list[list[SpatialVector]]:
+                                   edge_gradients_ref: list[list[SpatialVector]]) -> None:
     """
     Used in optimize_spline_surface.py
 
     Extract edge gradients from the global DOF vector.
     i.e. Update all edge gradient variables
 
+    NOTE: modifies edge_gradients_ref by reference.
+
     @param[in] variable_values: twelve-split DOF vector
     @param[in] variable_vertices: list of variable vertex indices
     @param[in] variable_edges: list of variable edge indices
     @param[in] halfedge: halfedge data structure
     @param[in] he_to_corner: map from halfedges to opposite triangle corners
-    @param[out] edge_gradients: list of edge gradient values
+    @param[out] edge_gradients: list of edge gradient values (element arrays of length 3)
     """
-    # edge_gradients: list[list[SpatialVector]]
-
     dimension: int = 3
     num_variable_vertices: int = len(variable_vertices)
     num_variable_edges: int = len(variable_edges)
@@ -626,9 +632,9 @@ def update_edge_gradient_variables(variable_values: VectorX,
             num_variable_vertices, variable_edge_index, dimension)
 
         # Update the gradients for the first corner
-        edge_gradients[first_face_index][first_face_vertex_index] = update_independent_variable_vector(
+        update_independent_variable_vector(
             variable_values,
-            edge_gradients[first_face_index][first_face_vertex_index],
+            edge_gradients_ref[first_face_index][first_face_vertex_index],
             start_index)
 
         # Update the gradients for the second corner if it exists
@@ -637,12 +643,10 @@ def update_edge_gradient_variables(variable_values: VectorX,
             second_face_index: int = he_to_corner[second_halfedge_index][0]
             second_face_vertex_index: int = he_to_corner[second_halfedge_index][1]
 
-            edge_gradients[second_face_index][second_face_vertex_index] = update_independent_variable_vector(
+            update_independent_variable_vector(
                 variable_values,
-                edge_gradients[second_face_index][second_face_vertex_index],
+                edge_gradients_ref[second_face_index][second_face_vertex_index],
                 start_index)
-
-    return edge_gradients
 
 
 def build_variable_vertex_indices_map(num_vertices: int, variable_vertices: list[int]) -> list[int]:
@@ -657,7 +661,8 @@ def build_variable_vertex_indices_map(num_vertices: int, variable_vertices: list
     @param[out] global_vertex_indices: map from vertex indices to variable vertices
     """
     # Get variable vertex indices
-    global_vertex_indices: list[int] = [-1 for _ in range(num_vertices)]
+    PLACEHOLDER_INT = -1
+    global_vertex_indices: list[int] = [PLACEHOLDER_INT for _ in range(num_vertices)]
 
     for i, _ in enumerate(variable_vertices):
         global_vertex_indices[variable_vertices[i]] = i
@@ -672,6 +677,8 @@ def build_variable_edge_indices_map(num_faces: int,
     """
     Used in optimize_spline_surface.py
 
+    NOTE: returns global_edge_indices since this method is only used internally within build_twelve_split_spline_energy_system()
+
     Generate a map from all edges to a list of variable edges or -1 for
     edges that are not variable.
     @param[in] num_faces: total number of faces
@@ -680,56 +687,49 @@ def build_variable_edge_indices_map(num_faces: int,
     @param[in] he_to_corner: map from halfedges to opposite triangle corners
     @param[out] global_edge_indices: map from edge indices to variable edges
     """
-    # TODO: does the below make a list of list[int, int, int] correctly?
     PLACEHOLDER_INT = -1
-    global_edge_indices: list[list[int]] = [[PLACEHOLDER_INT, PLACEHOLDER_INT, PLACEHOLDER_INT]
-                                            for _ in range(num_faces)]
+    global_edge_indices: list[list[Index]] = [[PLACEHOLDER_INT, PLACEHOLDER_INT, PLACEHOLDER_INT]
+                                              for _ in range(num_faces)]
 
     for i, _ in enumerate(variable_edges):
         edge_index: Index = variable_edges[i]
-        h0: int = halfedge.edge_to_first_halfedge(edge_index)
-        f0 = he_to_corner[h0][0]
-        f0_vertex_index = he_to_corner[h0][1]
+        h0: Index = halfedge.edge_to_first_halfedge(edge_index)
+        f0: Index = he_to_corner[h0][0]
+        f0_vertex_index: Index = he_to_corner[h0][1]
         global_edge_indices[f0][f0_vertex_index] = i
 
-        if (not halfedge.is_boundary_edge(edge_index)):
-            h1: int = halfedge.edge_to_second_halfedge(edge_index)
-            f1: int = he_to_corner[h1][0]
-            f1_vertex_index: int = he_to_corner[h1][1]
+        if not halfedge.is_boundary_edge(edge_index):
+            h1: Index = halfedge.edge_to_second_halfedge(edge_index)
+            f1: Index = he_to_corner[h1][0]
+            f1_vertex_index: Index = he_to_corner[h1][1]
             global_edge_indices[f1][f1_vertex_index] = i
 
     return global_edge_indices
 
 
 def update_energy_quadratic(local_energy: float,
-                            local_derivatives: Gradient,  # shape (n, 1)
-                            local_hessian: Hessian,  # shape (w, l)
+                            local_derivatives: TwelveSplitGradient,  # shape (36, 1)
+                            local_hessian: TwelveSplitHessian,  # shape (36, 36)
                             local_to_global_map: list[int],
                             energy: float,
-                            derivatives_ref: VectorX,
+                            derivatives_ref: Vector2D,
                             hessian_entries_ref: list[tuple[float, float, float]]
                             ) -> float:
     """
     Update global energy, derivatives, and hessian with local per face values
 
-    TODO: redo docstring
-    @param[in] local_energy: local energy value
-    @param[in] local_derivatives: local energy gradient
-    @param[in] local_hessian: local energy Hessian
-    @param[in] local_to_global_map: map from local to global DOF indices
+    NOTE: since update_energy_quadratic() is called in a loop to update the energy variable, we cannot simply just reassign energy to local_energy.
+    TODO: is it right to pass in parameters that are then modified and then pass those same parameters back as return values?
 
-    @return[out] energy: global energy value
-    @param[out] derivatives: global energy gradient
-    @param[out] hessian: global energy Hessian
+    :param local_energy:        (in) local energy value
+    :param local_derivatives:   (in) local energy gradient
+    :param local_hessian:       (in) local energy Hessian
+    :param local_to_global_map: (in) map from local to global DOF indices
 
-    # TODO: is it right to pass in parameters that are then modified and then pass those same parameters back as return values?
-    Returns: 
-    energy: global energy value
-    derivatives: global energy gradient
-    hessian: global energy Hessian
+    :return energy:           global energy value
+    :param  derivatives: (out) global energy gradient
+    :param  hessian:     (out) global energy Hessian
     """
-    # derivatives: VectorX = np.zeros(shape=(num_independent_variables, ))
-    # hessian_entries: list[tuple[float, float, float]] = []
     logger.info("Adding local face energy %s", local_energy)
     logger.info("Local to global map: %s", local_to_global_map)
     assert derivatives_ref.ndim == 2
@@ -739,7 +739,6 @@ def update_energy_quadratic(local_energy: float,
     assert local_hessian.ndim == 2
 
     # Update energy
-    # NOTE: since update_energy_quadratic() is called in a loop, we cannot simply just reassign energy to some value.
     energy += local_energy
 
     # Update derivatives

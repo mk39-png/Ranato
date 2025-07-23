@@ -9,9 +9,6 @@ import logging
 import mathutils
 import math
 
-
-#
-#
 from scipy.sparse import linalg as splinalg
 import scipy.sparse as sparse
 import sys
@@ -25,46 +22,60 @@ logging.basicConfig(level=logging.DEBUG)
 # *******
 # GLOBALS
 # *******
-FLOAT_EQUAL_PRECISION: float = 1e-10  # Epsilon for default float
-ADJACENT_CONTOUR_PRECISION: float = 1e-6  # Epsilon for chaining contours
+# Epsilon for default float
+FLOAT_EQUAL_PRECISION: float = 1e-10
+# Epsilon for chaining contours
+ADJACENT_CONTOUR_PRECISION: float = 1e-6
 # Epsilon for curve-curve bounding box padding
 PLANAR_BOUNDING_BOX_PRECISION: float = 0
 # Epsilon for Bezier clipping intersections
 FIND_INTERSECTIONS_BEZIER_CLIPPING_PRECISION: float = 1e-7
-DISCRETIZATION_LEVEL: int = 2  # Spline surface discretization level
-HASH_TABLE_SIZE: int = 70  # Size of spline surface hash table
+# Spline surface discretization level
+DISCRETIZATION_LEVEL: int = 2
+# Size of spline surface hash table
+HASH_TABLE_SIZE: int = 70
 
 # Real number representations
 
-# Includeing typing here for better code.
+# Including typing here for better code.
 # https://stackoverflow.com/questions/71109838/numpy-typing-with-specific-shape-and-datatype
 OneFormXr = np.ndarray  # TODO: what shape is this... I forget
-PlanarPoint = np.ndarray  # shape (1, 2)
-SpatialVector = np.ndarray  # shape (1, 3)
+PlanarPoint = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (1, 2)
+SpatialVector = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (1, 3)
 # SpatialVector = Annotated[npt.NDArray[], Literal[1, 3]]
-VectorX = np.ndarray  # shape (n, )
-MatrixXr = np.ndarray  # shape (n, m)
+PatchIndex = int
+# TODO: combine VectorX and VectorXr into one?
+VectorX = np.ndarray  # shape (n, )... sometimes. Oftentimes it's shape (n, 1) or (1, n)...
+VectorXr = np.ndarray  # TODO: maybe change name to Vector1D to denote that it's shape (n, )
+Vector2D = np.ndarray  # shape (1, n) (or sometimes shape (n, 1) as in the case of optimize_spline_surface)
+Vector1D = np.ndarray  # shape (n, )
+MatrixXr = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (n, m)
+MatrixNx3 = np.ndarray[tuple[int, int], np.dtype[np.float64]]
+Matrix6x6r = np.ndarray
 Index = int
 FaceIndex = int
 VertexIndex = int
+
+# NOTE: VectorX also encompasses SpatialVectors as well.
+# VectorX = np.ndarray
 
 # Used for accessing numpy shape for clarity sake
 ROWS = 0
 COLS = 1
 
-
 # PlanarPoint = NewType('PlanarPoint', npt.NDArray(shape=[(1, 2)], dtype=float))
 # SpatialVector = np.ndarray(shape=(1, 3), dtype=float)
-
-Matrix2x3r = np.ndarray  # shape (2, 3)
-Matrix2x2r = np.ndarray  # shape (2, 2)
-Matrix3x2r = np.ndarray  # shape (3, 2)
-Matrix3x3r = np.ndarray  # shape (3, 3)
-Matrix6x3r = np.ndarray  # shape (6, 3)
 # Edge = list[int, int]
 
-TwelveSplitGradient = np.ndarray  # shape (36, 1)
-TwelveSplitHessian = np.ndarray  # shape (36, 36)
+Matrix3x1r = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (3, 1)
+Matrix2x3r = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (2, 3)
+Matrix2x2r = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (2, 2)
+Matrix3x2r = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (3, 2)
+Matrix3x3r = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (3, 3)
+Matrix6x3r = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (6, 3)
+
+TwelveSplitGradient = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (36, 1)
+TwelveSplitHessian = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (36, 36)
 
 
 # **********************

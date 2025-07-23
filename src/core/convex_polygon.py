@@ -130,16 +130,16 @@ class ConvexPolygon:
     """
     # TODO (from ASOC code): Implement constructor from collection of points
 
-    def __init__(self, boundary_segments_coeffs: list[np.ndarray],
-                 vertices: np.ndarray) -> None:
+    def __init__(self, boundary_segments_coeffs: list[Matrix3x1r],
+                 vertices: Matrix3x2r) -> None:
         """
         Constructor that is called by classmethod init_from_boundary_segments_coeffs or init_from_vertices.
         NOTE: Do not call this constructor directly. As in, do not call ConvexPolygon(boundary_segments_coeffs, vertices). Instead, use ConvexPolygon.init_from_boundary_segments_coeffs or ConvexPolygon.init_from_vertices().
 
         :param boundary_segments_coeffs: boundary segment coefficients list of size 3 with element np.ndarray of shape (3, 1) and type np.float64
-        :type boundary_segments_coeffs: list[np.ndarray]
+        :type boundary_segments_coeffs: list[Matrix3x1r]
         :param vertices: vertices of type np.ndarray of shape (3, 2)
-        :type vertices: np.ndarray
+        :type vertices: Matrix3x2r
         """
         # Assertions to match ASOC code C++ code
         assert len(boundary_segments_coeffs) == 3
@@ -149,11 +149,11 @@ class ConvexPolygon:
         # *******
         # Private
         # *******
-        self.m_boundary_segments_coeffs: list[np.ndarray] = boundary_segments_coeffs
-        self.m_vertices: np.ndarray = vertices
+        self.m_boundary_segments_coeffs: list[Matrix3x1r] = boundary_segments_coeffs
+        self.m_vertices: Matrix3x2r = vertices
 
     @classmethod
-    def init_from_boundary_segments_coeffs(cls, boundary_segments_coeffs: list[np.ndarray]):
+    def init_from_boundary_segments_coeffs(cls, boundary_segments_coeffs: list[Matrix3x1r]):
         """
         Only boundary_segments_coeffs passed in. Construct m_vertices.
         """
@@ -166,20 +166,20 @@ class ConvexPolygon:
         # v1 shape == (1, 2)
         # v2 shape == (1, 2)
         # So, we want vertices shape == (3, 2)
-        vertices: np.ndarray = np.array([v0, v1, v2])
+        vertices: Matrix3x2r = np.array([v0, v1, v2], dtype=np.float64)
         assert vertices.shape == (3, 2)
 
         # return vertices
         return cls(boundary_segments_coeffs, vertices)
 
     @classmethod
-    def init_from_vertices(cls, vertices: np.ndarray):
+    def init_from_vertices(cls, vertices: Matrix3x2r):
         """
         Only vertices passed in. Construct m_boundary_segments_coeffs.
         """
         assert vertices.shape == (3, 2)
         num_vertices: int = vertices.shape[0]
-        boundary_segments_coeffs: list[np.ndarray] = []
+        boundary_segments_coeffs: list[Matrix3x1r] = []
 
         # TODO: is the below the dynamic sizing of arrays that I needed to avoid?
         for i in range(num_vertices):
@@ -259,7 +259,7 @@ class ConvexPolygon:
         return self.m_boundary_segments_coeffs
 
     @property
-    def get_vertices(self) -> np.ndarray:
+    def get_vertices(self) -> Matrix3x2r:
         return self.m_vertices
 
     def parametrize_patch_boundaries(self) -> list[LineSegment]:

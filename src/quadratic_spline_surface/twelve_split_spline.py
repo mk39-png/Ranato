@@ -20,7 +20,8 @@ from src.quadratic_spline_surface.quadratic_spline_surface import *
 
 from igl import per_vertex_normals
 from cholespy import CholeskySolverD, MatrixType
-import scipy.sparse as sparse
+# import scipy.sparse as sparse
+from scipy.sparse import csr_matrix
 
 
 class TwelveSplitSplineSurface(QuadraticSplineSurface):
@@ -37,8 +38,8 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
                  optimization_params: OptimizationParameters,
                  face_to_patch_indices: list[list[int]],
                  patch_to_face_indices: list[int],
-                 fit_matrix: sparse.csr_matrix,
-                 energy_hessian: sparse.csr_matrix,
+                 fit_matrix: csr_matrix,
+                 energy_hessian: csr_matrix,
                  energy_hessian_inverse: CholeskySolverD,  # np.ndarray,
                  corner_data: list[list[TriangleCornerData]] | None = None,
                  midpoint_data: list[list[TriangleMidpointData]] | None = None) -> None:
@@ -92,11 +93,14 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
 
     def update_positions(self,
                          V: np.ndarray,
+                         fit_matrix: csr_matrix,
+                         energy_hessian_inverse: CholeskySolverD
                          ):
         """
-        Update the spline surface vertex positions for the fit
-        @param[in] V: mesh vertex positions
+        Update the spline surface vertex positions for the fit.
 
+        NOTE: keeping fit_matrix and energy_hessian_inverse modified by refernece for efficiency.
+        @param[in] V: mesh vertex positions
         @param[out] fit_matrix: fit matrix for the energy
         @param[out] energy_hessian_inverse: inverse of the hessian for the energy
         computation
@@ -109,7 +113,13 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
 
         # Build optimized corner and midpoint data
         todo("Finish optimize_spline_surface.py")
-        generate_optimized_twelve_split_position_data(V, affine_manifold, fit_matrix, energy_hessian_inverse)
+        generate_optimized_twelve_split_position_data(
+            V,
+            affine_manifold,
+            fit_matrix,
+            energy_hessian_inverse,
+            self.m_corner_data,
+            self.m_midpoint_data)
 
         return fit_matrix, energy_hessian_inverse
 
