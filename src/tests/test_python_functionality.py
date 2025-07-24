@@ -238,3 +238,9 @@ print(x)
 
 
 # print(reser)
+
+six_split_local_to_global_map: list[int] = [-1 for _ in range(27)]
+local_to_global_map: list[int] = [39 for _ in range(36)]
+local_to_global_map[0:len(six_split_local_to_global_map)] = six_split_local_to_global_map
+
+print(local_to_global_map)

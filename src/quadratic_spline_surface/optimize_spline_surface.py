@@ -97,9 +97,13 @@ def generate_local_hessian_data(face_vertex_uv_positions: list[PlanarPoint],
 
     # Each face_vertex_uv_position element is shape (1, 2)
     # TODO: shaping may be off
-    uv: np.ndarray = np.array([face_vertex_uv_positions[0],
+    assert face_vertex_uv_positions[0].shape == (1, 2)
+    assert corner_to_corner_uv_positions[0].shape == (2, 2)
+    assert face_normal.shape == (1, 3)
+    uv: Matrix3x2r = np.array([face_vertex_uv_positions[0],
                                face_vertex_uv_positions[1],
-                               face_vertex_uv_positions[2]])
+                               face_vertex_uv_positions[2]],
+                              dtype=np.float64).squeeze()
     assert uv.shape == (3, 2)
 
     # TODO: the more Python way of creating the class would be to pass the values into the constructor of local_hessian_data, right?

@@ -17,3 +17,14 @@ def test_build_variable_edge_indices_map() -> None:
 
     for _, index in enumerate(global_edge_indices[0]):
         assert index == -1
+
+
+def test_generate_twelve_split_local_to_global_map():
+    """
+    Testing to see that the list resizing works as intended
+    """
+    six_split_local_to_global_map: list[int] = [-1 for _ in range(27)]
+    local_to_global_map: list[int] = [39 for _ in range(36)]
+    local_to_global_map[0:len(six_split_local_to_global_map)] = six_split_local_to_global_map
+
+    print(local_to_global_map)

@@ -37,58 +37,97 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
     def __init__(self, V: np.ndarray,
                  affine_manifold: AffineManifold,
                  optimization_params: OptimizationParameters,
-                 face_to_patch_indices: list[list[int]],
-                 patch_to_face_indices: list[int],
-                 fit_matrix: csr_matrix,
-                 energy_hessian: csr_matrix,
-                 energy_hessian_inverse: CholeskySolverD,  # np.ndarray,
-                 corner_data: list[list[TriangleCornerData]] | None = None,
-                 midpoint_data: list[list[TriangleMidpointData]] | None = None) -> None:
+                 #  face_to_patch_indices: list[list[int]],
+                 #  patch_to_face_indices: list[int],
+                 #  fit_matrix: csr_matrix,
+                 #  energy_hessian: csr_matrix,
+                 #  energy_hessian_inverse: CholeskySolverD,  # np.ndarray,
+                 #  corner_data: list[list[TriangleCornerData]] | None = None,
+                 #  midpoint_data: list[list[TriangleMidpointData]] | None = None
+                 ) -> None:
         # TODO: fitmatrix and energy_hessian originally sparse matrices in Eigen ASOC code... may be useful to have them sparse here somehow.
-        # TODO: as in, I may have to use SciPy for energy_hessian_inverse
-        """ Maps from the input mesh faces to the patches and from patches to the faces are also generated.
+        """ 
+        Maps from the input mesh faces to the patches and from patches to the faces are also generated.
+        Constructor for VF representation with uv coordinates and with additional data for the spline inferred as determined by the parameters.
 
         @param[in] V: mesh vertex positions
         @param[in] affine_manifold: affine manifold structure
         @param[in] optimization_params: parameters for the spline optimization
+
+        NOTE: the below two parameters are used for the contour_network calculation...
         @param[out] face_to_patch_indices: map from mesh faces to lists of
         corresponding patches
         @param[out] patch_to_face_indices: map from patches to the corresponding
         mesh face
+        NOTE: the below are not used again... well, not until animating.
+        NOTE: so why not just store them with the TwelveSplitSplineSurface?
         @param[out] fit_matrix: fit matrix for the energy
         @param[out] energy_hessian: hessian for the energy computation
         @param[out] energy_hessian_inverse: inverse of the hessian for the energy
         computation
 
+        TODO: deal with the case with the other constructor from corner_data and midpoint_data.
         @param[in] corner_data: quadratic vertex position and derivative data
         @param[in] midpoint_data: quadratic edge midpoint derivative data
         """
-        # Constructor for the spline directly from position data.
-        self.m_affine_manifold: AffineManifold = affine_manifold
+        self.m_affine_manifold: AffineManifold = affine_manifold  # TODO: this is never used from what it seems
         self.m_corner_data: list[list[TriangleCornerData]] = []
         self.m_midpoint_data: list[list[TriangleMidpointData]] = []
 
-        # Constructor for VF representation with uv coordinates and with additional data for the spline inferred as determined by the parameters.
         # Generate normals
         N = self.__generate_face_normals(V, affine_manifold)
 
         # Generate fit matrix by setting the parametrized quadratic surface mapping factor to zero
-        # fit_energy: float, fit_derivatives: VectorX
+        fit_energy: float
+        fit_derivatives: VectorX
+        fit_matrix: csr_matrix
+        fit_matrix_inverse: CholeskySolverD
+        # TODO: doesnt the below just make a shallow copy... still is the same OptimizationParameters but by reference?
         optimization_params_fit: OptimizationParameters = optimization_params
         optimization_params_fit.parametrized_quadratic_surface_mapping_factor = 0.0
+        fit_energy, fit_derivatives, fit_matrix, fit_matrix_inverse = build_twelve_split_spline_energy_system(V,
+                                                                                                              N,
+                                                                                                              affine_manifold,
+                                                                                                              optimization_params_fit)
 
-        # self_bui
-        build_twelve_split_spline_energy_system(V,
-                                                N,
-                                                affine_manifold,
-                                                optimization_params_fit,)
-        todo()
+        # Build full energy hessian system
+        energy: float
+        derivatives: Vector1D
+        energy_hessian: csr_matrix
+        energy_hessian_inverse: CholeskySolverD
+        energy, derivatives, energy_hessian, energy_hessian_inverse = build_twelve_split_spline_energy_system(V,
+                                                                                                              N,
+                                                                                                              affine_manifold,
+                                                                                                              optimization_params)
+
+        # Build optimized corner and midpoint data
         generate_optimized_twelve_split_position_data(V,
                                                       affine_manifold,
                                                       fit_matrix,
                                                       energy_hessian_inverse,
                                                       self.m_corner_data,
                                                       self.m_midpoint_data)
+
+        # Get cone corners
+        is_cone_corner: list[list[bool]] = affine_manifold.compute_cone_corners()  # list[bool] of length 3
+
+        # Initialize position data and patches
+        face_to_patch_indices: list[list[int]]
+        patch_to_face_indices: list[int]
+        face_to_patch_indices, patch_to_face_indices = self.__init_twelve_split_patches(self.m_corner_data,
+                                                                                        self.m_midpoint_data,
+                                                                                        is_cone_corner)
+
+        # Saving everything into the class
+        self.face_to_patch_indices: list[list[int]] = face_to_patch_indices
+        self.patch_to_face_indices: list[int] = patch_to_face_indices
+        self.fit_matrix: csr_matrix = fit_matrix
+        self.energy_hessian: csr_matrix = energy_hessian
+        self.energy_hessian_inverse: CholeskySolverD = energy_hessian_inverse
+
+        # NOTE: below are modified and changed by reference
+        # self.corner_data: list[list[TriangleCornerData]]
+        # self.midpoint_data: list[list[TriangleMidpointData]]
 
     @property
     def affine_manifold(self) -> AffineManifold:
