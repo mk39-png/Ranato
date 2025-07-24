@@ -2,14 +2,16 @@
 Used by optimize_spline_surface.py
 """
 
-from src.core.common import Matrix2x2r
+from src.core.common import *
 from src.quadratic_spline_surface.PS12_patch_coeffs import PS12_patch_coeffs
 
 import numpy as np
 import numpy.linalg as LA
 
 
-def get_C_gl(uv: np.ndarray, corner_to_corner_uv_positions: list[Matrix2x2r], reverse_edge_orientations: list[bool]) -> np.ndarray:
+def get_C_gl(uv: Matrix3x2r,
+             corner_to_corner_uv_positions: list[Matrix2x2r],
+             reverse_edge_orientations: list[bool]) -> Matrix12x12r:
     """
     Compute the matrix to convert from global degrees of freedom
     [f0, gu_0, gv_0, f1, gu_1, gv_1, f2, gu_2, gv_2, gm_12, gm_20, gm_01]
@@ -19,13 +21,16 @@ def get_C_gl(uv: np.ndarray, corner_to_corner_uv_positions: list[Matrix2x2r], re
     Here, dij is the derivative of f in the direction of edge eij and
     hij is the derivative of f from the edge midpoint to the opposite vertex
 
-    @param[in] uv: global uv vertex positions
-    @param[in] corner_to_corner_uv_positions: per vertex matrices with the
-    local vertex chart edge directions as rows
-    @param[in] reverse_edge_orientations: per edge booleans indicating if the
-    edge midpoint needs to be flipped from frame orientation consistency
-    @return matrix mapping global to local degrees of freedom
+    :param[in] uv: global uv vertex positions of shape (3, 2)
+    :param[in] corner_to_corner_uv_positions: per vertex matrices with the
+    local vertex chart edge directions as rows. Length = 3
+    :param[in] reverse_edge_orientations: per edge booleans indicating if the
+    edge midpoint needs to be flipped from frame orientation consistency. Length = 3
+
+    :return: matrix mapping global to local degrees of freedom of shape (12, 12)
     """
+    todo("convert the code below to just work with 1D arrays for simplicity...")
+    # logic should be straightforward, if not the same.
 
     assert uv.shape == (3, 2)
     assert len(corner_to_corner_uv_positions) == 3
@@ -34,17 +39,18 @@ def get_C_gl(uv: np.ndarray, corner_to_corner_uv_positions: list[Matrix2x2r], re
 
     # Get global uv vertex postions
     # TODO: apparently there's a difference betwen Vector and RowVector in Eigen which I'll need to translate...
-    q0 = uv[[0], :]
-    q1 = uv[[1], :]
-    q2 = uv[[2], :]
+    q0: Vector2D = uv[[0], :]
+    q1: Vector2D = uv[[1], :]
+    q2: Vector2D = uv[[2], :]
     assert q0.shape == (1, 2)
     assert q1.shape == (1, 2)
     assert q2.shape == (1, 2)
 
     # Compute global edge directions and squared lengths
-    e01_global = q1 - q0
-    e12_global = q2 - q1
-    e20_global = q0 - q2
+    # NOTE: flattening vectors for use with NumPy dot product below.
+    e01_global: Vector1D = (q1 - q0).flatten()
+    e12_global: Vector1D = (q2 - q1).flatten()
+    e20_global: Vector1D = (q0 - q2).flatten()
 
     # TODO: is the below correct for dot product?
     l01sq: float = e01_global.dot(e01_global)
@@ -53,15 +59,20 @@ def get_C_gl(uv: np.ndarray, corner_to_corner_uv_positions: list[Matrix2x2r], re
     assert isinstance(l01sq, float)
 
     # Compute global midpoint to corner directions
-    e01_m = q2 - (q0 + q1) / 2
-    e12_m = q0 - (q2 + q1) / 2
-    e20_m = q1 - (q0 + q2) / 2
+    # TODO: is there a chance that the below is not (1, 2) shape?
+    e01_m: PlanarPoint = q2 - (q0 + q1) / 2
+    e12_m: PlanarPoint = q0 - (q2 + q1) / 2
+    e20_m: PlanarPoint = q1 - (q0 + q2) / 2
+    assert e01_m.shape == (1, 2)
+    assert e12_m.shape == (1, 2)
+    assert e20_m.shape == (1, 2)
 
     # Compute global edge perpendicular directions
     # TODO: double check if perpendicular stuff is correct
-    perpe01 = np.array([[-e01_global[0][1]], [e01_global[0][0]]])
-    perpe12 = np.array([[-e12_global[0][1]], [e12_global[0][0]]])
-    perpe20 = np.array([[-e20_global[0][1]], [e20_global[0][0]]])
+    # TODO: difference from ASOC code since these need to be 1D for the calculation below.
+    perpe01: Vector1D = np.array([[-e01_global[1]], [e01_global[0]]])
+    perpe12: Vector1D = np.array([[-e12_global[1]], [e12_global[0]]])
+    perpe20: Vector1D = np.array([[-e20_global[1]], [e20_global[0]]])
     assert perpe01.shape == (1, 2)
 
     # Compute local edge midpoint directions in frames defined by eij, perpeij

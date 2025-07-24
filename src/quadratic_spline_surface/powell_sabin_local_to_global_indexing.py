@@ -466,13 +466,11 @@ def generate_twelve_split_local_to_global_map(global_vertex_indices: list[int],
 
     # Get index map for the Powell-Sabin shared variables
     dimension: int = 3
-
+    local_to_global_map: list[int] = [-1 for _ in range(36)]
     six_split_local_to_global_map: list[int] = generate_six_split_local_to_global_map(
         global_vertex_indices, num_variable_vertices)
-
-    # NOTE: six_split_local_to_global_map should be returning a copy by value since both objects are list[int]
-    local_to_global_map: list[int] = six_split_local_to_global_map.copy()
-    assert len(local_to_global_map) == 36
+    assert len(six_split_local_to_global_map) == 27
+    local_to_global_map[0:len(six_split_local_to_global_map)] = six_split_local_to_global_map
 
     for local_edge_index in range(3):
         global_edge_index: int = global_edge_indices[local_edge_index]
@@ -490,6 +488,7 @@ def generate_twelve_split_local_to_global_map(global_vertex_indices: list[int],
 
             local_to_global_map[local_index] = global_index
 
+    assert len(local_to_global_map) == 36
     return local_to_global_map
 
 
@@ -772,11 +771,14 @@ def update_energy_quadratic(local_energy: float,
     return energy
 
 
-def build_face_variable_vector(variables: list, i: int,
+def build_face_variable_vector(variables: list,
+                               i: int,
                                j: int,
                                k: int) -> list:
     """
     Build a triplet of face vertex values from a global array of vertex variables
+
+    NOTE: this could be doing something fancy that I do not know of.
 
     @param[in] variables: global variables
     @param[in] i: first variable index
@@ -784,5 +786,10 @@ def build_face_variable_vector(variables: list, i: int,
     @param[in] k: third variable index
     @param[out] face_variable_vector: variables for face Tijk
     """
-    unimplemented(
-        "This function really is not needed in Python since C++ arrays are already vectors. As in, lists are already vector-like.")
+
+    # TODO: test this with some NumPy implementation
+    face_variable_vector = [variables[i], variables[j], variables[k]]
+    return face_variable_vector
+
+    # unimplemented(
+    # "This function really is not needed in Python since C++ arrays are already vectors. As in, lists are already vector-like.")

@@ -53,6 +53,7 @@ MatrixXr = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (n, m)
 MatrixNx3 = np.ndarray[tuple[int, int], np.dtype[np.float64]]
 Matrix6x6r = np.ndarray
 Matrix3x6r = np.ndarray
+Matrix12x12r = np.ndarray
 Index = int
 FaceIndex = int
 VertexIndex = int
