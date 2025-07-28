@@ -8,7 +8,6 @@ from src.core.vertex_circulator import VertexCirculator
 
 import polyscope as ps
 import mathutils
-
 from dataclasses import dataclass
 
 
@@ -30,21 +29,16 @@ class VertexManifoldChart:
 
     # Index of the vertex in the affine manifold
     vertex_index: int
-
     # List of manifold vertex indices in the one ring
     vertex_one_ring: list[int]
     # List of manifold face indices in the one ring
     face_one_ring: list[int]
-
     # Local uv coordinates of the one ring vertices
     one_ring_uv_positions: np.ndarray
-
     # Mark boundary vertices
     is_boundary: bool = False
-
     # Mark cone vertices
     is_cone: bool = False
-
     # Mark vertices adjacent to a cone
     is_cone_adjacent: bool = False
 
@@ -86,44 +80,32 @@ class FaceManifoldChart:
     Local layout manifold chart in R2 of a triangle.
     This is the same as global uv positions when these are provided.
     """
-    # # -- Face indices --
-    # face_index: Index
 
-    # # -- Vertex positions --
-    # # NOTE: self_uv_position must be a size 3 list with PlanarPoint elements
-    # # assert len(face_uv_positions) == 3
-    # # NOTE: placeholder values below to denote that face_uv_positions is list of length 3
-    # face_uv_positions: list[PlanarPoint] = [PlanarPoint(shape=(1, 2)),
-    #                                         PlanarPoint(shape=(1, 2)),
-    #                                         PlanarPoint(shape=(1, 2))]
-
-    # # -- Global information --
-    # # True iff the edge is on the boundary
-    # is_boundary: bool = False
-    # # Mark faces adjacent to a cone
-    # is_cone_adjacent: bool = False
-    # # Mark individual corners adjacent to a cone
-    # is_cone_corner: list[bool] = [False, False, False]
-
-    def __init__(self, face_index: Index, face_uv_positions: list[PlanarPoint],
-                 is_boundary: bool = False, is_cone_adjacent: bool = False,
-                 is_cone_corner: list[bool] = [False, False, False]) -> None:
+    def __init__(self,
+                 _face_index: Index,
+                 _face_uv_positions: list[PlanarPoint],
+                 _is_boundary: bool = False,
+                 _is_cone_adjacent: bool = False,
+                 _is_cone_corner: list[bool] = [False, False, False]) -> None:
 
         # -- Face indices --
-        self.face_index: Index = face_index
+        self.face_index: Index = _face_index
 
         # -- Vertex positions --
         # NOTE: self_uv_position must be a size 3 list with PlanarPoint elements
-        assert len(face_uv_positions) == 3
-        self.face_uv_positions: list[PlanarPoint] = face_uv_positions
+        assert len(_face_uv_positions) == 3
+        self.face_uv_positions: list[PlanarPoint] = _face_uv_positions
 
         # -- Global information --
         # True iff the edge is on the boundary
-        self.is_boundary: bool = is_boundary
+        self.is_boundary: bool = _is_boundary
+
         # Mark faces adjacent to a cone
-        self.is_cone_adjacent: bool = is_cone_adjacent
+        self.is_cone_adjacent: bool = _is_cone_adjacent
+
         # Mark individual corners adjacent to a cone
-        self.is_cone_corner: list[bool] = is_cone_corner
+        assert len(_is_cone_corner) == 3
+        self.is_cone_corner: list[bool] = _is_cone_corner
 
 
 class AffineManifold:
@@ -168,9 +150,9 @@ class AffineManifold:
         self.m_halfedge = Halfedge(F)  # Build halfedge
         he_to_edge: list[Index] = self.m_halfedge.get_halfedge_to_edge_map
         self.m_corner_to_he: list[list[Index]] = self.m_halfedge.get_corner_to_he
-        self.m_corner_to_edge: list[list[Index]] = self._build_corner_to_edge_map(
-            self.m_corner_to_he, he_to_edge)
         self.m_he_to_corner: list[tuple[Index, Index]] = self.m_halfedge.get_he_to_corner
+
+        self.m_corner_to_edge: list[list[Index]] = self._build_corner_to_edge_map(self.m_corner_to_he, he_to_edge)
 
         # *** Global metric information ***
         self.m_global_uv: np.ndarray = global_uv
@@ -301,9 +283,10 @@ class AffineManifold:
         @param[in] face_index: index of the face for the chart segments
         @param[out] corner_uv_positions: chart uv positions as enumerated above
         """
-        corner_uv_positions: list[np.ndarray] = [np.ndarray(shape=(2, 2)),
-                                                 np.ndarray(shape=(2, 2)),
-                                                 np.ndarray(shape=(2, 2))]
+        corner_uv_positions: list[np.ndarray] = [np.zeros(shape=(2, 2)),
+                                                 np.zeros(shape=(2, 2)),
+                                                 # TODO: fill with 0s or some random value for easier debugging like -39..... but yeah... This may be an issue of Eigen innerworkings.
+                                                 np.zeros(shape=(2, 2))]
 
         for i in range(3):
             # Get the chart for vertex i in the given face
@@ -1020,50 +1003,48 @@ class AffineManifold:
     def _align_local_charts(self, uv: np.ndarray, F_uv: np.ndarray) -> None:
         """
         Align local uv charts with the global parametrization
+
+        :param [in] uv: 
+        :param [in] F_uv: 
+        :param [out] self.m_vertex_charts
         """
         # Rotate and scale local layouts to align with the global layout
         for vertex_index in range(self.num_vertices):
             # Get the (transposed) similarity map that maps [1, 0]^T to the first local
             # uv edge
-            local_layout: MatrixXr = self.get_vertex_chart(
-                vertex_index).one_ring_uv_positions
+            local_layout: MatrixXr = self.get_vertex_chart(vertex_index).one_ring_uv_positions
 
             # FIXME: problem with shape below because of slicing... maybe
-            local_edge: PlanarPoint = local_layout[[0], :]
-            assert local_edge.shape == (1, 2)
+            # NOTE: flattening this because not used
+            local_edge: PlanarPoint = local_layout[0, :]
+            assert local_edge.shape == (2, )
 
             # TODO: confirm that the elements in this matrix matched position of elements in ASOC code
             # Documentation confirms that "comma intialization" in Eigen inserts row by row.
             # https://eigen.tuxfamily.org/dox-devel/group__TutorialAdvancedInitialization.html
             local_similarity_map: Matrix2x2r = np.array(
-                [[local_edge[0][0], local_edge[0][1]], [-local_edge[0][1], local_edge[0][0]]])
+                [[local_edge[0], local_edge[1]],
+                 [-local_edge[1], local_edge[0]]], dtype=np.float64)
             assert local_similarity_map.shape == (2, 2)
 
             # Get the global uv values corresponding the edge of the face
-            edge_face_index: Index = self.get_vertex_chart(
-                vertex_index).face_one_ring[0]
-            edge_face_vertex_index: Index = find_face_vertex_index(
-                self.m_F[edge_face_index, :], vertex_index)
-            uv_vertex_index: Index = F_uv[edge_face_index,
-                                          edge_face_vertex_index]
-            uv_edge_vertex_index: Index = F_uv[edge_face_index,
-                                               (edge_face_vertex_index + 1) % 3]
+            edge_face_index: Index = self.get_vertex_chart(vertex_index).face_one_ring[0]
+            edge_face_vertex_index: Index = find_face_vertex_index(self.m_F[edge_face_index, :], vertex_index)
+            uv_vertex_index: Index = F_uv[edge_face_index, edge_face_vertex_index]
+            uv_edge_vertex_index: Index = F_uv[edge_face_index, (edge_face_vertex_index + 1) % 3]
 
-            # Get (transposed) similarity map that maps [1, 0]^T to the first global uv
-            # edge
-            global_edge = uv[[uv_edge_vertex_index], :] - \
-                uv[[uv_vertex_index], :]
-            assert global_edge.shape == (1, 2)
+            # Get (transposed) similarity map that maps [1, 0]^T to the first global uv edge
+            global_edge: PlanarPoint1d = uv[uv_edge_vertex_index, :] - uv[uv_vertex_index, :]
+            assert global_edge.shape == (2, )
 
             # TODO: confirm that the elements in this matrix matched position of elements in ASOC code
-            global_similarity_map: Matrix2x2r = np.array([[global_edge[0, 0], global_edge[0, 1]],
-                                                          [-global_edge[0, 1], global_edge[0, 0]]])
+            global_similarity_map: Matrix2x2r = np.array([[global_edge[0], global_edge[1]],
+                                                          [-global_edge[1], global_edge[0]]])
             assert global_similarity_map.shape == (2, 2)
 
             # Apply composite similarity maps to the local uv positions
             # TODO: double check that this is doing matmul as we wanted
-            similarity_map = global_similarity_map @ LA.inv(
-                local_similarity_map)
+            similarity_map = global_similarity_map @ LA.inv(local_similarity_map)
             self.m_vertex_charts[vertex_index].one_ring_uv_positions = self.m_vertex_charts[
                 vertex_index].one_ring_uv_positions @ similarity_map
 
@@ -1075,7 +1056,7 @@ class AffineManifold:
         """
         Mark cones and surrounding elements in the vertex and face charts
         """
-        F: np.ndarray = self.get_faces
+        F: MatrixNx3 = self.get_faces
         cones: list[Index] = self.compute_cones()
 
         for _, ci in enumerate(cones):

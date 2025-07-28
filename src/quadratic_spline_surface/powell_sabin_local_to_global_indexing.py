@@ -291,9 +291,11 @@ def generate_six_split_variable_value_vector(vertex_positions: list[SpatialVecto
     if num_variable_vertices == 0:
         logger.warning("Building value vector for zero variable vertices")
         variable_values: Vector1D = np.ndarray(shape=(0, 0))
+        raise Exception("building value vector for zero variable vertices")
         return variable_values
     dimension: int = 3
     variable_values: Vector1D = np.ndarray(shape=(3 * dimension * num_variable_vertices, ))
+    assert variable_values.ndim == 1
 
     # Get postion values
     for vertex_index in range(num_variable_vertices):
@@ -302,9 +304,8 @@ def generate_six_split_variable_value_vector(vertex_positions: list[SpatialVecto
             dimension)
 
         for i in range(dimension):
-            # NOTE: SpatialVector shape is (1, 3)
-            # FIXME: something might go wrong with vertex_positions accessing because of SpatialVector shape
-            variable_values[start_index + i] = vertex_positions[variable_vertices[vertex_index]][0, i]
+            # NOTE: SpatialVector shape is (1, 3), but flattened to (3, ) shape
+            variable_values[start_index + i] = vertex_positions[variable_vertices[vertex_index]].flatten()[i]
 
     # Get gradient values
     for vertex_index in range(num_variable_vertices):
@@ -383,7 +384,9 @@ def generate_twelve_split_variable_value_vector(vertex_positions: list[SpatialVe
                 num_variable_vertices, variable_edge_index, coord)
 
             # Extract variable value of the edge to the corner
-            variable_values[variable_index] = edge_gradients[face_index][face_vertex_index][coord]
+            # FIXME: problem with setting an array element with a sequence.
+            # NOTE: edge_gradients[face_index][face_vertex_index] gets SpatialVector of shape (1, 3), h
+            variable_values[variable_index] = edge_gradients[face_index][face_vertex_index].flatten()[coord]
 
     assert variable_values.ndim == 1
     return variable_values
@@ -405,17 +408,20 @@ def generate_six_split_local_to_global_map(global_vertex_indices: list[int],
     @param[in] num_variable_vertices: number of variable vertices
     @param[out] local_to_global_map: map from local to global DOF indices
     """
-
+    assert len(global_vertex_indices) == 3
     dimension: int = 3
     # TODO: check if having -1 initialized into local_to_global_map is the way to go
     # TODO: seems like it since the below sets global_index to -1... somewhere.
-    local_to_global_map: list[int] = [-1 for _ in range(27)]
+    # TODO: what if instead of list[int]... we use numpy arrays???
+    PLACEHOLDER_INT: int = -1
+    local_to_global_map: list[int] = [PLACEHOLDER_INT for _ in range(27)]
 
     for local_vertex_index in range(3):
         global_vertex_index: int = global_vertex_indices[local_vertex_index]
 
         # Add vertex position index values
         for coord in range(dimension):
+            # TODO: check generate_local_vertex_position_variable_index
             local_index: int = generate_local_vertex_position_variable_index(
                 local_vertex_index, coord, dimension)
 
@@ -466,7 +472,8 @@ def generate_twelve_split_local_to_global_map(global_vertex_indices: list[int],
 
     # Get index map for the Powell-Sabin shared variables
     dimension: int = 3
-    local_to_global_map: list[int] = [-1 for _ in range(36)]
+    PLACEHOLDER_INT: int = -1
+    local_to_global_map: list[int] = [PLACEHOLDER_INT for _ in range(36)]
     six_split_local_to_global_map: list[int] = generate_six_split_local_to_global_map(
         global_vertex_indices, num_variable_vertices)
     assert len(six_split_local_to_global_map) == 27
@@ -506,8 +513,8 @@ def update_independent_variable_vector(variable_values: Vector1D,
     :param variable_vector_ref: (out)
     :param start_index: (in)
     """
-    assert variable_vector_ref.shape == (1, 3)
     assert variable_values.ndim == 1
+    assert variable_vector_ref.shape == (1, 3)
 
     # TODO: could probably do this with NumPy indexing
     for i in range(variable_vector_ref.size):
@@ -662,7 +669,6 @@ def build_variable_vertex_indices_map(num_vertices: int, variable_vertices: list
     # Get variable vertex indices
     PLACEHOLDER_INT = -1
     global_vertex_indices: list[int] = [PLACEHOLDER_INT for _ in range(num_vertices)]
-
     for i, _ in enumerate(variable_vertices):
         global_vertex_indices[variable_vertices[i]] = i
 
@@ -712,7 +718,7 @@ def update_energy_quadratic(local_energy: float,
                             local_to_global_map: list[int],
                             energy: float,
                             derivatives_ref: Vector2D,
-                            hessian_entries_ref: list[tuple[float, float, float]]
+                            hessian_entries_ref: list[tuple[int, int, float]]
                             ) -> float:
     """
     Update global energy, derivatives, and hessian with local per face values
@@ -731,7 +737,7 @@ def update_energy_quadratic(local_energy: float,
     """
     logger.info("Adding local face energy %s", local_energy)
     logger.info("Local to global map: %s", local_to_global_map)
-    assert derivatives_ref.ndim == 2
+    assert derivatives_ref.ndim == 2  # shape (36, 1)
     assert derivatives_ref.shape[1] == 1
     assert local_derivatives.ndim == 2
     assert local_derivatives.shape[1] == 1
@@ -740,14 +746,14 @@ def update_energy_quadratic(local_energy: float,
     # Update energy
     energy += local_energy
 
-    # Update derivatives
+    # Update derivatives NOTE: looks fine. things are being modified by refernece and changes are reflected back in caller method
     num_local_indices: int = len(local_to_global_map)
     for local_index in range(num_local_indices):
         global_index: int = local_to_global_map[local_index]
         if global_index < 0:
             continue  # Skip fixed variables with no global index
         # NOTE: Accessing column 0 because derivatives are 2D shapes with 1 column.
-        derivatives_ref[global_index, 0] = local_derivatives[local_index, 0]
+        derivatives_ref[global_index, 0] += local_derivatives[local_index, 0]
 
     # Update hessian entries
     for local_index_i in range(num_local_indices):
@@ -786,7 +792,6 @@ def build_face_variable_vector(variables: list,
     @param[in] k: third variable index
     @param[out] face_variable_vector: variables for face Tijk
     """
-
     # TODO: test this with some NumPy implementation
     face_variable_vector = [variables[i], variables[j], variables[k]]
     return face_variable_vector

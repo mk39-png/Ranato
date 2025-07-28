@@ -71,12 +71,12 @@ class QuadraticSplineSurfacePatch:
             self.m_min_point: SpatialVector = np.zeros(shape=(1, 3))
             self.m_max_point: SpatialVector = np.zeros(shape=(1, 3))
             self.m_cone_index: int = -1
-        elif (surface_mapping_coeffs and domain):
+        elif ((surface_mapping_coeffs is not None) and (domain is not None)):
             # -- Core independent data --
             self.m_surface_mapping_coeffs: Matrix6x3r = surface_mapping_coeffs
             self.m_domain: ConvexPolygon = domain
 
-            # -- Inferred dependent data --
+            # -- Inferred dependent data - FIXME: sometimes, the below are NaNs... possibly because surface_mapping_coeffs is NaNs...
             # Compute derived mapping information from the surface mapping and domain
             self.m_normal_mapping_coeffs: Matrix6x3r = generate_quadratic_surface_normal_coeffs(
                 surface_mapping_coeffs)
@@ -413,8 +413,8 @@ class QuadraticSplineSurfacePatch:
 
         # Lift the domain vertices to the surface and also compute the normals
         # reshape to (V_domain.rows(), self.dimension)
-        V_ref.resize((V_domain.shape[ROWS], self.dimension))
-        N_ref.resize((V_domain.shape[ROWS], self.dimension))
+        V_ref.resize((V_domain.shape[ROWS], self.dimension), refcheck=False)
+        N_ref.resize((V_domain.shape[ROWS], self.dimension), refcheck=False)
 
         for i in range(V_domain.shape[ROWS]):  # V_domain.rows()
             # V_domain of shape
@@ -427,6 +427,7 @@ class QuadraticSplineSurfacePatch:
 
         # Have changes in F reflected back in F_ref parameter
         # TODO: does this work for F_ref of any size?
+        F_ref.resize(F.shape, refcheck=False)
         np.copyto(F_ref, F)
 
     def add_patch_to_viewer(self, patch_name: str = "surface_patch") -> None:

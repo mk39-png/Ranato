@@ -180,67 +180,104 @@ hash_size_y: int = HASH_TABLE_SIZE
 # print(mat.todense().shape)
 # print(mat)
 
-print(np.arange(20))
-print(np.arange(20))
-n_rows = 20
-rows = np.arange(n_rows)
-cols = np.arange(n_rows)
-data = np.ones(n_rows)
+n_rows = 30000000
 
 
-hessian: csr_matrix = csr_matrix((data, (rows, cols)),
-                                 shape=(n_rows, n_rows),
-                                 dtype=float)
-# hessian_coo = hessian.tocoo()
+def make_hessian_inverse():
 
-rows = hessian.indices
-# cols = hessian.
-# data = hessian.data
-print(hessian.asformat("coo"))
-num_rows = hessian.get_shape()[0]
-# print()
-# print(rows)
-# print(cols)
-# print(data)
+    # TODO: below works fine for really large matrix....
+    # So maybe not a problem with the matrix size and datatype, but rather
+    print(np.arange(20))
+    print(np.arange(20))
+    rows = np.arange(n_rows)
+    cols = np.arange(n_rows)
+    data = np.ones(n_rows)
 
-solver = CholeskySolverD(num_rows - 1, rows, cols, data, MatrixType.CSR)
+    hessian: coo_matrix = coo_matrix((data, (rows, cols)),
+                                     shape=(n_rows, n_rows),
+                                     dtype=float)
 
-# hessian_entries = [(18.0, 53.0, 1), (42.2, 78.2, 1), (132, 38, 1)]
-# indeX_rows, indeX_cols, values = zip(*hessian_entries)
-# print(np.array(indeX_rows))
+    hessian2: coo_matrix = coo_matrix((data, (rows, cols)),
+                                      shape=(n_rows, n_rows),
+                                      dtype=float)
+    hessian3: coo_matrix = coo_matrix((data, (rows, cols)),
+                                      shape=(n_rows, n_rows),
+                                      dtype=float)
+    hessian4: coo_matrix = coo_matrix((data, (rows, cols)),
+                                      shape=(n_rows, n_rows),
+                                      dtype=float)
+    hessian5: coo_matrix = coo_matrix((data, (rows, cols)),
+                                      shape=(n_rows, n_rows),
+                                      dtype=float)
+    hessian6: coo_matrix = coo_matrix((data, (rows, cols)),
+                                      shape=(n_rows, n_rows),
+                                      dtype=float)
+    # hessian_coo = hessian.tocoo()
 
-# # res = coo_matrix((values, (rows, cols)), shape=(133, 79)).tocsr()
-# # reser = csr_matrix((values, (indeX_rows, indeX_cols)), shape=(133, 79), dtype=float)
-# # resert: coo_matrix = reser.tocoo()
-# resert = coo_matrix((values, (indeX_rows, indeX_cols)), shape=(133, 79), dtype=float)
-# num_rows = n_rows
-# print(resert.row)
-# print(resert.col)
-# print(resert.data)
+    # rows = hessian.indices
+    # cols = hessian.
+    data = hessian.data
+    print(hessian.asformat("coo"))
+    num_rows = hessian.get_shape()[0]
+    # print()
+    # print(rows)
+    # print(cols)
+    # print(data)
 
-# num_rows = resert.shape[0]
-# rows = resert.row
-# cols = resert.col
-# data = resert.data
+    solver = CholeskySolverD(num_rows - 1, rows, cols, data, MatrixType.COO)
 
-# print(resert.shape[0])  # rows
-# print(np.array((1, 2, 3, 4)))
-# solver = CholeskySolverD(n_rows, rows, cols, data, MatrixType.COO)
-b = np.ones(n_rows, dtype=np.float64)
-x = np.zeros_like(b, dtype=np.float64)
-
-# NOTE: b in this case would be hessian
-# Meanwhile x... well... that would be rhs!
-
-print(solver.solve(b, x))
-print(b)
-print(x)
+    return solver
 
 
-# print(reser)
+def main():
+    # hessian_entries = [(18.0, 53.0, 1), (42.2, 78.2, 1), (132, 38, 1)]
+    # indeX_rows, indeX_cols, values = zip(*hessian_entries)
+    # print(np.array(indeX_rows))
 
-six_split_local_to_global_map: list[int] = [-1 for _ in range(27)]
-local_to_global_map: list[int] = [39 for _ in range(36)]
-local_to_global_map[0:len(six_split_local_to_global_map)] = six_split_local_to_global_map
+    # # res = coo_matrix((values, (rows, cols)), shape=(133, 79)).tocsr()
+    # # reser = csr_matrix((values, (indeX_rows, indeX_cols)), shape=(133, 79), dtype=float)
+    # # resert: coo_matrix = reser.tocoo()
+    # resert = coo_matrix((values, (indeX_rows, indeX_cols)), shape=(133, 79), dtype=float)
+    # num_rows = n_rows
+    # print(resert.row)
+    # print(resert.col)
+    # print(resert.data)
 
-print(local_to_global_map)
+    # num_rows = resert.shape[0]
+    # rows = resert.row
+    # cols = resert.col
+    # data = resert.data
+
+    # print(resert.shape[0])  # rows
+    # print(np.array((1, 2, 3, 4)))
+    # solver = CholeskySolverD(n_rows, rows, cols, data, MatrixType.COO)
+    b = np.ones(n_rows, dtype=np.float64)
+    x = np.zeros_like(b, dtype=np.float64)
+
+    # NOTE: b in this case would be hessian
+    # Meanwhile x... well... that would be rhs!
+
+    solver = make_hessian_inverse()
+
+    # print(solver.solve(b, x))
+    print(b)
+    print(x)
+
+    # print(reser)
+
+    # six_split_local_to_global_map: list[int] = [-1 for _ in range(27)]
+    # local_to_global_map: list[int] = [39 for _ in range(36)]
+    # local_to_global_map[0:len(six_split_local_to_global_map)] = six_split_local_to_global_map
+
+    # print(local_to_global_map)
+
+    # Seeing if array broadcasting worked... found out that shape of V was not working as intended.
+    testing = np.ones(shape=(24, 3))
+    num_patch_vertices = 24
+    patch_index = 1
+    # V[num_patch_vertices * patch_index: num_patch_vertices * (patch_index + 1),
+    #   0: V.shape[1]]
+
+
+if __name__ == "__main__":
+    main()

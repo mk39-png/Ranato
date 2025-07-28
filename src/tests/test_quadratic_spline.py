@@ -10,9 +10,10 @@ import logging
 import sys
 import argparse
 import os
+import pytest
 
 
-def test_main():
+def test_spot_model():
     # Build maps from strings to enums
     log_level_map: dict[str, int] = {
         "off": logging.NOTSET,
@@ -29,8 +30,10 @@ def test_main():
     #     description="Generate smooth occluding contours for a mesh.",
     # )
     input_filename: str = "spot_control_mesh-cleaned_conf_simplified_with_uv.obj"
+    # input_filename: str = "spot_quadrangulated_tri_clean_conf_simplified_with_uv.obj"
     output_dir: str = "./"
-    log_level = logging.NOTSET
+    # log_level = logging.NOTSET
+    log_level = logging.DEBUG
     color: Matrix3x1r = SKY_BLUE
     num_subdivisions: int = DISCRETIZATION_LEVEL
     optimization_params: OptimizationParameters = OptimizationParameters()
@@ -50,7 +53,7 @@ def test_main():
     weight: float = optimization_params.position_difference_factor
 
     # Get input mesh
-    V = np.ndarray(shape=(0, 0), dtype=np.float64)
+    V: np.ndarray = np.ndarray(shape=(0, 0), dtype=np.float64)
     uv = np.ndarray(shape=(0, 0), dtype=np.float64)
     N = np.ndarray(shape=(0, 0), dtype=np.float64)
     F = np.ndarray(shape=(0, 0), dtype=np.int64)
@@ -63,22 +66,26 @@ def test_main():
 
     # Generate quadratic spline
     logger.info("Computing spline surface")
-    face_to_patch_indices: list[list[int]] = []
-    patch_to_face_indices: list[int] = []
-    fit_matrix: csr_matrix
-    energy_hessian: csr_matrix
-    energy_hessian_inverse: CholeskySolverD
+    # face_to_patch_indices: list[list[int]] = []
+    # patch_to_face_indices: list[int] = []
+    # fit_matrix: csr_matrix
+    # energy_hessian: csr_matrix
+    # energy_hessian_inverse: CholeskySolverD
 
     # NOTE: must input a mesh that is already UV unwrapped....
     # TODO: but the specific UV unwrapping algorithm is special?
     affine_manifold: AffineManifold = AffineManifold(F, uv, FT)
 
+    # NOTE: m_F of affine manifold seems off... maybe. TODO: TwelveSplitSpline surface calc takes approxs 2 min-ish
     spline_surface: TwelveSplitSplineSurface = TwelveSplitSplineSurface(V, affine_manifold,  optimization_params)
 
     # View the mesh
     spline_surface.view(color, num_subdivisions)
 
-    return
+    # TODO: remove this once actually get the result we want from testing.
+    # Actually, to make sure that everything is working, comparing values with an external file would be advisable.
+    # As part of the test for quadratic_spline
+    # assert False
 
 # if __name__ == "__main__":
 #     main()

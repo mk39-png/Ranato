@@ -9,8 +9,9 @@ import logging
 import mathutils
 import math
 
-from scipy.sparse import linalg as splinalg
-import scipy.sparse as sparse
+from scipy.sparse import linalg as splinalg, csr_matrix
+# import scipy.sparse as s
+# from cvxopt import spmatrix
 import sys
 
 import igl
@@ -41,6 +42,7 @@ HASH_TABLE_SIZE: int = 70
 # https://stackoverflow.com/questions/71109838/numpy-typing-with-specific-shape-and-datatype
 OneFormXr = np.ndarray  # TODO: what shape is this... I forget
 PlanarPoint = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (1, 2)
+PlanarPoint1d = np.ndarray[tuple[int], np.dtype[np.float64]]  # shape (2, )
 SpatialVector = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (1, 3)
 # SpatialVector = Annotated[npt.NDArray[], Literal[1, 3]]
 PatchIndex = int
@@ -54,6 +56,7 @@ MatrixNx3 = np.ndarray[tuple[int, int], np.dtype[np.float64]]
 Matrix6x6r = np.ndarray
 Matrix3x6r = np.ndarray
 Matrix12x12r = np.ndarray
+Matrix12x3f = np.ndarray
 Index = int
 FaceIndex = int
 VertexIndex = int
@@ -102,10 +105,17 @@ def sparse_cholesky(A):
 
     return L  # return L (lower triangular matrix)
 
+# https://stackoverflow.com/questions/25314067/scipy-sparse-matrix-to-cvxopt-spmatrix
+# def scipy_sparse_to_spmatrix(A: csr_matrix) -> spmatrix:
+#     coo = A.tocoo()
+#     SP = spmatrix(coo.data.tolist(), coo.row.tolist(), coo.col.tolist(), size=A.shape)
+#     return SP
 
 # **********************
 # Debug/Helper Methods
 # **********************
+
+
 def deprecated(msg: str = "Method no longer in use"):
     raise Exception(msg)
 
@@ -819,7 +829,10 @@ def vector_contains_nan(vec: np.ndarray) -> bool:
 def convert_polylines_to_edges(polylines: list[list[int]]) -> list[Edge]:
     """
     TODO: is this really needed? check if polylines are just list of edges in Python cuz the ASOC code may just be some vector to array conversion.
+    NOTE: returning list[list[Edge]], which is really jsut list[list[int, int]]... but the change is the switch to NumPy arrays since Polyscope used in add_surface_to_viewer() in quadratic_spline_surface.py need NumPy arrays rather than Python list[list[int]].... though...
     """
+
+    # TODO: check to see if functionality of NumPy version is the same as the old one.
     edges: list[Edge] = []
     for i, _ in enumerate(polylines):
         for j, _ in enumerate(polylines[i]):
