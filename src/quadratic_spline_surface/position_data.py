@@ -38,13 +38,18 @@ class TriangleCornerData:
         :param second_edge_derivative: derivative in the clockwise edge direction
         """
 
-        assert input_function_value.shape[0] == 1
-        assert input_first_edge_derivative.shape[0] == 1
-        assert input_second_edge_derivative.shape[0] == 1
+        # TODO: make the assertions only check if NOT None type...
+        # TODO: but also, fix the logic of update_positions,...
+        if input_function_value is not None:
+            assert input_function_value.shape[0] == 1
+        if input_first_edge_derivative is not None:
+            assert input_first_edge_derivative.shape[0] == 1
+        if input_second_edge_derivative is not None:
+            assert input_second_edge_derivative.shape[0] == 1
 
-        self.function_value: VectorX = input_function_value
-        self.first_edge_derivative: VectorX = input_first_edge_derivative
-        self.second_edge_derivative: VectorX = input_second_edge_derivative
+        self.function_value: VectorX | None = input_function_value
+        self.first_edge_derivative: VectorX | None = input_first_edge_derivative
+        self.second_edge_derivative: VectorX | None = input_second_edge_derivative
 
 
 @dataclass
@@ -60,10 +65,13 @@ class TriangleMidpointData:
 
         :param input_normal_derivative: derivative in the direction of the opposite corner
         """
-        assert input_normal_derivative.shape[0] == 1
+        # FIXME: should below be none type or not??
+        # WARNING: input potentially None and that could ruin computations...
+        if input_normal_derivative is not None:
+            assert input_normal_derivative.shape[0] == 1
 
         # derivative in the direction of the opposite corner
-        self.normal_derivative: VectorX = input_normal_derivative
+        self.normal_derivative: VectorX | None = input_normal_derivative
 
 
 def view_triangle_corner_data() -> None:

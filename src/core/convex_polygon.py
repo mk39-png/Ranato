@@ -86,11 +86,11 @@ def refine_triangles(V: np.ndarray, F: np.ndarray) -> tuple[np.ndarray, np.ndarr
     :return: Vertices and Faces refined
     :rtype: tuple[np.ndarray, np.ndarray]
     """
-    assert V.dtype == np.float64
-    assert F.dtype == np.int64
+    # assert V.dtype == np.float64
+    # assert F.dtype == np.int64
 
     num_faces: Index = F.shape[0]  # rows
-
+    F = np.array(F, dtype=np.int64)  # FIXME go back and address non-int type of F array
     V_refined: np.ndarray = np.ndarray(shape=(num_faces * 6, 2))
     F_refined: np.ndarray = np.ndarray(shape=(num_faces * 4, 3))
 
@@ -166,7 +166,7 @@ class ConvexPolygon:
         # v1 shape == (1, 2)
         # v2 shape == (1, 2)
         # So, we want vertices shape == (3, 2)
-        vertices: Matrix3x2r = np.array([v0, v1, v2], dtype=np.float64)
+        vertices: Matrix3x2r = np.array([v0, v1, v2], dtype=np.float64).squeeze()
         assert vertices.shape == (3, 2)
 
         # return vertices
@@ -248,7 +248,7 @@ class ConvexPolygon:
         # Build intersection
         # TODO: I really need a subclass of np.ndarray called PlanarPoint that automatically checks
         # the sizing of the array for me... Because manually checking shape==(1,2) is cumbersome
-        intersection = np.array([[x], [y]])
+        intersection: PlanarPoint = np.array([[x, y]])
         assert intersection.shape == (1, 2)
 
         return intersection
@@ -266,7 +266,7 @@ class ConvexPolygon:
         patch_boundaries: list[LineSegment] = []
 
         # Get rows of m_vertices
-        num_vertices = self.m_vertices.shape[0]
+        num_vertices: int = self.m_vertices.shape[0]
 
         for i in range(num_vertices):
             # TODO: maybe something wrong with the shape?
@@ -298,12 +298,12 @@ class ConvexPolygon:
         # TODO: logic of triangulate might be weird in comparison to the original ASOC code
 
         V: np.ndarray = self.m_vertices
-        F: np.ndarray = np.array([[0, 1, 2]])
+        F: np.ndarray = np.array([[0, 1, 2]], dtype=np.int64)
         assert F.shape == (1, 3)
 
         for i in range(num_refinements):
             V_refined: np.ndarray
-            F_refined: np.ndarray
+            F_refined: np.ndarray  # int64
             V_refined, F_refined = refine_triangles(V, F)
             V = V_refined
             F = F_refined

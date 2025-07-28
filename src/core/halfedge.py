@@ -60,6 +60,10 @@ class Halfedge:
         """
         TODO: deal with actually default constructor where Default trivial halfedge is made.
         Build halfedge mesh from mesh faces F with.
+
+        FIXME: Need to actually take in a corner_to_he and he_to_corner rather than making one from scratch in here...
+        Because affine_manifold requires us to do just that...
+        # Basically, be more like the C++ implementation.
         """
 
         # Why does this start off with clear when nothing exists yet?
@@ -341,14 +345,15 @@ class Halfedge:
         """
 
         # FIXME: resizing probably all works, but find a way that's neater than whatever is below
-        corner_to_he: list[list[Index]] = [None] * num_faces
-        he_to_corner: list[tuple[Index, Index]] = [None] * 3 * num_faces
+        PLACEHOLDER = -1
+        corner_to_he: list[list[Index]] = [[] for _ in range(num_faces)]
+        he_to_corner: list[tuple[Index, Index]] = [(PLACEHOLDER, PLACEHOLDER) for _ in range(3 * num_faces)]
 
         # Iterate over faces to build corner to he maps
         he_index: Index = 0
 
         for face_index in range(num_faces):
-            corner_to_he[face_index] = [None] * 3
+            corner_to_he[face_index] = [PLACEHOLDER] * 3
 
             for i in range(3):
                 # Assign indices

@@ -4,6 +4,9 @@ coefficients.
 """
 from src.core.bivariate_quadratic_function import u_derivative_matrix, v_derivative_matrix, compute_quadratic_cross_product
 from src.core.common import Matrix6x3r
+import numpy as np
+
+# TODO: add typing here for shape and whatnot surface
 
 
 def generate_quadratic_surface_normal_coeffs(surface_mapping_coeffs) -> Matrix6x3r:
@@ -25,7 +28,7 @@ def generate_quadratic_surface_normal_coeffs(surface_mapping_coeffs) -> Matrix6x
     assert D_u.shape == (3, 6)
     assert D_v.shape == (3, 6)
     assert u_derivative_coeffs.shape == (3, 3)
-    assert v_derivative_coeffs == (3, 3)
+    assert v_derivative_coeffs.shape == (3, 3)
 
     # Compute normal from the cross product
     normal_mapping_coeffs = compute_quadratic_cross_product(

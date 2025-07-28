@@ -8,11 +8,11 @@ from polyscope.point_cloud import PointCloud
 from src.core.affine_manifold import AffineManifold
 from src.quadratic_spline_surface.PS12_patch_coeffs import PS12_patch_coeffs
 from src.quadratic_spline_surface.PS12tri_bounds_coeffs import PS12tri_bounds_coeffs
-import src.core.common
+# from src.core.common import *
 
-import src.core.line_segment
-import src.core.polynomial_function
-import src.core.rational_function
+# from src.core.line_segment import *
+# from src.core.polynomial_function import *
+# from src.core.rational_function import *
 from src.core.compute_boundaries import compute_face_boundary_edges
 
 from src.quadratic_spline_surface.optimize_spline_surface import OptimizationParameters, build_twelve_split_spline_energy_system, generate_optimized_twelve_split_position_data
@@ -20,9 +20,10 @@ from src.quadratic_spline_surface.position_data import *
 from src.quadratic_spline_surface.quadratic_spline_surface import *
 
 from igl import per_vertex_normals
-from cholespy import CholeskySolverD, MatrixType
-# import scipy.sparse as sparse
-from scipy.sparse import csr_matrix
+from cholespy import CholeskySolverD, CholeskySolverF, MatrixType
+from scipy.sparse import csr_matrix, coo_matrix
+
+import copy
 
 
 class TwelveSplitSplineSurface(QuadraticSplineSurface):
@@ -80,10 +81,12 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
         # Generate fit matrix by setting the parametrized quadratic surface mapping factor to zero
         fit_energy: float
         fit_derivatives: VectorX
-        fit_matrix: csr_matrix
+        fit_matrix: coo_matrix
         fit_matrix_inverse: CholeskySolverD
         # TODO: doesnt the below just make a shallow copy... still is the same OptimizationParameters but by reference?
-        optimization_params_fit: OptimizationParameters = optimization_params
+        # Well, that's before I made a deep copy...
+        optimization_params_fit: OptimizationParameters = copy.deepcopy(optimization_params)
+        # FIXME fit_energy below should be 0, while energy should be some really teeny tiny value
         optimization_params_fit.parametrized_quadratic_surface_mapping_factor = 0.0
         fit_energy, fit_derivatives, fit_matrix, fit_matrix_inverse = build_twelve_split_spline_energy_system(V,
                                                                                                               N,
@@ -93,8 +96,11 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
         # Build full energy hessian system
         energy: float
         derivatives: Vector1D
-        energy_hessian: csr_matrix
+        energy_hessian: coo_matrix
         energy_hessian_inverse: CholeskySolverD
+        # FIXME: the below is not getting the values we want...
+        # FIXME energy, derivatives, and hessian are not being properly updated/returned... with NANs being included...
+        # FIXME: energy one the first call to this with spot initial test model SHOULD BE 1269.98....
         energy, derivatives, energy_hessian, energy_hessian_inverse = build_twelve_split_spline_energy_system(V,
                                                                                                               N,
                                                                                                               affine_manifold,
@@ -121,8 +127,8 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
         # Saving everything into the class
         self.face_to_patch_indices: list[list[int]] = face_to_patch_indices
         self.patch_to_face_indices: list[int] = patch_to_face_indices
-        self.fit_matrix: csr_matrix = fit_matrix
-        self.energy_hessian: csr_matrix = energy_hessian
+        self.fit_matrix: coo_matrix = fit_matrix
+        self.energy_hessian: coo_matrix = energy_hessian
         self.energy_hessian_inverse: CholeskySolverD = energy_hessian_inverse
 
         # NOTE: below are modified and changed by reference
@@ -139,7 +145,7 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
 
     def update_positions(self,
                          V: np.ndarray,
-                         fit_matrix: csr_matrix,
+                         fit_matrix: coo_matrix,
                          energy_hessian_inverse: CholeskySolverD
                          ) -> None:
         """
@@ -218,9 +224,9 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
         self.add_position_data_to_viewer()
         polyscope.show()
 
-    # ***************
-    # Private methods
-    # ***************
+    # *********************************************
+    # Private methods for TwelveSplitSpline class
+    # *********************************************
 
     def __init_twelve_split_patches(self,
                                     corner_data: list[list[TriangleCornerData]],
@@ -237,11 +243,12 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
         :return: (face_to_patch_indices, patch_to_face_indices)
         :rtype: tuple[list[list[int]], list[int]]
         """
+
         num_faces: int = len(corner_data)
 
         # Get number of patches per face
         patches_per_face: int = 12
-        num_patches: int = patches_per_face * num_faces
+        # num_patches: int = patches_per_face * num_faces # NOTE: num_patches used for reserving m_patches
 
         # Get general patch domains to use for all faces
         patch_boundaries: list[list[np.ndarray]] = generate_twelve_split_spline_patch_patch_boundaries()
@@ -256,11 +263,15 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
         # Generate map from patches to input mesh corners
         patch_to_corner_map: list[tuple[int, int]]  # list of length 12
         patch_to_corner_map = generate_twelve_split_spline_patch_patch_to_corner_map()
+        assert len(patch_to_corner_map) == 12
 
         # Clear face to patch mappings
         # TODO: not really doing much here since we're making new lists to return
         face_to_patch_indices: list[list[int]] = [[] for _ in range(num_faces)]
         patch_to_face_indices: list[int] = []
+
+        # TODO: why not make __init_twelve_split_patches a @classmethod?
+        self.m_patches = []
 
         for face_index in range(num_faces):
             # Get surface mappings
@@ -288,6 +299,7 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
 
         # TODO: set hash_table in constructor instead so that behavior of this method is better  defined....
         # Initialize hash tables
+        # FIXME problem below is trying to call parent function quadraticsplinesurface, which is not initialized yet.
         self.hash_table = self.compute_patch_hash_tables()
 
         return face_to_patch_indices, patch_to_face_indices
@@ -321,6 +333,10 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
         assert N.shape[COLS] == 3
         return N
 
+
+# **************
+# Public Members
+# **************
 
 def compute_twelve_split_spline_patch_boundary_edges(F: np.ndarray,
                                                      face_to_patch_indices: list[list[int]]
@@ -372,7 +388,11 @@ def compute_twelve_split_spline_patch_boundary_edges(F: np.ndarray,
     return patch_boundary_edges
 
 
-def generate_twelve_split_domain_areas(v0: PlanarPoint, v1: PlanarPoint, v2: PlanarPoint):
+# ******************************************************
+# Publicly Accessible Helpers for init_twelve_split_patches
+# ******************************************************
+
+def generate_twelve_split_domain_areas(v0: PlanarPoint, v1: PlanarPoint, v2: PlanarPoint) -> None:
     """
     Generate areas for the twelve split patches in the same order as the
     patch surface mappings for a given domain triangle.
@@ -385,21 +405,16 @@ def generate_twelve_split_domain_areas(v0: PlanarPoint, v1: PlanarPoint, v2: Pla
     unimplemented("Only used in test_assemble_matrix.cpp in original ASOC code.")
 
 
-# ******************************************************
-# Private Helpers for init_twelve_split_patches
-# ******************************************************
-
-def generate_twelve_split_spline_patch_patch_boundaries() -> list[list[np.ndarray]]:
+def generate_twelve_split_spline_patch_patch_boundaries() -> list[list[Matrix3x1r]]:
     """
     Generate patch boundary equations for the twelve split patches in the same
     order as the patch surface mappings
 
     NOTE: helper for init_twelve_split_patches()
 
-    @param[out] patch_boundaries: twelve patch domain boundary coefficients. length = 12. 
-    element length = 3. subelement matrices of shape (3, 1)
-
-    :return: list of length 12 of list of length 3 of matrix of shape (3, 1)
+    :return: [out] patch_boundaries: twelve patch domain boundary coefficients. 
+    list of length 12 with list[Matrix3x1r] of length 3.
+    :rtype: list[list[Matrix3x1r]]
     """
     num_patches = 12
     num_boundaries = 3
@@ -434,12 +449,12 @@ def generate_twelve_split_spline_patch_patch_to_corner_map() -> list[tuple[int, 
 
     NOTE: helper for init_twelve_split_patches()
 
-    @param[out] patch_to_corner_map: face corner and patch vertex in the corner
+    :param[out] patch_to_corner_map: face corner and patch vertex in the corner
     for each patch. list of length 12
     """
     # First six patches are interior
     patch_to_corner_map: list[tuple[int, int]] = []
-    for i in range(6):
+    for _ in range(6):
         patch_to_corner_map.append((-1, -1))
 
     # Hand code the last 6 patches
@@ -454,18 +469,17 @@ def generate_twelve_split_spline_patch_patch_to_corner_map() -> list[tuple[int, 
     return patch_to_corner_map
 
 
-# ******************************************************
-# Private Methods for use only in twelve_split_spline.py
-# ******************************************************
-
-def __generate_twelve_split_data_to_monomial_matrices() -> list[np.ndarray]:
+def generate_twelve_split_data_to_monomial_matrices() -> list[np.ndarray]:
     """
     Build matrices to go from position data to surface mappings
-    @param[out] coefficient_matrices: conversion matrix. list of length 12. elements of shape (6,12)
+
+    :return: coefficient_matrices: conversion matrix. list of length 12. elements of shape (6,12)
+    :rtype: list[np.ndarray] TODO: fix rtype not showing up in docstring viewer
     """
 
     patch_coeffs: np.ndarray = PS12_patch_coeffs()  # shape (12, 6, 12)
-    coefficient_matrices: list[np.ndarray] = [np.zeros(shape=(6, 12)) for _ in range(12)]
+    coefficient_matrices: list[np.ndarray] = [np.zeros(shape=(6, 12), dtype=np.float64)
+                                              for _ in range(12)]
 
     # TODO: could use some numpy magic... maybe
     for i in range(12):
@@ -473,27 +487,30 @@ def __generate_twelve_split_data_to_monomial_matrices() -> list[np.ndarray]:
             for k in range(12):
                 coefficient_matrices[i][j, k] = patch_coeffs[i][j][k]
 
+    assert len(coefficient_matrices) == 12
     return coefficient_matrices
 
 
-def __generate_twelve_split_data_matrix(corner_data: list[TriangleCornerData],
-                                        midpoint_data: list[TriangleMidpointData]
-                                        ) -> np.ndarray:
+def generate_twelve_split_data_matrix(corner_data: list[TriangleCornerData],
+                                      midpoint_data: list[TriangleMidpointData]
+                                      ) -> Matrix12x3f:
     """
     Combine structured position data into a single matrix
+    NOTE member variables of TriangleCornerData are shape (1, 3)
+    NOTE member variables of TriangleMidpointData are shape (1, 3)
 
-    NOTE: member variables of TriangleCornerData are shape (1, 3)
-    NOTE: member variables of TriangleMidpointData are shape (1, 3)
-
-    @tparam Scalar: coefficient scalar
-    @param[in] corner_data: data at triangle corners. length 3.
-    @param[in] midpoint_data: data at triangle edge midpoints. length 3.
-    @param[out] twelve_split_data: combined data. shape (12, 3)
+    :param corner_data: [in] data at triangle corners. length 3.
+    :type corner_data: list[TriangleCornerData]
+    :param midpoint_data: [in] data at triangle edge midpoints. length 3.
+    :type midpoint_data: list[TriangleMidpointData]
+    :return: [out] twelve_split_data: combined data. shape (12, 3)
+    :rtype: Matrix12x3f
     """
+
     assert len(corner_data) == 3
     assert len(midpoint_data) == 3
 
-    twelve_split_data: np.ndarray = np.array([
+    twelve_split_data: Matrix12x3f = np.array([
         # Vertex positions
         corner_data[0].function_value.flatten(),  # row 0
         corner_data[1].function_value.flatten(),  # row 1
@@ -511,36 +528,37 @@ def __generate_twelve_split_data_matrix(corner_data: list[TriangleCornerData],
         midpoint_data[2].normal_derivative.flatten(),  # row 9
         midpoint_data[0].normal_derivative.flatten(),  # row 10
         midpoint_data[1].normal_derivative.flatten()  # row 11
-    ])
+    ], dtype=np.float64)
 
     assert twelve_split_data.shape == (12, 3)
     return twelve_split_data
 
 
 def generate_twelve_split_spline_patch_surface_mapping(corner_data: list[TriangleCornerData],
-                                                       midpoint_data: list[TriangleMidpointData]) -> list[np.ndarray]:
+                                                       midpoint_data: list[TriangleMidpointData]) -> list[Matrix6x3r]:
     """
     Generate twelve spline surface patch mapping coefficient matrix from corner
     and midpoint data according to the twelve-split Powell-Sabin formula.
 
+    NOTE: this method is accessed outside for testing
     NOTE: member variables of TriangleCornerData are shape (1, 3)
     NOTE: member variables of TriangleMidpointData are shape (1, 3)
 
-    @tparam Scalar: coefficient scalar
-    @param[in] corner_data: data at triangle corners. length 3
-    @param[in] midpoint_data: data at triangle edge midpoints. length 3
-    @param[out] surface_mappings: spline surface mappings
+    :param corner_data: [in] data at triangle corners. length 3
+    :param midpoint_data: [in] data at triangle edge midpoints. length 3
+    :return: [out] surface_mappings: spline surface mappings
+    :rtype: list[Matrix6x3r]
     """
     assert len(corner_data) == 3
     assert len(midpoint_data) == 3
 
     # Generate matrices to go from the position data to surface coefficients
     coefficient_matrices: list[np.ndarray]  # list of size 12 with matrices shape (6, 12)
-    coefficient_matrices = __generate_twelve_split_data_to_monomial_matrices()
+    coefficient_matrices = generate_twelve_split_data_to_monomial_matrices()
 
     # Combine position data into a matrix
     twelve_split_data: np.ndarray  # matrix of float with shape (12, 3)
-    twelve_split_data = __generate_twelve_split_data_matrix(corner_data, midpoint_data)
+    twelve_split_data = generate_twelve_split_data_matrix(corner_data, midpoint_data)
 
     # Build the surface mappings
     surface_mappings: list[np.ndarray] = []  # list of length 12 with matrices shape (6, 3)

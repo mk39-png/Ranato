@@ -383,7 +383,7 @@ def generate_quadratic_coordinate_affine_transformation_matrix(linear_transforma
     @param[out] change_of_basis_matrix: change of coefficient basis matrix
     """
     assert linear_transformation.shape == (2, 2)
-    assert translation == (1, 2)
+    assert translation.shape == (1, 2)
 
     # Get matrix information
     b11: float = linear_transformation[0, 0]

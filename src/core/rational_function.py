@@ -181,14 +181,14 @@ class RationalFunction:
         """
         @brief Sample points in the rational function. 
         @param[in] num_points: number of points to sample
-        @param[out] points: vector of sampled points. list of matrices of shape (1, self.dimension). dtype of elements == float
+        @param[out] points: vector of sampled points. list of matrices of shape (1, 2). dtype of elements == float
         """
         # Get sample of the domain
         t_samples: list[float] = self.m_domain.sample_points(num_points)
 
         # Evaluate the function at the sampled domain points
         # TODO: is this filling of default np.ndarray of zeros correct?
-        list_resize(points_ref, num_points, np.zeros(shape=(1, self.get_dimension)))
+        list_resize(points_ref, num_points, np.zeros(shape=(1, 2)))
         for i in range(num_points):
             points_ref[i] = self.__evaluate(t_samples[i])
 
@@ -295,6 +295,7 @@ class RationalFunction:
         # NOTE: keep the modification by reference since that helps showcase what shape Pt and Qt should be.
 
         # FIXME: Wait a minute... why is numerator all 0s with test_unit_pullback_case?
+        # FIXME: inheriting degree from
         Pt = evaluate_polynomial(degree=self.m_degree,
                                  dimension=self.m_dimension,
                                  polynomial_coeffs=self.m_numerator_coeffs,

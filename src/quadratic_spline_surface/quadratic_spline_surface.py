@@ -17,7 +17,6 @@ class SurfaceDiscretizationParameters:
     """
     # Number of subdivisions per triangle of the domain
     num_subdivisions: int = 2
-
     # If true, compute unit length surface normal vectors
     normalize_surface_normals: bool = True
 
@@ -184,38 +183,47 @@ class QuadraticSplineSurface:
         num_subdivisions: int = surface_disc_params.num_subdivisions
 
         if self.empty():
-            V = np.ndarray(shape=(0, 0))
-            F = np.ndarray(shape=(0, 0))
-            N = np.ndarray(shape=(0, 0))
+            V = np.ndarray(shape=(0, 0), dtype=np.float64)
+            F = np.ndarray(shape=(0, 0), dtype=np.int64)
+            N = np.ndarray(shape=(0, 0), dtype=np.float64)
             return V, F, N
 
         # Build triangulated surface in place
         patch_index: PatchIndex = 0
-        V: np.ndarray  # dtype float
-        F: np.ndarray  # dtype int
-        N: np.ndarray  # dtype float
+
+        # FIXME: v f and n are not the correct shape... especially V should be (235008, 3)
+        V: np.ndarray[tuple[int], np.dtype[np.float64]]
+        F: np.ndarray[tuple[int], np.dtype[np.int64]]
+        N: np.ndarray[tuple[int], np.dtype[np.float64]]
         V, F, N = self.triangulate_patch(patch_index, num_subdivisions)
-        num_patch_vertices: int = V.shape[0]  # rows
-        num_patch_faces: int = F.shape[0]  # rows
+        num_patch_vertices: int = V.shape[ROWS]
+        num_patch_faces: int = F.shape[ROWS]
         patch_index += 1
 
+        # TODO: this is not exactly equivalent to conservativeResize...
+        V.resize((num_patch_vertices * self.num_patches, 3))
+        F.resize((num_patch_faces * self.num_patches, 3))
+        N.resize((num_patch_vertices * self.num_patches, 3))
+
         for _ in range(self.num_patches):
+            # NOTE: patches are shape (24, 3) with num_subdivisions = 2 and with the spot control 3D model
             V_patch: np.ndarray  # dtype float
             F_patch: np.ndarray  # dtype int
             N_patch: np.ndarray  # dtype float
             V_patch, F_patch, N_patch = self.triangulate_patch(patch_index, num_subdivisions)
 
-            # TODO: double check dimensionality... in fact... add dimensions to types because this is all getting quite confusing.
             V[num_patch_vertices * patch_index: num_patch_vertices * (patch_index + 1),
               0: V.shape[1]] = V_patch
             F[num_patch_faces * patch_index: num_patch_faces * (patch_index + 1),
-              0: F.shape[1]] = F_patch + np.full(shape=(num_patch_faces, F.shape[1]), fill_value=num_patch_vertices * patch_index, dtype=int)
+              0: F.shape[1]] = F_patch + np.full(shape=(num_patch_faces, F.shape[1]),
+                                                 fill_value=num_patch_vertices * patch_index,
+                                                 dtype=np.int64)
             N[num_patch_vertices * patch_index: num_patch_vertices * (patch_index + 1),
               0: N.shape[1]] = N_patch
 
-        logger.info("%s surface vertices", V.shape[0])
-        logger.info("%s surface faces", F.shape[0])
-        logger.info("%s surface normals", N.shape[0])
+        logger.info("%s surface vertices", V.shape[ROWS])
+        logger.info("%s surface faces", F.shape[ROWS])
+        logger.info("%s surface normals", N.shape[ROWS])
 
         return V, F, N
 
@@ -223,6 +231,7 @@ class QuadraticSplineSurface:
         """
         Discretize all patch boundaries as polylines.
         NOTE: This also appears in contour_network folder in discretize.py, but is here for convenience and also for organiztion purposes.
+        TODO: perhaps change to utilize NumPy arrays... but I'm a bit concerned about losing clarity. But I would gain proper shaping and would make everything clearer.
 
         :return points: list of polyline points.
         :rtype points: list[SpatialVector]
@@ -233,6 +242,7 @@ class QuadraticSplineSurface:
         points: list[SpatialVector] = []
         polylines: list[list[int]] = []
 
+        # FIXME this part takes the longest. optimize please.
         for patch_index in range(self.num_patches):
             spline_surface_patch: QuadraticSplineSurfacePatch = self.get_patch(patch_index)
             # list of size 3
@@ -242,7 +252,6 @@ class QuadraticSplineSurface:
                 # Get points on the boundary curve
                 parameter_points_k: list[PlanarPoint] = []
                 patch_boundaries[k].sample_points(5, parameter_points_k)
-
                 points_k: list[SpatialVector] = []
 
                 for i, _ in enumerate(parameter_points_k):
@@ -300,7 +309,7 @@ class QuadraticSplineSurface:
         V: np.ndarray  # dtype float
         F: np.ndarray  # dtype int
         N: np.ndarray  # dtype float
-        V, F, N = self.discretize(surface_disc_params)
+        V, F, N = self.discretize(surface_disc_params)  # NOTE: this takes approx 10 sec to do
 
         # Add surface mesh
         ps.init()
@@ -311,14 +320,19 @@ class QuadraticSplineSurface:
         # Discretize patch boundaries
         boundary_points: list[SpatialVector]
         boundary_polylines: list[list[int]]
+        # FIXME -- DONE! runtime on this method maybe obsurd
         boundary_points, boundary_polylines = self.discretize_patch_boundaries()
 
         # View contour curve network
         boundary_points_matrix: np.ndarray = convert_nested_vector_to_matrix(boundary_points)
         boundary_edges: list[list[int]] = convert_polylines_to_edges(boundary_polylines)
+
+        # HACK: converting boundary edges to numpy array so that polyscope works, but may
+        # want to have convert_polylines_to_edges return a Nx2 matrix by default, where each row is an edge.
+        # FIXME is the below taking a bunch of time to do?
         patch_boundaries: CurveNetwork = ps.register_curve_network("patch_boundaries",
                                                                    boundary_points_matrix,
-                                                                   boundary_edges)
+                                                                   np.array(boundary_edges))
         patch_boundaries.set_color((0.670, 0.673, 0.292))
         patch_boundaries.set_radius(0.0005)
         patch_boundaries.set_radius(0.0005)
@@ -344,14 +358,19 @@ class QuadraticSplineSurface:
                    camera_position: SpatialVector = np.array([[0.0, 0.0, 2.0]], dtype=np.float64),
                    camera_target: SpatialVector = np.array([[0.0, 0.0, 0.0]], dtype=np.float64),
                    use_orthographic: bool = False) -> None:
-        # TODO: include types in docstring
         """
         Save a screenshot of the surface in the viewer.
 
         :param filename: file to save the screenshot.
-        :param camera_position: camera position for the screenshot.
-        :param camera_target: camera target for the screenshot.
+        :type filename: str
+        :param camera_position: camera position for the screenshot. (np.ndarray shape (1, 3))
+        :type camera_position: SpatialVector
+        :param camera_target: camera target for the screenshot. (np.ndarray shape (1, 3))
+        :type camera_target: SpatialVector
         :param use_orthographic: use orthographic perspective if true.
+        :type use_orthographic: bool
+
+        :return: None
         """
         self.add_surface_to_viewer()
 
@@ -443,6 +462,8 @@ class QuadraticSplineSurface:
         eps: float = 1e-10
 
         # Hash into each box
+        # FIXME below takes 2 minutes to run...
+        # FIXME below sometimes has NaN inside m_patches, other times no. Like first time running has NaN
         for i in range(num_patch):
             left_x: int = int((self.m_patches[i].get_bbox_x_min() - eps - x_min) / x_interval)
             right_x: int = int(hash_size_x - int((x_max - self.m_patches[i].get_bbox_x_max() - eps) / x_interval) - 1)
@@ -505,6 +526,7 @@ class QuadraticSplineSurface:
         y_min: float = self.m_patches[0].get_bbox_y_min()
         y_max: float = self.m_patches[0].get_bbox_y_max()
 
+        # FIXME: Why was it all NaN and now it's all fine???
         for i in range(1, self.num_patches):
             if (x_min > self.m_patches[i].get_bbox_x_min()):
                 x_min = self.m_patches[i].get_bbox_x_min()
