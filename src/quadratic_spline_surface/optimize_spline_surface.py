@@ -25,6 +25,9 @@ import numpy as np
 from scipy.sparse import csr_matrix, coo_matrix
 import scipy.linalg as spl
 from cholespy import CholeskySolverD, MatrixType, CholeskySolverF
+# import numpy.typing as npt
+
+import numpy.testing as npt
 import numpy.typing as npt
 
 
@@ -197,6 +200,12 @@ class LocalDOFData:
         assert len(vertex_gradients_T) == 3
         assert len(edge_gradients_T) == 3
 
+        # lazily checking shape...
+        assert initial_vertex_positions_T[0].shape == (1, 3)
+        assert vertex_positions_T[0].shape == (1, 3)
+        assert vertex_gradients_T[0].shape == (2, 3)
+        assert edge_gradients_T[0].shape == (1, 3)
+
         # r_alpha_0: fitting values
         # WARNING: Only fitting to zero implemented for gradients
         # TODO (ASOC): Implement fitting for creases
@@ -206,7 +215,13 @@ class LocalDOFData:
         r_alpha_0[6, :] = initial_vertex_positions_T[2].flatten()
 
         # r_alpha: input values
+        # TODO: check shaping....
+
+        # TODO: check shaping....
+
         r_alpha: np.ndarray[tuple[int, int], np.dtype[np.float64]] = np.zeros(shape=(12, 3))
+        # TODO: increment thru and see if correct...
+        # TODO: increment thru and see if correct...
         r_alpha[0, :] = vertex_positions_T[0].flatten()
         r_alpha[1, :] = vertex_gradients_T[0][0, :]  # row
         r_alpha[2, :] = vertex_gradients_T[0][1, :]  # row
@@ -227,6 +242,22 @@ class LocalDOFData:
             for j in range(3):
                 # NOTE: r_alpha_flat is shape (36, 1)
                 r_alpha_flat[3 * i + j][0] = r_alpha[i, j]
+
+        # FIXME: is the test case below equal or not?
+        # Should be....
+        npt.assert_array_equal(r_alpha_flat.flatten(), r_alpha.flatten())
+
+        assert r_alpha_0.shape == (12, 3)
+        assert r_alpha.shape == (12, 3)
+        assert r_alpha_flat.shape == (36, 1)
+
+        # FIXME: is the test case below equal or not?
+        # Should be....
+        npt.assert_array_equal(r_alpha_flat.flatten(), r_alpha.flatten())
+
+        assert r_alpha_0.shape == (12, 3)
+        assert r_alpha.shape == (12, 3)
+        assert r_alpha_flat.shape == (36, 1)
 
         return cls(r_alpha_0, r_alpha, r_alpha_flat)
 
@@ -266,6 +297,22 @@ def compute_local_twelve_split_energy_quadratic(local_hessian_data: LocalHessian
     # full local 12x12 hessian (only smoothness and fitting terms)
     local_hessian_12x12: np.ndarray = np.full(shape=(12, 12),
                                               fill_value=2 * (w_s * H_s + w_f * H_f))
+    # Wait, the below doesn't make sense... why filling 12x12 with 12x12??
+    # FIXME: local_hessian_12x12 is the wrong shape...
+    local_hessian_12x12: Matrix12x12r = 2 * (w_s * H_s + w_f * H_f)
+
+    npt.assert_array_equal(np.full(shape=(12, 12),
+                                   fill_value=(2*(w_s*H_s+w_f*H_f))),
+                           local_hessian_12x12)
+    assert local_hessian_12x12.shape == (12, 12)
+    # Wait, the below doesn't make sense... why filling 12x12 with 12x12??
+    # FIXME: local_hessian_12x12 is the wrong shape...
+    local_hessian_12x12: Matrix12x12r = 2 * (w_s * H_s + w_f * H_f)
+
+    npt.assert_array_equal(np.full(shape=(12, 12),
+                                   fill_value=(2*(w_s*H_s+w_f*H_f))),
+                           local_hessian_12x12)
+    assert local_hessian_12x12.shape == (12, 12)
 
     # Add smoothness and fitting term blocks to the full local hessian per coordinate
     for i in range(12):
@@ -297,6 +344,7 @@ def compute_local_twelve_split_energy_quadratic(local_hessian_data: LocalHessian
 
     # Add smoothness term
     smoothness_term: float = 0.0
+    for i in range(3):  # FIXME below is probably wrong... somehow...
     for i in range(3):
         # r_alpha shape sliced = (12, 1)
         __temp = (r_alpha[:, [i]].T @ (w_s * H_s) @ r_alpha[:, [i]])
@@ -329,7 +377,10 @@ def compute_local_twelve_split_energy_quadratic(local_hessian_data: LocalHessian
     return local_energy, local_derivatives, local_hessian
 
 
-def shift_array(arr_ref: list, shift: int) -> None:  # TODO:
+def shift_array(arr_ref: list, shift: int) -> None:
+
+
+def shift_array(arr_ref: list, shift: int) -> None:
     """
     Helper function to cyclically shift an array of three elements.
 
@@ -433,6 +484,8 @@ def compute_twelve_split_energy_quadratic(
     for face_index in range(manifold.num_faces):
         # Get face vertices
         F: np.ndarray = manifold.get_faces  # F has int dtype
+        F: MatrixXi = manifold.get_faces
+        F: MatrixXi = manifold.get_faces
         __i: int = F[face_index, 0]
         __j: int = F[face_index, 1]
         __k: int = F[face_index, 2]
@@ -440,6 +493,14 @@ def compute_twelve_split_energy_quadratic(
         # Bundle relevant global variables into per face local vectors (all list of length 3)
         initial_vertex_positions_T: list[SpatialVector] = build_face_variable_vector(
             initial_vertex_positions, __i, __j, __k)
+        initial_vertex_positions_T: list[SpatialVector] = build_face_variable_vector(initial_vertex_positions,
+                                                                                     __i,
+                                                                                     __j,
+                                                                                     __k)
+        initial_vertex_positions_T: list[SpatialVector] = build_face_variable_vector(initial_vertex_positions,
+                                                                                     __i,
+                                                                                     __j,
+                                                                                     __k)
         vertex_positions_T: list[SpatialVector] = build_face_variable_vector(vertex_positions, __i, __j, __k)
         edge_gradients_T: list[SpatialVector] = edge_gradients[face_index]
         vertex_gradients_T: list[Matrix2x3r] = build_face_variable_vector(vertex_gradients, __i, __j, __k)
@@ -633,7 +694,13 @@ def compute_twelve_split_energy_quadratic(
             normal,
             optimization_params)
 
+        #
+        #
         # Compute local degree of freedom data
+        # FIXME: local_dof_data looking mighty suspect since it contains r_alpha, which is used alongside w_s in local_energy and local_derivatives... both of which are WRONG and result in WRONG global energy and WRONG global derivative.
+        #
+        # FIXME: local_dof_data looking mighty suspect since it contains r_alpha, which is used alongside w_s in local_energy and local_derivatives... both of which are WRONG and result in WRONG global energy and WRONG global derivative.
+        #
         local_dof_data: LocalDOFData = LocalDOFData.generate_local_dof_data(
             initial_vertex_positions_T,
             vertex_positions_T,
@@ -644,8 +711,8 @@ def compute_twelve_split_energy_quadratic(
         local_energy: float
         local_derivatives: TwelveSplitGradient
         local_hessian: TwelveSplitHessian
-        # FIXME double check the below method after fixing the 2 methods above. UPDATE: this looks fine as of 4:35 pm 7/27/2025
-        # FIXME: when face_index == 3, then the values below become NAN!
+        # FIXME: local_derivatives adding to the global_derivative are WRONG!
+        # FIXME: local_derivatives adding to the global_derivative are WRONG!
         local_energy, local_derivatives, local_hessian = compute_local_twelve_split_energy_quadratic(
             local_hessian_data,
             local_dof_data
@@ -925,7 +992,8 @@ def build_twelve_split_spline_energy_system(initial_V: np.ndarray,
 
     vertex_gradients: list[Matrix2x3r] = generate_zero_vertex_gradients(num_vertices)
     edge_gradients: list[list[SpatialVector]] = generate_zero_edge_gradients(num_faces)
-    # NOTE: assertion == 3 below sicne ASOC code originally has array<int, 3> as elements of edge_gradients
+    # NOTE: assertion == 3 below since ASOC code originally has array<int, 3> as elements of edge_gradients
+    # NOTE: assertion == 3 below since ASOC code originally has array<int, 3> as elements of edge_gradients
     assert len(edge_gradients[0]) == 3
 
     # TODO: test with c++ code... though probably not needed since we've already checked V earlier.
@@ -1134,6 +1202,10 @@ def generate_optimized_twelve_split_position_data(V: np.ndarray,  # matrix
     @param[in] fit_matrix: quadratic fit energy Hessian matrix
     @param[in] hessian_inverse: solver for inverting the energy Hessian
 
+    # TODO: remove the modify by reference and just create them as new. As in, return a new copy of corner_data rather than reference that's been modified.
+    # NOTE: this may make some problems with update_positions... maybe...
+    # TODO: remove the modify by reference and just create them as new. As in, return a new copy of corner_data rather than reference that's been modified.
+    # NOTE: this may make some problems with update_positions... maybe...
     @param[out] corner_data: quadratic vertex position and derivative data with list[TriangleCornerData] of length 3
     @param[out] midpoint_data: quadratic edge midpoint derivative data with list[TriangleMidpointData] of length 3
     """
@@ -1182,6 +1254,7 @@ def generate_optimized_twelve_split_position_data(V: np.ndarray,  # matrix
         make_3d=True)
     assert len(optimized_reduced_edge_gradients[0]) == 3
 
+    # TESTING --
     # TESTING --
     # https://stackoverflow.com/questions/6736590/fast-check-for-nan-in-numpy
     assert not np.any(np.isnan(optimized_V))
