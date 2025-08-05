@@ -25,6 +25,11 @@ from scipy.sparse import csr_matrix, coo_matrix
 
 import copy
 
+from collections import defaultdict
+
+
+# NOTE: twelvesplit spline does NOT use a lot of the quadratic_spline_surface functions...
+# So, may be moot to have it be a subclass of QuadraticSplineSurface.
 
 class TwelveSplitSplineSurface(QuadraticSplineSurface):
     """
@@ -71,9 +76,9 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
         @param[in] corner_data: quadratic vertex position and derivative data
         @param[in] midpoint_data: quadratic edge midpoint derivative data
         """
-        self.m_affine_manifold: AffineManifold = affine_manifold  # TODO: this is never used from what it seems
-        self.m_corner_data: list[list[TriangleCornerData]] = []
-        self.m_midpoint_data: list[list[TriangleMidpointData]] = []
+        self.m_affine_manifold: AffineManifold = affine_manifold
+        self.m_corner_data: dict[int, dict[int, TriangleCornerData]] = defaultdict(dict)
+        self.m_midpoint_data: dict[int, dict[int, TriangleMidpointData]] = defaultdict(dict)
 
         # Generate normals
         N = self.__generate_face_normals(V, affine_manifold)
@@ -92,6 +97,13 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
                                                                                                               N,
                                                                                                               affine_manifold,
                                                                                                               optimization_params_fit)
+        assert float_equal(fit_energy, 0.0)  # NOTE: magic number from ASOC code output for fit_energy
+        # TODO: move these to different test case.
+        # compare_eigen_numpy_matrix(
+        #     "spot_control\\12_split_spline\\fit_derivatives.csv", fit_derivatives.flatten())
+        # # NOTE: below works! But, takes quite a bit of time to run.
+        # compare_eigen_numpy_matrix(
+        #     "spot_control\\12_split_spline\\fit_matrix_dense.csv", fit_matrix.todense())
 
         # Build full energy hessian system
         energy: float
@@ -106,7 +118,15 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
                                                                                                               affine_manifold,
                                                                                                               optimization_params)
 
-        # Build optimized corner and midpoint data
+        # NOTE: magic number from ASOC code's output for energy
+        # TODO: move to different test case.
+        assert float_equal(energy, 1269.9805595159069, eps=10.0)
+        # compare_eigen_numpy_matrix("spot_control\\12_split_spline\\derivatives.csv", derivatives.flatten())
+        # compare_eigen_numpy_matrix(
+        #     "spot_control\\12_split_spline\\energy_hessian_dense.csv", energy_hessian.todense())
+
+        # Build optimized corner and midpoint data...
+        # self.m_corner_data, self.m_midpoint_data =
         generate_optimized_twelve_split_position_data(V,
                                                       affine_manifold,
                                                       fit_matrix,
@@ -123,6 +143,44 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
         face_to_patch_indices, patch_to_face_indices = self.__init_twelve_split_patches(self.m_corner_data,
                                                                                         self.m_midpoint_data,
                                                                                         is_cone_corner)
+        # FIXME: redundant checks....
+        compare_eigen_numpy_matrix("spot_control\\12_split_spline\\init_twelve_split_patches\\face_to_patch_indices.csv",
+                                   np.array(face_to_patch_indices))
+        compare_eigen_numpy_matrix("spot_control\\12_split_spline\\init_twelve_split_patches\\patch_to_face_indices.csv",
+                                   np.array(patch_to_face_indices))
+
+        # NOTE: m_corner_data.csv is set up such that it represents the below: (either that or... just combine it all smoothly...)
+        # CORNER 1
+        # 0, 1, 2 function_value
+        # 0, 1, 2 first_edge_derivative
+        # 0, 1, 2 second_edge_derivative
+        # CORNER 2
+        # 0, 1, 2 function_value
+        # 0, 1, 2 first_edge_derivative
+        # 0, 1, 2 second_edge_derivative
+        # CORNER 3
+        # 0, 1, 2 function_value
+        # 0, 1, 2 first_edge_derivative
+        # 0, 1, 2 second_edge_derivative
+        # ...
+        # Nvm... just bash it all together into 1 big chunk..
+        # midpoint_data_test: list[np.ndarray] = []
+        # for i, midpoint_data in enumerate(self.m_midpoint_data):
+        #     for j, triangle_midpoint_data in enumerate(midpoint_data):
+        #         midpoint_data_test.append(triangle_midpoint_data.normal_derivative.flatten())
+        # # FIXME: m_midpoint_data fails
+        # compare_eigen_numpy_matrix("spot_control\\12_split_spline\\m_midpoint_data.csv",
+        #                            np.array(midpoint_data_test))
+
+        # corner_data_test: list[np.ndarray] = []
+        # for i, corner_data in enumerate(self.m_corner_data):
+        #     for j, triangle_corner_data in enumerate(corner_data):
+        #         corner_data_test.append(triangle_corner_data.function_value.flatten())
+        #         corner_data_test.append(triangle_corner_data.first_edge_derivative.flatten())
+        #         corner_data_test.append(triangle_corner_data.second_edge_derivative.flatten())
+        # # FIXME: m_corner_data fails
+        # compare_eigen_numpy_matrix("spot_control\\12_split_spline\\m_corner_data.csv",
+        #                            np.array(corner_data_test))
 
         # Saving everything into the class
         self.face_to_patch_indices: list[list[int]] = face_to_patch_indices
@@ -177,9 +235,10 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
         assert len(is_cone_corner[0]) == 3
 
         # Initialize position data and patches
+        # TODO: need to pass thesze face_to_patch indices back to the caller!
         face_to_patch_indices: list[list[int]]
         patch_to_face_indices: list[int]
-        # TODO: return values are not used... maybe rename to some placeholder thing like "_"
+
         face_to_patch_indices, patch_to_face_indices = self.__init_twelve_split_patches(self.m_corner_data,
                                                                                         self.m_midpoint_data,
                                                                                         is_cone_corner)
@@ -229,8 +288,8 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
     # *********************************************
 
     def __init_twelve_split_patches(self,
-                                    corner_data: list[list[TriangleCornerData]],
-                                    midpoint_data: list[list[TriangleMidpointData]],
+                                    corner_data: dict[int, dict[int, TriangleCornerData]],
+                                    midpoint_data: dict[int, dict[int, TriangleMidpointData]],
                                     is_cone_corner: list[list[bool]]
                                     ) -> tuple[list[list[int]], list[int]]:
         """
@@ -491,8 +550,8 @@ def generate_twelve_split_data_to_monomial_matrices() -> list[np.ndarray]:
     return coefficient_matrices
 
 
-def generate_twelve_split_data_matrix(corner_data: list[TriangleCornerData],
-                                      midpoint_data: list[TriangleMidpointData]
+def generate_twelve_split_data_matrix(corner_data: dict[int, TriangleCornerData],
+                                      midpoint_data: dict[int, TriangleMidpointData]
                                       ) -> Matrix12x3f:
     """
     Combine structured position data into a single matrix
@@ -534,8 +593,8 @@ def generate_twelve_split_data_matrix(corner_data: list[TriangleCornerData],
     return twelve_split_data
 
 
-def generate_twelve_split_spline_patch_surface_mapping(corner_data: list[TriangleCornerData],
-                                                       midpoint_data: list[TriangleMidpointData]) -> list[Matrix6x3r]:
+def generate_twelve_split_spline_patch_surface_mapping(corner_data: dict[int, TriangleCornerData],
+                                                       midpoint_data: dict[int, TriangleMidpointData]) -> list[Matrix6x3r]:
     """
     Generate twelve spline surface patch mapping coefficient matrix from corner
     and midpoint data according to the twelve-split Powell-Sabin formula.

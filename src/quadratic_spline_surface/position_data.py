@@ -25,31 +25,24 @@ class TriangleCornerData:
     """
 
     def __init__(self,
-                 input_function_value: VectorX | None = None,
-                 input_first_edge_derivative: VectorX | None = None,
-                 input_second_edge_derivative: VectorX | None = None) -> None:
+                 input_function_value: Vector2D,
+                 input_first_edge_derivative: Vector2D,
+                 input_second_edge_derivative: Vector2D) -> None:
         """
         Default constructor
-        NOTE: made arguments optional to have some sort of default constructor.
-        Because there is behavior in position_data.py with midpoint_data that I do not completely understand and that seems to not create a new midpoint_data but rather modifies the original. Hence, this having default values so that TriangleCornerData() can be called and to implement the code as is.
+        NOTE: no longer need None values since implementing m_corner_data with dict of dict rather than list of list.
 
         :param function_value: position value vector at the corner
         :param first_edge_derivative: derivative in the counter-clockwise edge direction
         :param second_edge_derivative: derivative in the clockwise edge direction
         """
+        assert input_function_value.shape[ROWS] == 1  # shape (1, N)?
+        assert input_first_edge_derivative.shape[ROWS] == 1  # shape (1, M)?
+        assert input_second_edge_derivative.shape[ROWS] == 1  # shape (1, K)?
 
-        # TODO: make the assertions only check if NOT None type...
-        # TODO: but also, fix the logic of update_positions,...
-        if input_function_value is not None:
-            assert input_function_value.shape[0] == 1
-        if input_first_edge_derivative is not None:
-            assert input_first_edge_derivative.shape[0] == 1
-        if input_second_edge_derivative is not None:
-            assert input_second_edge_derivative.shape[0] == 1
-
-        self.function_value: VectorX | None = input_function_value
-        self.first_edge_derivative: VectorX | None = input_first_edge_derivative
-        self.second_edge_derivative: VectorX | None = input_second_edge_derivative
+        self.function_value: Vector2D = input_function_value
+        self.first_edge_derivative: Vector2D = input_first_edge_derivative
+        self.second_edge_derivative: Vector2D = input_second_edge_derivative
 
 
 @dataclass
@@ -58,20 +51,17 @@ class TriangleMidpointData:
     Derivative data at the midpoint of a triangle
     """
 
-    def __init__(self, input_normal_derivative: VectorX | None = None) -> None:
+    def __init__(self, input_normal_derivative: Vector2D) -> None:
         """
         Default constructor.
         NOTE: made arguments optional to have some sort of default constructor.
 
         :param input_normal_derivative: derivative in the direction of the opposite corner
         """
-        # FIXME: should below be none type or not??
-        # WARNING: input potentially None and that could ruin computations...
-        if input_normal_derivative is not None:
-            assert input_normal_derivative.shape[0] == 1
+        assert input_normal_derivative.shape[0] == 1
 
         # derivative in the direction of the opposite corner
-        self.normal_derivative: VectorX | None = input_normal_derivative
+        self.normal_derivative: Vector2D = input_normal_derivative
 
 
 def view_triangle_corner_data() -> None:
@@ -85,7 +75,8 @@ def generate_affine_manifold_chart_corner_data(V: np.ndarray,
                                                F: np.ndarray,
                                                chart: VertexManifoldChart,
                                                gradient: Matrix2x3r,
-                                               corner_data_ref: list[list[TriangleCornerData]]) -> None:
+                                               corner_data_ref: dict[int, dict[int, TriangleCornerData]]
+                                               ) -> None:
     """
     Helper function to add corner data for a given chart.
     Used by genenerate_affine_manifold_corner_data().
@@ -106,11 +97,11 @@ def generate_affine_manifold_chart_corner_data(V: np.ndarray,
     """
 
     #  Build position data for the corners adjacent to the given vertex
-    for face_index, f in enumerate(chart.face_one_ring):
-        # Get the face and index of the vertex in it
+    for face_index, _ in enumerate(chart.face_one_ring):
+        # -- Get the face and index of the vertex in it --
         # NOTE: find_face_vertex_index expects ndarray ndim = 1 where shape = (n, )
-        face_vertex_index: int = find_face_vertex_index(
-            F[f, :], chart.vertex_index)
+        f: int = chart.face_one_ring[face_index]
+        face_vertex_index: int = find_face_vertex_index(F[f, :], chart.vertex_index)
 
         # Compute position and edge derivatives from layout positions
         pi: SpatialVector = V[[chart.vertex_index], :]
@@ -141,13 +132,15 @@ def generate_affine_manifold_chart_corner_data(V: np.ndarray,
         corner_data_ref[f][face_vertex_index] = TriangleCornerData(pi, dij, dik)
 
     # Quickly checking that the element list is of size 3.
-    assert len(corner_data_ref[-1]) == 3
+    # TODO: check that the elements of dict[int, TriangleCornerData] has 3 entries.
+    # assert len(corner_data_ref[-1]) == 3
 
 
 def generate_affine_manifold_corner_data(V: np.ndarray,
                                          affine_manifold: AffineManifold,
                                          gradients: list[Matrix2x3r],
-                                         corner_data_ref: list[list[TriangleCornerData]]) -> None:
+                                         corner_data_ref: dict[int, dict[int, TriangleCornerData]]
+                                         ) -> None:
     """
     Generate corner position data for a mesh with an affine manifold structure and per-vertex position and gradients.
     NOTE: Used in optimize_spline_surface.py.
@@ -163,8 +156,15 @@ def generate_affine_manifold_corner_data(V: np.ndarray,
     :type corner_data_ref: list[list[TriangleCornerData]]
     """
     # Resize the gradient and position data
-    list_resize(corner_data_ref, affine_manifold.num_faces, [
-                TriangleCornerData(), TriangleCornerData(), TriangleCornerData()])
+    # If this needs to resize, then just append to the original list... if that works...
+    # But why extend?
+    # FIXME: this might be wrong because it passes the same reference to the TriangleCornerData() we made here...
+    # Meaning that the list resizing does not work as we intended...
+    # Which also means that corner_data_ref may be best represented by a different data structure...
+    # Like,
+    # list_resize(corner_data_ref, affine_manifold.num_faces, [
+    #             TriangleCornerData(), TriangleCornerData(), TriangleCornerData()])
+    # TODO: why not just append to the pre-existing list?
 
     # Compute the gradient and position data per vertesx
     for i in range(V.shape[ROWS]):  # equivalent to Eigen V.rows()
@@ -175,10 +175,12 @@ def generate_affine_manifold_corner_data(V: np.ndarray,
             gradients[i],
             corner_data_ref)
 
+    # TODO: check list amount of elements added to corner_data_ref... should do something with affine_manifold.num_faces
+
 
 def generate_affine_manifold_midpoint_data(affine_manifold: AffineManifold,
                                            edge_gradients: list[list[Matrix2x3r]],
-                                           midpoint_data_ref: list[list[TriangleMidpointData]]) -> None:
+                                           midpoint_data_ref: dict[int, dict[int, TriangleMidpointData]]) -> None:
     """
     Generate midpoint position data for a mesh with an affine manifold structure and
     per edge gradients.
@@ -198,10 +200,11 @@ def generate_affine_manifold_midpoint_data(affine_manifold: AffineManifold,
     F: np.ndarray = affine_manifold.get_faces
 
     # Set midpoint data per face corner
-    list_resize(midpoint_data_ref, affine_manifold.num_faces, [
-                TriangleMidpointData(), TriangleMidpointData(), TriangleMidpointData()])
-    assert len(edge_gradients[0]) == 3
-    assert len(midpoint_data_ref[0]) == 3
+    # list_resize(midpoint_data_ref, affine_manifold.num_faces, [
+    #             TriangleMidpointData(), TriangleMidpointData(), TriangleMidpointData()])
+    # assert len(edge_gradients[0]) == 3
+    # assert len(midpoint_data_ref[0]) == 3
+    # TODO: assert at the end that midpoint_data_ref has affine_manifold.num_faces number of entries.
 
     for i in range(affine_manifold.num_faces):
         for j in range(3):
@@ -222,7 +225,7 @@ def generate_affine_manifold_midpoint_data(affine_manifold: AffineManifold,
             uv_top: PlanarPoint = chart.top_vertex_uv_position
             assert uv_top.shape == (1, 2)
             # uv_top @ edge_gradients = (1, 2) @ (2, 3) == (1, 3)
-            midpoint_data_ref[f_top][j_top].normal_derivative = uv_top @ edge_gradients[i][j]
+            midpoint_data_ref[f_top][j_top] = TriangleMidpointData(uv_top @ edge_gradients[i][j])
             assert midpoint_data_ref[f_top][j_top].normal_derivative.shape == (1, 3)
             logger.info("Midpoint data for corner (%s, %s) is %s = %s\n%s", f_top, j_top,
                         midpoint_data_ref[f_top][j_top].normal_derivative.T,
@@ -240,7 +243,7 @@ def generate_affine_manifold_midpoint_data(affine_manifold: AffineManifold,
                 uv_bottom: PlanarPoint = chart.bottom_vertex_uv_position
                 assert uv_bottom.shape == (1, 2)
                 # uv_bottom @ edge_gradients = (1, 2) @ (2, 3) == (1, 3)
-                midpoint_data_ref[f_bottom][j_bottom].normal_derivative = uv_bottom @ edge_gradients[i][j]
+                midpoint_data_ref[f_bottom][j_bottom] = TriangleMidpointData(uv_bottom @ edge_gradients[i][j])
                 assert midpoint_data_ref[f_bottom][j_bottom].normal_derivative.shape == (1, 3)
                 logger.info("Midpoint data for corner (%s, %s) is %s",
                             f_bottom,

@@ -116,6 +116,186 @@ def sparse_cholesky(A):
 # **********************
 
 
+def load_json(filename: str):
+    """
+
+    """
+    filepath: str = os.path.abspath(f"src\\tests\\{filename}")
+    with open(filepath, 'r') as file:
+        try:
+            obj = json.load(file)
+        except:
+            print("Error with json parsing")
+
+    return obj
+
+
+def compare_list_list_varying_lengths(filename: str, rows_test: list[list[int]]) -> None:
+    """
+    Used when the csv list contains list with varying list lengths.
+    e.g. 
+    [
+    [1, 2, 3, 4],
+    [1, 2],
+    [5, 7, 8, 8, 19, 1],
+    ]
+    """
+    filepath: str = os.path.abspath(f"src\\tests\\{filename}")
+    rows_control: list[list[int]] = []
+
+    with open(filepath, 'r') as file:
+        reader = csv.reader(file)
+        for row in reader:
+            parsed: list[int] = [int(x) for x in row if x.strip() != '']
+            rows_control.append(parsed)
+    # Make sure that both are the same length
+    assert len(rows_control) == len(rows_test)
+    num_rows: int = len(rows_control)
+
+    for i in range(num_rows):
+        npt.assert_array_equal(np.array(rows_test[i]),
+                               np.array(rows_control[i]))
+
+
+def compare_eigen_numpy_matrix(filename: str, numpy_array: np.ndarray, make_3d: bool = False) -> bool:
+    """ 
+    Standardized function for comparing matrices for testing? 
+    Maybe? 
+    """
+    eigen_array: np.ndarray = deserialize_eigen_matrix_csv_to_numpy(filename, make_3d)
+    npt.assert_allclose(numpy_array, eigen_array, atol=FLOAT_EQUAL_PRECISION)
+
+
+def compare_eigen_numpy_matrix_4d(filename: str, numpy_array: np.ndarray, make_3d: bool = False) -> bool:
+    """ 
+    Standardized function for comparing matrices for testing? 
+    Maybe? 
+    """
+    eigen_array: np.ndarray = deserialize_eigen_matrix_csv_to_numpy(filename, make_3d)
+    npt.assert_allclose(numpy_array, eigen_array, atol=FLOAT_EQUAL_PRECISION)
+
+
+# def compare_eigen_3d_to_numpy_matrix_at_index(eigen_array: np.ndarray,
+#                                               numpy_array: np.ndarray,
+#                                               index: int) -> bool:
+#     """
+#     Standardized function for comparing matrices for testing?
+#     Maybe?
+#     """
+#     npt.assert_allclose(numpy_array, eigen_array[index], atol=FLOAT_EQUAL_PRECISION)
+
+
+def compare_eigen_list_trianglecornerdata(filename: str, numpy_array: np.ndarray, make_3d: bool = False) -> bool:
+    """ 
+    Standardized function for comparing matrices for testing? 
+    Maybe? 
+    """
+    eigen_array: np.ndarray = deserialize_eigen_matrix_csv_to_numpy(filename, make_3d)
+    npt.assert_allclose(numpy_array, eigen_array, atol=FLOAT_EQUAL_PRECISION)
+
+
+def serialize_vector_array() -> None:
+    """
+    // This could be any size list
+    inline void serialize_list_int(std::string filename, )
+    """
+
+    unreachable("This is a placeholder for testing C++ code")
+
+
+def serialize_eigen_matrix_f() -> None:
+    """
+    // This could be any matrix of any size. Scalable.
+    inline void serialize_eigen_matrix_f(std::string filename, Eigen::MatrixXf M) {
+        spdlog::info("Writing matrix data to {}", filename);
+        std::ofstream output_file(filename, std::ios::out | std::ios::trunc);
+
+        int prec = 17;
+
+        // Print out by row order
+        for (Eigen::Index i = 0; i < M.rows(); ++i) {
+            // Printing out the first element of the row separately since we do not want the comma at the start
+            output_file << std::setprecision(prec) << M(i, 0);
+
+            for (Eigen::Index j = 1; j < M.cols(); ++j) {
+                output_file << std::setprecision(prec) << "," << M(i, j);
+            }
+            output_file << std::endl;
+        }
+
+        output_file.close();
+    }
+    """
+    unreachable("This is just a placeholder for the C++ code that  will be written into the ASOC code")
+
+
+def deserialize_eigen_matrix_csv_to_numpy(filename: str, make_3d: bool = False) -> np.ndarray:
+    """
+    Turns Eigen matrix .csv into NumPy array
+    Used for testing.
+
+    :param make_3d: parses a 3D csv into a 3D nnumpy array. usually equivalent structure is a list of matrices.
+    """
+    filepath: str = os.path.abspath(f"src\\tests\\{filename}")
+
+    arr: np.ndarray
+
+    if make_3d:
+        with open(filepath, "r") as file:
+            file_lines_raw: str = file.read()
+            file_lines: list[str] = file_lines_raw.split("\n\n")
+
+            arr_list: list[np.ndarray] = []  # build this list 3d then convert to np
+            for line_raw in file_lines:
+                # NOTE: sometimes the last line can be '' empty string since we remove "\n\n"
+                if len(line_raw) == 0:
+                    continue
+                # convert to stringio because that's what loadtxt works with
+                s = StringIO(line_raw)
+                line: np.ndarray = np.loadtxt(s, delimiter=',')  # get matrix values to put in list of matrices
+                arr_list.append(line)
+
+            arr = np.array(arr_list)
+            assert arr.ndim == 3
+        file.close()
+    else:
+        arr = np.loadtxt(filepath, dtype=np.float64, delimiter=',')
+
+    return arr
+
+
+def deserialize_eigen_matrix_csv_to_numpy_4d(filename: str) -> np.ndarray:
+    """
+    Turns Eigen matrix .csv into NumPy array
+    Used for testing.
+
+    :param make_3d: parses a 3D csv into a 3D nnumpy array. usually equivalent structure is a list of matrices.
+    """
+    filepath: str = os.path.abspath(f"src\\tests\\{filename}")
+
+    arr: np.ndarray
+
+    with open(filepath, "r") as file:
+        file_lines_raw: str = file.read()
+        file_lines: list[str] = file_lines_raw.split("\n\n")
+
+        arr_list: list[np.ndarray] = []  # build this list 3d then convert to np
+        for line_raw in file_lines:
+            # NOTE: sometimes the last line can be '' empty string since we remove "\n\n"
+            if len(line_raw) == 0:
+                continue
+            # convert to stringio because that's what loadtxt works with
+            s = StringIO(line_raw)
+            line: np.ndarray = np.loadtxt(s, delimiter=',')  # get matrix values to put in list of matrices
+            arr_list.append(line)
+
+        arr = np.array(arr_list)
+        assert arr.ndim == 3
+    file.close()
+
+    return arr
+
+
 def deprecated(msg: str = "Method no longer in use"):
     raise Exception(msg)
 

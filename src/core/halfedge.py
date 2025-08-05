@@ -166,6 +166,33 @@ class Halfedge:
         #   }
         # #endif
 
+        # TESTING
+        # TODO: also double check num_edges, num_he, num_faces, and num_vertices members.
+        if logger.level == logging.DEBUG:
+            filepath: str = "spot_control\\halfedge\\"
+            compare_eigen_numpy_matrix(f"{filepath}corner_to_he.csv",
+                                       np.array(self.corner_to_he))
+            compare_eigen_numpy_matrix(f"{filepath}he_to_corner.csv",
+                                       np.array(self.he_to_corner))
+            compare_eigen_numpy_matrix(f"{filepath}m_e2he.csv",
+                                       np.array(self.m_e2he))
+            compare_eigen_numpy_matrix(f"{filepath}m_f2he.csv",
+                                       np.array(self.m_f2he))
+            compare_eigen_numpy_matrix(f"{filepath}m_face.csv",
+                                       np.array(self.m_face))
+            compare_eigen_numpy_matrix(f"{filepath}m_from.csv",
+                                       np.array(self.m_from))
+            compare_eigen_numpy_matrix(f"{filepath}m_he2e.csv",
+                                       np.array(self.m_he2e))
+            compare_eigen_numpy_matrix(f"{filepath}m_next.csv",
+                                       np.array(self.m_next))
+            compare_eigen_numpy_matrix(f"{filepath}m_opp.csv",
+                                       np.array(self.m_opp))
+            compare_eigen_numpy_matrix(f"{filepath}m_out.csv",
+                                       np.array(self.m_out))
+            compare_eigen_numpy_matrix(f"{filepath}m_to.csv",
+                                       np.array(self.m_to))
+
     # ******
     # PUBLIC
     # ******

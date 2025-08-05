@@ -245,15 +245,16 @@ class VertexCirculator:
                                                                                                    i,
                                                                                                    self.m_all_adjacent_faces[i])
 
-        print("w")
-
-    # ***************
-    # Private Members
-    # ***************
-    m_F:                    np.ndarray[tuple[int, int], np.dtype[np.int_]]
-    m_all_adjacent_faces:   list[list[int]]
-    m_all_vertex_one_rings: list[list[int]]
-    m_all_face_one_rings:   list[list[int]]
+        # TESTING:
+        if logger.level == logging.DEBUG:
+            filepath: str = "spot_control\\vertex_circulator\\"
+            compare_eigen_numpy_matrix(f"{filepath}F.csv", self.m_F)
+            compare_list_list_varying_lengths(f"{filepath}m_all_adjacent_faces.csv",
+                                              self.m_all_adjacent_faces)
+            compare_list_list_varying_lengths(f"{filepath}m_all_face_one_rings.csv",
+                                              self.m_all_face_one_rings)
+            compare_list_list_varying_lengths(f"{filepath}m_all_vertex_one_rings.csv",
+                                              self.m_all_vertex_one_rings)
 
     # ***************
     # Public Members

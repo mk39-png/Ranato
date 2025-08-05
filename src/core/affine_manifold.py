@@ -161,10 +161,14 @@ class AffineManifold:
         # ** Build edge lengths and charts from the global uv **
         self.m_l: list[list[float]] = self._build_lengths_from_global_uv(F_uv, global_uv)
         # * Local metric information *
-        self.m_vertex_charts: list[VertexManifoldChart] = self._build_vertex_charts_from_lengths(
-            F, self.m_l)
-        self.m_edge_charts: list[EdgeManifoldChart] = self._build_edge_charts_from_lengths(
-            F, self.m_halfedge, self.m_l)
+        self.m_vertex_charts: list[VertexManifoldChart] = self._build_vertex_charts_from_lengths(F,
+                                                                                                 self.m_l)
+
+        # TODO: TEST ALL OF THESE....
+        # FIXME: this is bad! real bad...
+        self.m_edge_charts: list[EdgeManifoldChart] = self._build_edge_charts_from_lengths(F,
+                                                                                           self.m_halfedge,
+                                                                                           self.m_l)
         self.m_face_charts: list[FaceManifoldChart] = self._build_face_charts(F, global_uv, F_uv)
 
         # Align charts with the input parameterization
@@ -177,6 +181,38 @@ class AffineManifold:
         if not self._is_valid_affine_manifold():
             logger.error("Could not build a cone manifold")
             self.clear()
+
+        # ********************
+        # TESTING:
+        # ********************
+        # TODO: move these to a different test case.
+        if logger.level == logging.DEBUG:
+            filepath: str = "spot_control\\affine_manifold\\"
+            compare_eigen_numpy_matrix(f"{filepath}m_l.csv", np.array(self.m_l))
+            compare_eigen_numpy_matrix(f"{filepath}m_corner_to_edge.csv",
+                                       np.array(self.m_corner_to_edge))
+            compare_eigen_numpy_matrix(
+                f"{filepath}m_corner_to_he.csv", np.array(self.m_corner_to_he))
+            compare_eigen_numpy_matrix(f"{filepath}m_F.csv", self.m_F)
+            compare_eigen_numpy_matrix(f"{filepath}m_F_uv.csv", self.m_F_uv)
+            compare_eigen_numpy_matrix(
+                f"{filepath}m_global_uv.csv", self.m_global_uv)
+            compare_eigen_numpy_matrix(
+                f"{filepath}m_he_to_corner.csv", np.array(self.m_he_to_corner))
+            compare_eigen_numpy_matrix(
+                f"{filepath}he_to_edge.csv", np.array(he_to_edge))
+
+            vertex_charts_control: list[dict] = load_json(
+                f"{filepath}m_vertex_charts_LAST.json")
+            compare_vertex_charts(vertex_charts_control, self.m_vertex_charts)
+
+            edge_charts_control: list[dict] = load_json(
+                f"{filepath}m_edge_charts_LAST.json")
+            compare_edge_charts(edge_charts_control, self.m_edge_charts)
+
+            face_charts_control: list[dict] = load_json(
+                f"{filepath}m_face_charts_LAST.json")
+            compare_face_charts(face_charts_control, self.m_face_charts)
 
     @property
     def num_faces(self) -> Index:
@@ -839,17 +875,15 @@ class AffineManifold:
                            F_uv: np.ndarray) -> list[FaceManifoldChart]:
         """
         """
-        num_faces: Index = F.shape[0]
-
-        # FIXME: type issue below when allocating space in list
+        num_faces: Index = F.shape[ROWS]
         face_charts: list[FaceManifoldChart] = []
         # [FaceManifoldChart] * num_faces
 
         for face_index in range(num_faces):
             __face_index: int = face_index
-            __face_uv_positions: list[PlanarPoint] = [PlanarPoint(shape=(1, 2)),
-                                                      PlanarPoint(shape=(1, 2)),
-                                                      PlanarPoint(shape=(1, 2))]
+            __face_uv_positions: list[PlanarPoint] = [PlanarPoint(shape=(1, 2), dtype=np.float64),
+                                                      PlanarPoint(shape=(1, 2), dtype=np.float64),
+                                                      PlanarPoint(shape=(1, 2), dtype=np.float64)]
 
             for face_vertex_index in range(3):
                 uv_vertex_index: Index = F_uv[face_index, face_vertex_index]
