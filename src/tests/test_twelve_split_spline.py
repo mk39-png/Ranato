@@ -59,7 +59,6 @@ def test_spot_model():
     script_dir = os.path.dirname(os.path.realpath(__file__))
     obj_dir = os.path.join(script_dir, input_filename)
     V, uv, N, F, FT, FN = igl.readOBJ(obj_dir)
-    # TODO: test V, F, and N read in??????
 
     # Generate quadratic spline
     logger.info("Computing spline surface")

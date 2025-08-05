@@ -135,10 +135,6 @@ def generate_affine_manifold_chart_corner_data(V: np.ndarray,
         if np.any(np.isnan(pi)) or np.any(np.isnan(dij)) or np.any(np.isnan(dik)):
             unreachable("NaN values found in generate_affine_manifold_chart_corner_data()")
 
-        # TESTING ----
-        if np.any(np.isnan(pi)) or np.any(np.isnan(dij)) or np.any(np.isnan(dik)):
-            unreachable("NaN values found in generate_affine_manifold_chart_corner_data()")
-
     # Quickly checking that the element list is of size 3.
     # TODO: check that the elements of dict[int, TriangleCornerData] has 3 entries.
     # assert len(corner_data_ref[-1]) == 3

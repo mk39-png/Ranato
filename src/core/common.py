@@ -58,7 +58,6 @@ Matrix3x6r = np.ndarray
 Matrix12x12r = np.ndarray
 Matrix12x3f = np.ndarray
 MatrixXi = np.ndarray[tuple[int, int], np.dtype[np.int64]]
-MatrixXi = np.ndarray[tuple[int, int], np.dtype[np.int64]]
 Index = int
 FaceIndex = int
 VertexIndex = int
@@ -1020,7 +1019,6 @@ def convert_polylines_to_edges(polylines: list[list[int]]) -> list[Edge]:
         # polyline equivalent to polylines[i]
         edge_length: int = len(polyline)
         for j in range(1, edge_length):
-            edge: Edge = [polyline[j - 1], polyline[j]]
             edge: Edge = [polyline[j - 1], polyline[j]]
             edges.append(edge)
 
