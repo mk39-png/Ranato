@@ -2,7 +2,7 @@
 Methods to operate on bivariate quadratics represented by coefficient vectors.
 """
 from typing import NoReturn
-from src.core.common import logger
+from src.core.common import *
 from src.core.polynomial_function import *
 
 
@@ -101,10 +101,11 @@ def generate_linear_monomials(domain_point: PlanarPoint) -> Vector2D:
 
 def evaluate_quadratic_mapping(dimension: int,
                                quadratic_coeffs: np.ndarray,
-                               domain_point: PlanarPoint) -> Vector1D:
+                               domain_point: PlanarPoint) -> Vector2D:
     """
     Evaluate a quadratic bivariate equation with scalar coefficients.
     Dimension can be greater than 1, as seen in quadratic_spline_surface_patch.py
+    NOTE: This supports any dimension of quadratic coefficient, hence why it's used.
 
     :param dimension: dimension of quadratic_coeffs
     :type dimension: int
@@ -116,11 +117,11 @@ def evaluate_quadratic_mapping(dimension: int,
 
     assert quadratic_coeffs.shape == (6, dimension)
     assert domain_point.shape == (1, 2)
-    w = generate_quadratic_monomials(domain_point)
+    w: Vector2D = generate_quadratic_monomials(domain_point)
     assert w.shape == (1, 6)
 
     # shapes: (1, 6) @ (6, dimension)
-    quadratic_evaluation: np.ndarray = (w @ quadratic_coeffs)
+    quadratic_evaluation: np.ndarray = w @ quadratic_coeffs
     assert quadratic_evaluation.shape == (1, dimension)
 
     return quadratic_evaluation

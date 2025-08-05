@@ -13,12 +13,20 @@ from scipy.sparse import linalg as splinalg, csr_matrix
 # import scipy.sparse as s
 # from cvxopt import spmatrix
 import sys
+import os
+
 
 import igl
+import numpy.testing as npt
 
-logger = logging.getLogger(__name__)
+from io import StringIO  # used for testing
+
+import json  # for testing
+import csv
+
+logger: logging.Logger = logging.getLogger(__name__)
+# logging.basicConfig(filename='example.log', encoding='utf-8', level=logging.NOTSET)
 logging.basicConfig(level=logging.DEBUG)
-# UserId = NewType('UserId', int)
 
 # *******
 # GLOBALS
@@ -86,36 +94,8 @@ TwelveSplitHessian = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape 
 
 
 # **********************
-# Math-itensive Methods
-# **********************
-
-def sparse_cholesky(A):
-    """
-    https://gist.github.com/omitakahiro/c49e5168d04438c5b20c921b928f1f5d#file-sparsecholesky-md
-    I can't seem to install scikit-sparse since it relies on CHOLMOD from SuiteSparse and Cython, which does not really help for my purposes of this project being a Blender addon and also scikit-sparse being a process to install on Windows.
-
-    :param A: input sparse matrix that must be sparse symmetric positive-definite
-    """
-    deprecated()
-    sparse_matrix = A.T @ A
-    sparse_matrix += 1e-6 * sparse.identity(sparse_matrix.shape[0])  # force the sparse matrix is positive definite
-    n = sparse_matrix.shape[0]
-    LU = sparse.linalg.splu(sparse_matrix, diag_pivot_thresh=0.0, permc_spec="NATURAL")  # sparse LU decomposition
-
-    L = LU.L @ sparse.diags(LU.U.diagonal()**0.5)
-
-    return L  # return L (lower triangular matrix)
-
-# https://stackoverflow.com/questions/25314067/scipy-sparse-matrix-to-cvxopt-spmatrix
-# def scipy_sparse_to_spmatrix(A: csr_matrix) -> spmatrix:
-#     coo = A.tocoo()
-#     SP = spmatrix(coo.data.tolist(), coo.row.tolist(), coo.col.tolist(), size=A.shape)
-#     return SP
-
-# **********************
 # Debug/Helper Methods
 # **********************
-
 
 def load_json(filename: str):
     """
@@ -167,15 +147,6 @@ def compare_eigen_numpy_matrix(filename: str, numpy_array: np.ndarray, make_3d: 
     npt.assert_allclose(numpy_array, eigen_array, atol=FLOAT_EQUAL_PRECISION)
 
 
-def compare_eigen_numpy_matrix_4d(filename: str, numpy_array: np.ndarray, make_3d: bool = False) -> bool:
-    """ 
-    Standardized function for comparing matrices for testing? 
-    Maybe? 
-    """
-    eigen_array: np.ndarray = deserialize_eigen_matrix_csv_to_numpy(filename, make_3d)
-    npt.assert_allclose(numpy_array, eigen_array, atol=FLOAT_EQUAL_PRECISION)
-
-
 # def compare_eigen_3d_to_numpy_matrix_at_index(eigen_array: np.ndarray,
 #                                               numpy_array: np.ndarray,
 #                                               index: int) -> bool:
@@ -183,7 +154,8 @@ def compare_eigen_numpy_matrix_4d(filename: str, numpy_array: np.ndarray, make_3
 #     Standardized function for comparing matrices for testing?
 #     Maybe?
 #     """
-#     npt.assert_allclose(numpy_array, eigen_array[index], atol=FLOAT_EQUAL_PRECISION)
+#     eigen_array: np.ndarray = deserialize_eigen_matrix_csv_to_numpy(filename, make_3d)
+#     npt.assert_allclose(numpy_array, eigen_array, atol=FLOAT_EQUAL_PRECISION)
 
 
 def compare_eigen_list_trianglecornerdata(filename: str, numpy_array: np.ndarray, make_3d: bool = False) -> bool:
@@ -848,7 +820,10 @@ def angle_from_length(edge_length_opposite_corner: float,
     return math.acos(min(max(Ijk / (2.0 * l1 * l2), -1.0), 1.0))
 
 
-def angle_from_positions(dimension: int, angle_corner_position: np.ndarray, second_corner_position: np.ndarray, third_corner_position: np.ndarray) -> float:
+def angle_from_positions(dimension: int,
+                         angle_corner_position: np.ndarray,
+                         second_corner_position: np.ndarray,
+                         third_corner_position: np.ndarray) -> float:
     """
     @brief Compute the angle of a triangle corner with given positions
 
@@ -865,9 +840,10 @@ def angle_from_positions(dimension: int, angle_corner_position: np.ndarray, seco
     assert third_corner_position.shape == (1, dimension)
 
     # TODO: double check that the below are going to be floats...
+    # FIXME: really silly error was here
     l0: float = LA.norm(third_corner_position - second_corner_position)
-    l1: float = LA.norm(third_corner_position - second_corner_position)
-    l2: float = LA.norm(third_corner_position - second_corner_position)
+    l1: float = LA.norm(second_corner_position - angle_corner_position)
+    l2: float = LA.norm(third_corner_position - angle_corner_position)
 
     return angle_from_length(l0, l1, l2)
 

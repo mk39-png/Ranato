@@ -25,10 +25,10 @@ def compute_line_between_points(point_0: PlanarPoint, point_1: PlanarPoint) -> n
     :return: line_coeff of shape (3, 1) made from the points
     :rtype: np.ndarray 
     """
-    x0 = point_0[0, 0]
-    y0 = point_0[0, 1]
-    x1 = point_1[0, 0]
-    y1 = point_1[0, 1]
+    x0: np.float64 = point_0[0, 0]
+    y0: np.float64 = point_0[0, 1]
+    x1: np.float64 = point_1[0, 0]
+    y1: np.float64 = point_1[0, 1]
     line_coeffs: np.ndarray = np.array([[x0 * y1 - x1 * y0],
                                         [y0 - y1],
                                         [x1 - x0]])
@@ -51,14 +51,9 @@ def compute_parametric_line_between_points(point_0: PlanarPoint,
     :rtype: LineSegment
     """
     # Set numerator
-    numerators: np.ndarray = np.array([
+    numerators: Matrix2x2r = np.array([
         [point_0[0, 0], point_0[0, 1]],
-        [point_1[0, 0] - point_0[0, 0], point_1[0, 1] - point_0[0, 1]]])
-    # TODO: double check that the elements in numerators are indeed as per ASOC code
-    # numerators(0, 0) = point_0(0)
-    # numerators(0, 1) = point_0(1)
-    # numerators(1, 0) = point_1(0) - point_0(0)
-    # numerators(1, 1) = point_1(1) - point_0(1)
+        [point_1[0, 0] - point_0[0, 0], point_1[0, 1] - point_0[0, 1]]], dtype=np.float64)
 
     assert numerators.shape == (2, 2)
 
@@ -86,20 +81,20 @@ def refine_triangles(V: np.ndarray, F: np.ndarray) -> tuple[np.ndarray, np.ndarr
     :return: Vertices and Faces refined
     :rtype: tuple[np.ndarray, np.ndarray]
     """
-    # assert V.dtype == np.float64
-    # assert F.dtype == np.int64
+    # Need proper for F or else indexing from V will not work (because cannot use floats for accesing indices)
+    assert V.dtype == np.float64
+    assert F.dtype == np.int64
 
-    num_faces: Index = F.shape[0]  # rows
-    F = np.array(F, dtype=np.int64)  # FIXME go back and address non-int type of F array
-    V_refined: np.ndarray = np.ndarray(shape=(num_faces * 6, 2))
-    F_refined: np.ndarray = np.ndarray(shape=(num_faces * 4, 3))
+    num_faces: Index = F.shape[ROWS]  # rows
+    V_refined: np.ndarray = np.ndarray(shape=(num_faces * 6, 2), dtype=np.float64)
+    F_refined: np.ndarray = np.ndarray(shape=(num_faces * 4, 3), dtype=np.int64)
 
     # TODO: could probably use NumPy indexing for the things below, right?
     for i in range(num_faces):
         # We have vectors below, this time of shape (n, ) because we're using NumPy broadcasting
-        v0: np.ndarray = V[F[i, 0], :]
-        v1: np.ndarray = V[F[i, 1], :]
-        v2: np.ndarray = V[F[i, 2], :]
+        v0: Vector1D = V[F[i, 0], :]
+        v1: Vector1D = V[F[i, 1], :]
+        v2: Vector1D = V[F[i, 2], :]
         assert v0.ndim == 1
         assert v1.ndim == 1
         assert v2.ndim == 1
@@ -114,10 +109,10 @@ def refine_triangles(V: np.ndarray, F: np.ndarray) -> tuple[np.ndarray, np.ndarr
         V_refined[6 * i + 5, :] = (v2 + v0) / 2.0
 
         # Add refined faces
-        F_refined[4 * i + 0, :] = np.array([6 * i + 0, 6 * i + 3, 6 * i + 5])
-        F_refined[4 * i + 1, :] = np.array([6 * i + 1, 6 * i + 4, 6 * i + 3])
-        F_refined[4 * i + 2, :] = np.array([6 * i + 2, 6 * i + 5, 6 * i + 4])
-        F_refined[4 * i + 3, :] = np.array([6 * i + 3, 6 * i + 4, 6 * i + 5])
+        F_refined[4 * i + 0, :] = np.array([6 * i + 0, 6 * i + 3, 6 * i + 5], dtype=np.int64)
+        F_refined[4 * i + 1, :] = np.array([6 * i + 1, 6 * i + 4, 6 * i + 3], dtype=np.int64)
+        F_refined[4 * i + 2, :] = np.array([6 * i + 2, 6 * i + 5, 6 * i + 4], dtype=np.int64)
+        F_refined[4 * i + 3, :] = np.array([6 * i + 3, 6 * i + 4, 6 * i + 5], dtype=np.int64)
 
     return V_refined, F_refined
 
@@ -133,17 +128,21 @@ class ConvexPolygon:
     def __init__(self, boundary_segments_coeffs: list[Matrix3x1r],
                  vertices: Matrix3x2r) -> None:
         """
-        Constructor that is called by classmethod init_from_boundary_segments_coeffs or init_from_vertices.
-        NOTE: Do not call this constructor directly. As in, do not call ConvexPolygon(boundary_segments_coeffs, vertices). Instead, use ConvexPolygon.init_from_boundary_segments_coeffs or ConvexPolygon.init_from_vertices().
+        Constructor that is called by classmethod init_from_boundary_segments_coeffs 
+        or init_from_vertices.
+        NOTE: Do not call this constructor directly. As in, do not call 
+        ConvexPolygon(boundary_segments_coeffs, vertices). Instead, use 
+        ConvexPolygon.init_from_boundary_segments_coeffs or ConvexPolygon.init_from_vertices().
 
-        :param boundary_segments_coeffs: boundary segment coefficients list of size 3 with element np.ndarray of shape (3, 1) and type np.float64
+        :param boundary_segments_coeffs: boundary segment coefficients list of size 3 with 
+        element np.ndarray of shape (3, 1) and type np.float64
         :type boundary_segments_coeffs: list[Matrix3x1r]
         :param vertices: vertices of type np.ndarray of shape (3, 2)
         :type vertices: Matrix3x2r
         """
         # Assertions to match ASOC code C++ code
         assert len(boundary_segments_coeffs) == 3
-        assert boundary_segments_coeffs[0].shape == (3, 1)
+        assert boundary_segments_coeffs[0].shape == (3, 1)  # lazily checking elements are shape (3,1) in list
         assert vertices.shape == (3, 2)
 
         # *******
@@ -178,7 +177,7 @@ class ConvexPolygon:
         Only vertices passed in. Construct m_boundary_segments_coeffs.
         """
         assert vertices.shape == (3, 2)
-        num_vertices: int = vertices.shape[0]
+        num_vertices: int = vertices.shape[ROWS]
         boundary_segments_coeffs: list[Matrix3x1r] = []
 
         # TODO: is the below the dynamic sizing of arrays that I needed to avoid?
@@ -187,8 +186,8 @@ class ConvexPolygon:
                                                                   vertices[[(i + 1) % num_vertices], :])
             boundary_segments_coeffs.append(line_coeffs)
 
-        assert len(boundary_segments_coeffs) == 3
-        assert boundary_segments_coeffs[0].shape == (3, 1)
+        assert len(boundary_segments_coeffs) == num_vertices
+        assert boundary_segments_coeffs[0].shape == (3, 1)  # lazy check
 
         # return boundary_segments_coeffs
         return cls(boundary_segments_coeffs, vertices)
@@ -197,11 +196,14 @@ class ConvexPolygon:
         """
         Return true iff point is in the convex polygon
         """
-        for i, L_coeffs in enumerate(self.m_boundary_segments_coeffs):
+        assert point.shape == (1, 2)
+
+        for _, L_coeffs in enumerate(self.m_boundary_segments_coeffs):
             # NOTE: redundant check
             assert L_coeffs.shape == (3, 1)
 
-            if (L_coeffs[0, 0] + L_coeffs[1, 0] * point[0, 0] + L_coeffs[2, 0] * point[1, 0]) < 0.0:
+            # NOTE: index accessing was wrong beforehand...
+            if (L_coeffs.flatten()[0] + L_coeffs.flatten()[1] * point.flatten()[0] + L_coeffs.flatten()[2] * point.flatten()[1]) < 0.0:
                 return False
 
         return True
@@ -263,10 +265,13 @@ class ConvexPolygon:
         return self.m_vertices
 
     def parametrize_patch_boundaries(self) -> list[LineSegment]:
+        """
+
+        """
         patch_boundaries: list[LineSegment] = []
 
         # Get rows of m_vertices
-        num_vertices: int = self.m_vertices.shape[0]
+        num_vertices: int = self.m_vertices.shape[ROWS]
 
         for i in range(num_vertices):
             # TODO: maybe something wrong with the shape?
@@ -279,7 +284,7 @@ class ConvexPolygon:
 
         # Double checking that we indeed only have 3 elements inside patch_boundaries as per
         # ASOC code
-        assert len(patch_boundaries) == 3
+        assert len(patch_boundaries) == num_vertices
         return patch_boundaries
 
     def triangulate(self, num_refinements: int) -> tuple[np.ndarray, np.ndarray]:
@@ -311,6 +316,9 @@ class ConvexPolygon:
         return V, F
 
     def sample(self, num_samples: int) -> list[PlanarPoint]:
+        """
+
+        """
         domain_points: list[PlanarPoint] = []
 
         # TODO (from ASOC code): Make actual bounding box
@@ -335,7 +343,7 @@ class ConvexPolygon:
 
         for i in range(num_samples):
             for j in range(num_samples):
-                point: PlanarPoint = np.array([[x_axis[i], y_axis[j]]])
+                point: PlanarPoint = np.array([[x_axis[i], y_axis[j]]], dtype=np.float64)
                 assert point.shape == (1, 2)
                 if self.contains(point):
                     domain_points.append(point)

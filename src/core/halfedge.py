@@ -56,7 +56,7 @@ class Halfedge:
     # ************
     # CONSTRUCTORS
     # ************
-    def __init__(self, F: np.ndarray | None = None) -> None:
+    def __init__(self, F: np.ndarray) -> None:
         """
         TODO: deal with actually default constructor where Default trivial halfedge is made.
         Build halfedge mesh from mesh faces F with.
@@ -65,6 +65,23 @@ class Halfedge:
         Because affine_manifold requires us to do just that...
         # Basically, be more like the C++ implementation.
         """
+        # *******
+        # PRIVATE
+        # *******
+        m_next: list[Index]
+        m_opp:  list[Index]
+        m_he2e: list[Index]
+        m_e2he: list[tuple[Index, Index]]
+        m_to:   list[Index]
+        m_from: list[Index]
+        m_face: list[Index]
+        m_out:  list[Index]
+        m_f2he: list[Index]
+        m_F: np.ndarray
+        m_num_vertices: Index
+        m_num_faces: Index
+        m_num_halfedges: Index
+        m_num_edges: Index
 
         # Why does this start off with clear when nothing exists yet?
         # self.clear()
@@ -87,8 +104,7 @@ class Halfedge:
         # Build maps between corners and halfedges
         self.corner_to_he: list[list[Index]]
         self.he_to_corner: list[tuple[int, int]]
-        self.corner_to_he, self.he_to_corner = self.build_corner_to_he_maps(
-            num_faces)
+        self.corner_to_he, self.he_to_corner = self.build_corner_to_he_maps(num_faces)
 
         # Iterate over faces to build next, face, and to arrays
         self.m_next = [self.INVALID_HALFEDGE_INDEX] * num_halfedges
@@ -113,37 +129,35 @@ class Halfedge:
 
         # Iterate over vertices to build opp using a vertex circulator
         # Note that this is the main difficulty in constructing halfedge from VF
-        vertex_circulator = VertexCirculator(F)
-        self.m_opp = [-1] * 3 * num_faces
+        vertex_circulator = VertexCirculator(F)  # TODO: check if all values made are all good
+        self.m_opp = [-1] * (3 * num_faces)
         for vertex_index in range(num_vertices):
             # Get vertex one ring
-            vertex_one_ring, face_one_ring = vertex_circulator.get_one_ring(
-                vertex_index)
+            vertex_one_ring: list[int]
+            face_one_ring: list[int]
+            vertex_one_ring, face_one_ring = vertex_circulator.get_one_ring(vertex_index)
 
             # Determine if we are in a boundary case
-            is_boundary: bool = (vertex_one_ring[0] != vertex_one_ring[-1])
+            is_boundary: bool = (vertex_one_ring[0] != vertex_one_ring[-1])  # Front != Back
             num_adjacent_faces: Index = len(face_one_ring)
-
-            # TODO: below code was generated. Confirm it works/is equivalent
-            num_interior_edges: Index = num_adjacent_faces - \
-                1 if is_boundary else num_adjacent_faces
+            num_interior_edges: Index
+            if is_boundary:
+                num_interior_edges = num_adjacent_faces - 1
+            else:
+                num_interior_edges = num_adjacent_faces
 
             # Build opposite arrays
             for i in range(num_interior_edges):
                 # Get current face prev (cw) halfedge from the vertex
                 fi: Index = face_one_ring[i]
                 # TODO: confirm I'm doing correct slicing like Eigen .row()
-                fi_vertex_index: Index = find_face_vertex_index(
-                    F[fi, :], vertex_index)
-                current_he: Index = self.corner_to_he[fi][(
-                    fi_vertex_index + 1) % 3]
+                fi_vertex_index: Index = find_face_vertex_index(F[fi, :], vertex_index)
+                current_he: Index = self.corner_to_he[fi][(fi_vertex_index + 1) % 3]
 
                 # Get next (ccw) face next (ccw) halfedge from the vertex
                 fj: Index = face_one_ring[(i + 1) % num_adjacent_faces]
-                fj_vertex_index: Index = find_face_vertex_index(
-                    F[fj, :], vertex_index)
-                opposite_he: Index = self.corner_to_he[fj][(
-                    fj_vertex_index + 2) % 3]
+                fj_vertex_index: Index = find_face_vertex_index(F[fj, :], vertex_index)
+                opposite_he: Index = self.corner_to_he[fj][(fj_vertex_index + 2) % 3]
 
                 # Assign opposite halfedge
                 self.m_opp[current_he] = opposite_he
@@ -168,30 +182,30 @@ class Halfedge:
 
         # TESTING
         # TODO: also double check num_edges, num_he, num_faces, and num_vertices members.
-        if logger.level == logging.DEBUG:
-            filepath: str = "spot_control\\halfedge\\"
-            compare_eigen_numpy_matrix(f"{filepath}corner_to_he.csv",
-                                       np.array(self.corner_to_he))
-            compare_eigen_numpy_matrix(f"{filepath}he_to_corner.csv",
-                                       np.array(self.he_to_corner))
-            compare_eigen_numpy_matrix(f"{filepath}m_e2he.csv",
-                                       np.array(self.m_e2he))
-            compare_eigen_numpy_matrix(f"{filepath}m_f2he.csv",
-                                       np.array(self.m_f2he))
-            compare_eigen_numpy_matrix(f"{filepath}m_face.csv",
-                                       np.array(self.m_face))
-            compare_eigen_numpy_matrix(f"{filepath}m_from.csv",
-                                       np.array(self.m_from))
-            compare_eigen_numpy_matrix(f"{filepath}m_he2e.csv",
-                                       np.array(self.m_he2e))
-            compare_eigen_numpy_matrix(f"{filepath}m_next.csv",
-                                       np.array(self.m_next))
-            compare_eigen_numpy_matrix(f"{filepath}m_opp.csv",
-                                       np.array(self.m_opp))
-            compare_eigen_numpy_matrix(f"{filepath}m_out.csv",
-                                       np.array(self.m_out))
-            compare_eigen_numpy_matrix(f"{filepath}m_to.csv",
-                                       np.array(self.m_to))
+        # if logger.level == logging.DEBUG:
+        #     filepath: str = "spot_control\\halfedge\\"
+        #     compare_eigen_numpy_matrix(f"{filepath}corner_to_he.csv",
+        #                                np.array(self.corner_to_he))
+        #     compare_eigen_numpy_matrix(f"{filepath}he_to_corner.csv",
+        #                                np.array(self.he_to_corner))
+        #     compare_eigen_numpy_matrix(f"{filepath}m_e2he.csv",
+        #                                np.array(self.m_e2he))
+        #     compare_eigen_numpy_matrix(f"{filepath}m_f2he.csv",
+        #                                np.array(self.m_f2he))
+        #     compare_eigen_numpy_matrix(f"{filepath}m_face.csv",
+        #                                np.array(self.m_face))
+        #     compare_eigen_numpy_matrix(f"{filepath}m_from.csv",
+        #                                np.array(self.m_from))
+        #     compare_eigen_numpy_matrix(f"{filepath}m_he2e.csv",
+        #                                np.array(self.m_he2e))
+        #     compare_eigen_numpy_matrix(f"{filepath}m_next.csv",
+        #                                np.array(self.m_next))
+        #     compare_eigen_numpy_matrix(f"{filepath}m_opp.csv",
+        #                                np.array(self.m_opp))
+        #     compare_eigen_numpy_matrix(f"{filepath}m_out.csv",
+        #                                np.array(self.m_out))
+        #     compare_eigen_numpy_matrix(f"{filepath}m_to.csv",
+        #                                np.array(self.m_to))
 
     # ******
     # PUBLIC
@@ -339,24 +353,6 @@ class Halfedge:
 
         # TODO: do some clearing thing for m_F
         # self.m_F.resize(0, 0)
-
-    # *******
-    # PRIVATE
-    # *******
-    m_next: list[Index]
-    m_opp:  list[Index]
-    m_he2e: list[Index]
-    m_e2he: list[tuple[Index, Index]]
-    m_to:   list[Index]
-    m_from: list[Index]
-    m_face: list[Index]
-    m_out:  list[Index]
-    m_f2he: list[Index]
-    m_F: np.ndarray
-    m_num_vertices: Index
-    m_num_faces: Index
-    m_num_halfedges: Index
-    m_num_edges: Index
 
     def build_corner_to_he_maps(self, num_faces: Index) -> tuple[list[list[Index]], list[tuple[Index, Index]]]:
         """

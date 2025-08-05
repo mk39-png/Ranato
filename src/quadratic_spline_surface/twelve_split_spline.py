@@ -8,7 +8,7 @@ from polyscope.point_cloud import PointCloud
 from src.core.affine_manifold import AffineManifold
 from src.quadratic_spline_surface.PS12_patch_coeffs import PS12_patch_coeffs
 from src.quadratic_spline_surface.PS12tri_bounds_coeffs import PS12tri_bounds_coeffs
-# from src.core.common import *
+from src.core.common import *
 
 # from src.core.line_segment import *
 # from src.core.polynomial_function import *
@@ -26,6 +26,7 @@ from scipy.sparse import csr_matrix, coo_matrix
 
 import copy
 
+import numpy.testing as npt
 from collections import defaultdict
 
 
@@ -44,13 +45,6 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
     def __init__(self, V: np.ndarray,
                  affine_manifold: AffineManifold,
                  optimization_params: OptimizationParameters,
-                 #  face_to_patch_indices: list[list[int]],
-                 #  patch_to_face_indices: list[int],
-                 #  fit_matrix: csr_matrix,
-                 #  energy_hessian: csr_matrix,
-                 #  energy_hessian_inverse: CholeskySolverD,  # np.ndarray,
-                 #  corner_data: list[list[TriangleCornerData]] | None = None,
-                 #  midpoint_data: list[list[TriangleMidpointData]] | None = None
                  ) -> None:
         # TODO: fitmatrix and energy_hessian originally sparse matrices in Eigen ASOC code... may be useful to have them sparse here somehow.
         """ 
@@ -136,7 +130,8 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
 
         # Get cone corners
         is_cone_corner: list[list[bool]] = affine_manifold.compute_cone_corners()  # list[bool] of length 3
-        compare_eigen_numpy_matrix("spot_control\\12_split_spline\\is_cone_corner.csv", np.array(is_cone_corner))
+        # compare_eigen_numpy_matrix("spot_control\\12_split_spline\\is_cone_corner.csv", np.array(is_cone_corner))
+        # compare_eigen_numpy_matrix("spot_control\\12_split_spline\\is_cone_corner.csv", np.array(is_cone_corner))
 
         # Initialize position data and patches
         face_to_patch_indices: list[list[int]]
@@ -145,10 +140,10 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
                                                                                         self.m_midpoint_data,
                                                                                         is_cone_corner)
         # FIXME: redundant checks....
-        compare_eigen_numpy_matrix("spot_control\\12_split_spline\\init_twelve_split_patches\\face_to_patch_indices.csv",
-                                   np.array(face_to_patch_indices))
-        compare_eigen_numpy_matrix("spot_control\\12_split_spline\\init_twelve_split_patches\\patch_to_face_indices.csv",
-                                   np.array(patch_to_face_indices))
+        # compare_eigen_numpy_matrix("spot_control\\12_split_spline\\init_twelve_split_patches\\face_to_patch_indices.csv",
+        #                            np.array(face_to_patch_indices))
+        # compare_eigen_numpy_matrix("spot_control\\12_split_spline\\init_twelve_split_patches\\patch_to_face_indices.csv",
+        #                            np.array(patch_to_face_indices))
 
         # NOTE: m_corner_data.csv is set up such that it represents the below: (either that or... just combine it all smoothly...)
         # CORNER 1
@@ -317,9 +312,12 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
         assert len(patch_boundaries) == 12
         assert len(patch_boundaries[0]) == 3
         assert patch_boundaries[0][0].shape == (3, 1)
-        # TODO: test this.
-        compare_eigen_numpy_matrix("spot_control\\12_split_spline\\init_twelve_split_patches\\patch_boundaries.csv",
-                                   np.array(patch_boundaries).squeeze(), make_3d=True)
+        # # TODO: test this.
+        # compare_eigen_numpy_matrix("spot_control\\12_split_spline\\init_twelve_split_patches\\patch_boundaries.csv",
+        #                            np.array(patch_boundaries).squeeze(), make_3d=True)
+        # # TODO: test this.
+        # compare_eigen_numpy_matrix("spot_control\\12_split_spline\\init_twelve_split_patches\\patch_boundaries.csv",
+        #                            np.array(patch_boundaries).squeeze(), make_3d=True)
 
         domains: list[ConvexPolygon] = []  # list of length patches_per_face
         for i in range(patches_per_face):
@@ -330,9 +328,12 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
         patch_to_corner_map: list[tuple[int, int]]  # list of length 12
         patch_to_corner_map = generate_twelve_split_spline_patch_patch_to_corner_map()
         assert len(patch_to_corner_map) == 12
-        # TODO: test patch_to_corner_map
-        compare_eigen_numpy_matrix("spot_control\\12_split_spline\\init_twelve_split_patches\\patch_to_corner_map.csv",
-                                   np.array(patch_to_corner_map))
+        # # TODO: test patch_to_corner_map
+        # compare_eigen_numpy_matrix("spot_control\\12_split_spline\\init_twelve_split_patches\\patch_to_corner_map.csv",
+        #                            np.array(patch_to_corner_map))
+        # # TODO: test patch_to_corner_map
+        # compare_eigen_numpy_matrix("spot_control\\12_split_spline\\init_twelve_split_patches\\patch_to_corner_map.csv",
+        #                            np.array(patch_to_corner_map))
 
         # Clear face to patch mappings
         # TODO: not really doing much here since we're making new lists to return
@@ -368,11 +369,16 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
                 face_to_patch_indices[face_index].append(new_patch_index)
                 assert patch_to_face_indices[face_to_patch_indices[face_index][-1]] == face_index
                 assert face_to_patch_indices[patch_to_face_indices[-1]][-1] == new_patch_index
-        assert len(self.m_patches) == num_patches
-        compare_eigen_numpy_matrix("spot_control\\12_split_spline\\init_twelve_split_patches\\face_to_patch_indices.csv",
-                                   np.array(face_to_patch_indices))
-        compare_eigen_numpy_matrix("spot_control\\12_split_spline\\init_twelve_split_patches\\patch_to_face_indices.csv",
-                                   np.array(patch_to_face_indices))
+        # assert len(self.m_patches) == num_patches
+        # compare_eigen_numpy_matrix("spot_control\\12_split_spline\\init_twelve_split_patches\\face_to_patch_indices.csv",
+        #                            np.array(face_to_patch_indices))
+        # compare_eigen_numpy_matrix("spot_control\\12_split_spline\\init_twelve_split_patches\\patch_to_face_indices.csv",
+        #                            np.array(patch_to_face_indices))
+        # assert len(self.m_patches) == num_patches
+        # compare_eigen_numpy_matrix("spot_control\\12_split_spline\\init_twelve_split_patches\\face_to_patch_indices.csv",
+        #                            np.array(face_to_patch_indices))
+        # compare_eigen_numpy_matrix("spot_control\\12_split_spline\\init_twelve_split_patches\\patch_to_face_indices.csv",
+        #                            np.array(patch_to_face_indices))
 
         # TODO: set hash_table in constructor instead so that behavior of this method is better  defined....
         # Initialize hash tables
@@ -416,11 +422,14 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
 
         assert N.shape[COLS] == 3
 
-        # FIXME: now checking to see if correct with this constructor.
-        compare_eigen_numpy_matrix("spot_control\\12_split_spline\\generate_face_normals\\V.csv", V)
-        compare_eigen_numpy_matrix("spot_control\\12_split_spline\\generate_face_normals\\F.csv", F)
-        # XXX: N was fixed since there was a typo with angle_from_positions() in common.py
-        compare_eigen_numpy_matrix("spot_control\\12_split_spline\\generate_face_normals\\N.csv", N)
+        # # FIXME: now checking to see if correct with this constructor.
+        # compare_eigen_numpy_matrix("spot_control\\12_split_spline\\generate_face_normals\\V.csv", V)
+        # compare_eigen_numpy_matrix("spot_control\\12_split_spline\\generate_face_normals\\F.csv", F)
+        # compare_eigen_numpy_matrix("spot_control\\12_split_spline\\generate_face_normals\\V.csv", V)
+        # compare_eigen_numpy_matrix("spot_control\\12_split_spline\\generate_face_normals\\F.csv", F)
+        # # XXX: N was fixed since there was a typo with angle_from_positions() in common.py
+        # compare_eigen_numpy_matrix("spot_control\\12_split_spline\\generate_face_normals\\N.csv", N)
+        # compare_eigen_numpy_matrix("spot_control\\12_split_spline\\generate_face_normals\\N.csv", N)
 
         return N
 

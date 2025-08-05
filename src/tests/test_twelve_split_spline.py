@@ -7,6 +7,7 @@ from src.core.bivariate_quadratic_function import evaluate_quadratic_mapping
 
 import pytest
 import numpy as np
+import os
 
 
 def test_spot_model():
@@ -25,7 +26,7 @@ def test_spot_model():
     #     prog="ASOC",
     #     description="Generate smooth occluding contours for a mesh.",
     # )
-    input_filename: str = "spot_control_mesh-cleaned_conf_simplified_with_uv.obj"
+    input_filename: str = "spot_control\\spot_control_mesh-cleaned_conf_simplified_with_uv.obj"
     # input_filename: str = "spot_quadrangulated_tri_clean_conf_simplified_with_uv.obj"
     output_dir: str = "./"
     # log_level = logging.NOTSET
@@ -179,29 +180,29 @@ def twelve_split_quadratic_reproduction(
 
 def test_twelve_split_spline_constant_surface():
     # Build constant function triangle data
-    p: SpatialVector = np.array([[1.0, 2.0, 3.0]])
-    zero: SpatialVector = np.array([[0.0, 0.0, 0.0]])
+    p: SpatialVector = np.array([[1.0, 2.0, 3.0]], dtype=np.float64)
+    zero: SpatialVector = np.array([[0.0, 0.0, 0.0]], dtype=np.float64)
     assert p.shape == (1, 3)
     assert zero.shape == (1, 3)
 
-    corner_data: list[TriangleCornerData] = [
-        TriangleCornerData(p, zero, zero),
-        TriangleCornerData(p, zero, zero),
-        TriangleCornerData(p, zero, zero)
-    ]
+    corner_data: dict[int, TriangleCornerData] = {
+        0: TriangleCornerData(p, zero, zero),
+        1: TriangleCornerData(p, zero, zero),
+        2: TriangleCornerData(p, zero, zero)
+    }
 
-    midpoint_data: list[TriangleMidpointData] = [
-        TriangleMidpointData(zero),
-        TriangleMidpointData(zero),
-        TriangleMidpointData(zero)
-    ]
+    midpoint_data: dict[int, TriangleMidpointData] = {
+        0: TriangleMidpointData(zero),
+        1: TriangleMidpointData(zero),
+        2: TriangleMidpointData(zero)
+    }
 
     surface_mappings: list[Matrix6x3r]  # length 12 array with matrices shape (6, 3)
     surface_mappings = generate_twelve_split_spline_patch_surface_mapping(
         corner_data,
         midpoint_data)
 
-    domain_point: PlanarPoint = np.array([[0.25, 0.25]])
+    domain_point: PlanarPoint = np.array([[0.25, 0.25]], dtype=np.float64)
     q: SpatialVector = evaluate_quadratic_mapping(3, surface_mappings[0], domain_point)
 
     assert len(surface_mappings) == 12

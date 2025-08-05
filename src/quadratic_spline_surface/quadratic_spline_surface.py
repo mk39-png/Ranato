@@ -8,6 +8,8 @@ from src.quadratic_spline_surface.position_data import *
 from src.quadratic_spline_surface.quadratic_spline_surface_patch import *
 from src.quadratic_spline_surface.quadratic_spline_surface_patch import QuadraticSplineSurfacePatch
 from dataclasses import dataclass
+from typing import TextIO
+import os
 
 
 @dataclass
@@ -34,20 +36,30 @@ class QuadraticSplineSurface:
     - (basic) rendering
     - (de)serialization
     """
+    # HACK: also has filename for deserializing patch info text file.
+    # This is then used for testing
 
-    def __init__(self, patches: list[QuadraticSplineSurfacePatch]) -> None:
+    def __init__(self, patches: list[QuadraticSplineSurfacePatch] | None = None, filename: str | None = None) -> None:
         """
         Constructor from patches
         @param[in] patches: quadratic surface patches
         """
-        # Protected
-        self.m_patches: list[QuadraticSplineSurfacePatch] = patches
+
+        # HACK: adding initialization from file support
+        # Sets m_patches to information from the input text file
+        if filename is not None:
+            self.read_spline(filename)
+        else:
+            # FIXME: m_patches may accidentally be set to None and mess up program
+            # Protected
+            self.m_patches: list[QuadraticSplineSurfacePatch] = patches
 
         # TODO: utilize some sort of pythonic hash table type
         #  Hash table data
         # hash_table is a 2D list of list[int]
         # NOTE: hash_table is HASH_TABLE_SIZE x HASH_TABLE_SIZE 2D list with elements list[int]
         # TODO: todo("Rename member variables below to show that they are part of the class...")
+        # FIXME: I think the hash table is where everything goes wrong and is the one function I did not check yet...
         self.hash_table: list[list[list[int]]] = self.compute_patch_hash_tables()
 
         # TODO: what about the below? what is the reverse exactly?
@@ -151,12 +163,10 @@ class QuadraticSplineSurface:
         :return: vertices (V), faces (F), and vertex normals (N) of the triangulation
         :rtype: tuple[np.ndarray, np.ndarray, np.ndarray]
         """
-
-        # TODO: todo("Parameter modification and return below. So, change V F and N and return them properly according to Python")
-        V: np.ndarray = np.zeros(shape=(0, 0))
-        F: np.ndarray = np.zeros(shape=(0, 0))
-        N: np.ndarray = np.zeros(shape=(0, 0))
-        self.get_patch(patch_index).triangulate(num_refinements, V, F, N)
+        V: np.ndarray[tuple[int, int], np.dtype[np.float64]]
+        F: np.ndarray[tuple[int, int], np.dtype[np.int64]]
+        N: np.ndarray[tuple[int, int], np.dtype[np.float64]]
+        V, F, N = self.get_patch(patch_index).triangulate(num_refinements)
 
         return V, F, N
 
@@ -167,70 +177,79 @@ class QuadraticSplineSurface:
 
         :param surface_disc_params: discretization parameters
         :type surface_disc_params: SurfaceDiscretizationParameters
-
-        :param V: vertices of the triangulation
-        :type V: np.ndarray
-
-        :param F: faces of the triangulation
-        :type F: np.ndarray
-
-        :param N: vertex normals
-        :type N: np.ndarray
-
         :return: vertices of the triangulation (V_tri), faces of the triangulation(F_tri), and vertex normals (N_tri)
         :rtype: tuple[np.ndarray, np.ndarray, np.ndarray]
         """
         num_subdivisions: int = surface_disc_params.num_subdivisions
 
         if self.empty():
-            V = np.ndarray(shape=(0, 0), dtype=np.float64)
-            F = np.ndarray(shape=(0, 0), dtype=np.int64)
-            N = np.ndarray(shape=(0, 0), dtype=np.float64)
+            V: np.ndarray = np.ndarray(shape=(0, 0), dtype=np.float64)
+            F: np.ndarray = np.ndarray(shape=(0, 0), dtype=np.int64)
+            N: np.ndarray = np.ndarray(shape=(0, 0), dtype=np.float64)
             return V, F, N
 
-        # Build triangulated surface in place
+        # ** Build triangulated surface as a copy **
         patch_index: PatchIndex = 0
 
-        # FIXME: v f and n are not the correct shape... especially V should be (235008, 3)
-        V: np.ndarray[tuple[int], np.dtype[np.float64]]
-        F: np.ndarray[tuple[int], np.dtype[np.int64]]
-        N: np.ndarray[tuple[int], np.dtype[np.float64]]
-        V, F, N = self.triangulate_patch(patch_index, num_subdivisions)
-        num_patch_vertices: int = V.shape[ROWS]
-        num_patch_faces: int = F.shape[ROWS]
+        # Build patch 0 to get information like num_patch_vertices and num_patch_faces.
+        V_patch_0: np.ndarray[tuple[int], np.dtype[np.float64]]
+        F_patch_0: np.ndarray[tuple[int], np.dtype[np.int64]]
+        N_patch_0: np.ndarray[tuple[int], np.dtype[np.float64]]
+        V_patch_0, F_patch_0, N_patch_0 = self.triangulate_patch(patch_index, num_subdivisions)
+
+        # if logger.isEnabledFor(logging.DEBUG):
+        #     compare_eigen_numpy_matrix(
+        #         "spot_control\\quadratic_spline_surface\\discretize\\F_triangulate_patch_0.csv", F_patch_0)
+        #     compare_eigen_numpy_matrix(
+        #         "spot_control\\quadratic_spline_surface\\discretize\\V_triangulate_patch_0.csv", V_patch_0)
+        #     compare_eigen_numpy_matrix(
+        #         "spot_control\\quadratic_spline_surface\\discretize\\N_triangulate_patch_0.csv", N_patch_0)
+
+        num_patch_vertices: int = V_patch_0.shape[ROWS]
+        num_patch_faces: int = F_patch_0.shape[ROWS]
         patch_index += 1
 
-        # TODO: this is not exactly equivalent to conservativeResize...
-        V.resize((num_patch_vertices * self.num_patches, 3))
-        F.resize((num_patch_faces * self.num_patches, 3))
-        N.resize((num_patch_vertices * self.num_patches, 3))
+        # Set the patch 0 inside V, F, and N of the surface.
+        V_tri: np.ndarray = np.zeros(shape=(num_patch_vertices * self.num_patches, 3), dtype=np.float64)
+        F_tri: np.ndarray = np.zeros(shape=(num_patch_faces * self.num_patches, 3), dtype=np.int64)
+        N_tri: np.ndarray = np.zeros(shape=(num_patch_vertices * self.num_patches, 3), dtype=np.float64)
+        V_tri[:num_patch_vertices, :] = V_patch_0
+        F_tri[:num_patch_faces, :] = F_patch_0
+        N_tri[:num_patch_vertices, :] = N_patch_0
 
-        for _ in range(self.num_patches):
-            # NOTE: patches are shape (24, 3) with num_subdivisions = 2 and with the spot control 3D model
-            V_patch: np.ndarray  # dtype float
-            F_patch: np.ndarray  # dtype int
-            N_patch: np.ndarray  # dtype float
+        # Building the rest of the patches. (e.g. the rest of the shape V, F, and N)
+        # NOTE: expect V to be shape (235008, 3) for the Spot Control mesh
+        while patch_index < self.num_patches:
+            # NOTE: expect patches shape (24, 3) with num_subdivisions = 2 and the Spot Control mesh
+            V_patch: np.ndarray[tuple[int, int], np.dtype[np.float64]]
+            F_patch: np.ndarray[tuple[int, int], np.dtype[np.int64]]
+            N_patch: np.ndarray[tuple[int, int], np.dtype[np.float64]]
             V_patch, F_patch, N_patch = self.triangulate_patch(patch_index, num_subdivisions)
 
-            V[num_patch_vertices * patch_index: num_patch_vertices * (patch_index + 1),
-              0: V.shape[1]] = V_patch
-            F[num_patch_faces * patch_index: num_patch_faces * (patch_index + 1),
-              0: F.shape[1]] = F_patch + np.full(shape=(num_patch_faces, F.shape[1]),
-                                                 fill_value=num_patch_vertices * patch_index,
-                                                 dtype=np.int64)
-            N[num_patch_vertices * patch_index: num_patch_vertices * (patch_index + 1),
-              0: N.shape[1]] = N_patch
+            # FIXME: values stop being set after a certain point....
+            V_tri[num_patch_vertices * patch_index: num_patch_vertices * (patch_index + 1),
+                  : V_tri.shape[COLS]] = V_patch
 
-        logger.info("%s surface vertices", V.shape[ROWS])
-        logger.info("%s surface faces", F.shape[ROWS])
-        logger.info("%s surface normals", N.shape[ROWS])
+            F_tri[num_patch_faces * patch_index: num_patch_faces * (patch_index + 1),
+                  : F_tri.shape[COLS]] = F_patch + np.full(shape=(num_patch_faces, F_tri.shape[COLS]),
+                                                           fill_value=num_patch_vertices * patch_index,
+                                                           dtype=np.int64)
+            N_tri[num_patch_vertices * patch_index: num_patch_vertices * (patch_index + 1),
+                  : N_tri.shape[COLS]] = N_patch
 
-        return V, F, N
+            # XXX: need to increment patch_index
+            patch_index += 1
+
+        logger.info("%s surface vertices", V_tri.shape[ROWS])
+        logger.info("%s surface faces", F_tri.shape[ROWS])
+        logger.info("%s surface normals", N_tri.shape[ROWS])
+
+        return V_tri, F_tri, N_tri
 
     def discretize_patch_boundaries(self) -> tuple[list[SpatialVector], list[list[int]]]:
         """
         Discretize all patch boundaries as polylines.
-        NOTE: This also appears in contour_network folder in discretize.py, but is here for convenience and also for organiztion purposes.
+        NOTE: This also appears in contour_network folder in discretize.py, but is here for convenience and also for organization purposes.
         TODO: perhaps change to utilize NumPy arrays... but I'm a bit concerned about losing clarity. But I would gain proper shaping and would make everything clearer.
 
         :return points: list of polyline points.
@@ -306,10 +325,11 @@ class QuadraticSplineSurface:
         # TODO: adjust parameter naming of SurfaceDiscretizationParameters
         # Generate mesh discretization
         surface_disc_params = SurfaceDiscretizationParameters(num_subdivisions=num_subdivisions)
-        V: np.ndarray  # dtype float
-        F: np.ndarray  # dtype int
-        N: np.ndarray  # dtype float
+        V: np.ndarray[tuple[int, int], np.dtype[np.float64]]  # dtype float
+        F: np.ndarray[tuple[int, int], np.dtype[np.int64]]  # dtype int
+        N: np.ndarray[tuple[int, int], np.dtype[np.float64]]  # dtype float
         V, F, N = self.discretize(surface_disc_params)  # NOTE: this takes approx 10 sec to do
+        # FIXME maybe discretization is wrong...
 
         # Add surface mesh
         ps.init()
@@ -320,7 +340,8 @@ class QuadraticSplineSurface:
         # Discretize patch boundaries
         boundary_points: list[SpatialVector]
         boundary_polylines: list[list[int]]
-        # FIXME -- DONE! runtime on this method maybe obsurd
+
+        # FIXME: number of boundary_polylines is wrong...
         boundary_points, boundary_polylines = self.discretize_patch_boundaries()
 
         # View contour curve network
@@ -337,6 +358,22 @@ class QuadraticSplineSurface:
         patch_boundaries.set_radius(0.0005)
         patch_boundaries.set_radius(0.0005)
         patch_boundaries.set_enabled(False)
+
+        # if logger.level == logging.DEBUG:
+        #     compare_eigen_numpy_matrix(
+        #         "spot_control\\quadratic_spline_surface\\add_surface_to_viewer\\F_discretized_2_subdiv.csv", F)
+        #     compare_eigen_numpy_matrix(
+        #         "spot_control\\quadratic_spline_surface\\add_surface_to_viewer\\V_discretized_2_subdiv.csv", V)
+        #     compare_eigen_numpy_matrix(
+        #         "spot_control\\quadratic_spline_surface\\add_surface_to_viewer\\N_discretized_2_subdiv.csv", N)
+        #     compare_eigen_numpy_matrix("spot_control\\quadratic_spline_surface\\add_surface_to_viewer\\boundary_points.csv",
+        #                                np.array(boundary_points).squeeze())
+        #     compare_eigen_numpy_matrix("spot_control\\quadratic_spline_surface\\add_surface_to_viewer\\boundary_polylines.csv",
+        #                                np.array(boundary_polylines))
+        #     compare_eigen_numpy_matrix("spot_control\\quadratic_spline_surface\\add_surface_to_viewer\\boundary_points_mat.csv",
+        #                                np.array(boundary_points_matrix))
+        #     compare_eigen_numpy_matrix("spot_control\\quadratic_spline_surface\\add_surface_to_viewer\\boundary_edges.csv",
+        #                                np.array(boundary_edges).squeeze())
 
     def view(self, color: Matrix3x1r = SKY_BLUE, num_subdivisions: int = DISCRETIZATION_LEVEL) -> None:
         """
@@ -383,41 +420,127 @@ class QuadraticSplineSurface:
         logger.info("Screenshot saved to %s", filename)
         ps.remove_all_structures()
 
-    def serialize(self, output_file) -> None:
+    def serialize(self, output_file: TextIO) -> None:
         """
         Serialize the surface
         NOTE: used by write_spline()
+
+        patch information in the format
+            patch
+            cx a_0 a_u a_v a_uv a_uu a_vv
+            cy a_1 a_u a_v a_uv a_uu a_vv
+            cz a_2 a_u a_v a_uv a_uu a_vv
+            p1 p1_u p1_v
+            p2 p2_u p2_v
+            p3 p3_u p3_v
 
         @param[in] out: output stream for the surface
         """
         for i, _ in enumerate(self.m_patches):
             self.m_patches[i].serialize(output_file)
 
-    def deserialize(self) -> None:
+    def deserialize(self, input_file: TextIO) -> list[QuadraticSplineSurfacePatch]:
         """
         Deserialize a surface
+
+        NOTE: used for testing with original ASOC code
+        TODO: future implementations could port over to JSON for univeral formatting
+        and better parsing
+
+        patch information in the format
+            patch
+            cx a_0 a_u a_v a_uv a_uu a_vv
+            cy a_1 a_u a_v a_uv a_uu a_vv
+            cz a_2 a_u a_v a_uv a_uu a_vv
+            p1 p1_u p1_v
+            p2 p2_u p2_v
+            p3 p3_u p3_v
+
         @param[in] in: input stream for the surface
         """
-        unimplemented("Method used in read_spline(), but read_spline() is not used anywhere.")
+        # self.m_patches.clear()
+        patches: list[QuadraticSplineSurfacePatch] = []
 
+        patch_info_lines: list[str] = input_file.readlines()
+        EXTRA_NEWLINE = 1
+        ROWS_OF_PATCH_INFORMATION = 7
+        NUM_OF_ROWS: int = len(patch_info_lines)
+        assert NUM_OF_ROWS % ROWS_OF_PATCH_INFORMATION == 0
+
+        # -- Read coordinate coefficients cx, cy, and cz along with point information --
+        # NOTE: this relies on there being 7 rows for patch format
+        for i in range(0, NUM_OF_ROWS, ROWS_OF_PATCH_INFORMATION):
+            # TODO: add better checking and optional comments ettter
+
+            # TODO: use regex to verify cx, cy, cz pattern
+            # Read coordinates (skipping the label and reading the float data)
+            cx = np.array(list(map(float, patch_info_lines[i + 1].split()[1:])), dtype=np.float64)
+            cy = np.array(list(map(float, patch_info_lines[i + 2].split()[1:])), dtype=np.float64)
+            cz = np.array(list(map(float, patch_info_lines[i + 3].split()[1:])), dtype=np.float64)
+            surface_mapping_coeffs: Matrix6x3r = np.stack((cx, cy, cz), axis=1, dtype=np.float64)
+            assert surface_mapping_coeffs.shape == (6, 3)
+
+            # TODO: use regex to verify p1, p2, p3 pattern
+            p1 = np.array(list(map(float, patch_info_lines[i + 4].split()[1:])), dtype=np.float64)
+            p2 = np.array(list(map(float, patch_info_lines[i + 5].split()[1:])), dtype=np.float64)
+            p3 = np.array(list(map(float, patch_info_lines[i + 6].split()[1:])), dtype=np.float64)
+            vertices: Matrix3x2r = np.array([p1, p2, p3], dtype=np.float64)
+            assert vertices.shape == (3, 2)
+
+            domain: ConvexPolygon = ConvexPolygon.init_from_vertices(vertices)
+
+            # Add patch to the spline surface
+            patches.append(QuadraticSplineSurfacePatch(surface_mapping_coeffs, domain))
+
+        return patches
+
+    # TODO: this should be accessible OUTSIDE the class
     def write_spline(self, filename: str) -> None:
         """
-        Write the surface serialization to file
+        Write the surface serialization to file.
         NOTE: used in contour_network.py
+
+        patch information in the format
+            patch
+            cx a_0 a_u a_v a_uv a_uu a_vv
+            cy a_1 a_u a_v a_uv a_uu a_vv
+            cz a_2 a_u a_v a_uv a_uu a_vv
+            p1 p1_u p1_v
+            p2 p2_u p2_v
+            p3 p3_u p3_v
 
         @param[in] filename: file path for the serialized surface
         """
         logger.info("Writing spline to %s", filename)
-        with open(filename, "w") as output_file:
+
+        filepath: str = os.path.abspath(f"src\\tests\\{filename}")
+        # TODO: check if the file exists before writing to it....
+
+        if os.path.isfile(filepath):
+            logger.warning("Overwritting spline txt file at %s", filepath)
+            # raise Exception("File already exists. Choose different file name to write spline to.")
+
+        with open(filepath, 'w', encoding='utf-8') as output_file:
             self.serialize(output_file)
         output_file.close()
 
-    def read_spline(self) -> None:
+    # This should be accessible OUTISDE the class to then create a new QuadraticSplineSurface object for debugging.
+    def read_spline(self, filename: str) -> None:
         """
         Read a surface serialization from file
         @param[in] filename: file path for the serialized surface
+        @param[out] self.m_patches: patches to save to.
+
+        NOTE: method used for testing with ASOC code and to make sure that implementation is correct.
         """
-        unimplemented("Method not used anywhere.")
+        input_file: TextIO
+        filepath: str = os.path.abspath(f"src\\tests\\{filename}")
+        if not os.path.isfile(filepath):
+            raise Exception("File does not exist. Choose a file to read spline from.")
+
+        with open(filepath, 'r', encoding='utf-8') as input_file:
+            self.m_patches = self.deserialize(input_file)
+        input_file.close()
 
     def compute_patch_hash_tables(self) -> list[list[list[int]]]:
         """

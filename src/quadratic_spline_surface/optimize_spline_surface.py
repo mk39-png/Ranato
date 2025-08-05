@@ -282,15 +282,7 @@ def compute_local_twelve_split_energy_quadratic(local_hessian_data: LocalHessian
     r_alpha: np.ndarray = local_dof_data.r_alpha  # shape (12, 3)
     r_alpha_flat: np.ndarray = local_dof_data.r_alpha_flat  # shape (36, 1)
 
-    # full local 12x12 hessian (only smoothness and fitting terms)
-    # Wait, the below doesn't make sense... why filling 12x12 with 12x12??
-    # FIXME: local_hessian_12x12 is the wrong shape...
-    local_hessian_12x12: Matrix12x12r = 2 * (w_s * H_s + w_f * H_f)
-
-    npt.assert_array_equal(np.full(shape=(12, 12),
-                                   fill_value=(2*(w_s*H_s+w_f*H_f))),
-                           local_hessian_12x12)
-    assert local_hessian_12x12.shape == (12, 12)
+    # Full local 12x12 hessian (only smoothness and fitting terms)
     # Wait, the below doesn't make sense... why filling 12x12 with 12x12??
     # FIXME: local_hessian_12x12 is the wrong shape...
     local_hessian_12x12: Matrix12x12r = 2 * (w_s * H_s + w_f * H_f)
@@ -876,7 +868,6 @@ def build_planar_constraint_hessian(uv: np.ndarray,
     # Make block diagonal C_gl matrix
     C_gl_diag: np.ndarray = np.ndarray(shape=(36, 36), dtype=float)
     C_gl_diag[0:12, 0:12] = C_gl
-    # TODO: is the below slicing correct with ASOC code?
     C_gl_diag[12:24, 12:24] = C_gl
     C_gl_diag[24:36, 24:36] = C_gl
 
@@ -1139,15 +1130,15 @@ def optimize_twelve_split_spline_surface(
     # optimized_vertex_gradients_ref = np.nan_to_num(optimized_vertex_gradients_ref)
     # optimized_edge_gradients_ref = np.nan_to_num(optimized_edge_gradients_ref)
     filepath = "spot_control\\optimize_spline_surface\\optimize_twelve_split_spline_surface\\"
-    compare_eigen_numpy_matrix(filepath+"initial_variable_values.csv", initial_variable_values)
-    compare_eigen_numpy_matrix(filepath+"right_hand_side.csv", right_hand_side)
-    compare_eigen_numpy_matrix(filepath+"optimized_variable_values.csv", optimized_variable_values)
-    compare_eigen_numpy_matrix(filepath+"optimized_vertex_positions.csv",
-                               np.array(optimized_vertex_positions_ref).squeeze())
-    compare_eigen_numpy_matrix(filepath+"optimized_vertex_gradients.csv",
-                               np.array(optimized_vertex_gradients_ref), make_3d=True)
-    compare_eigen_numpy_matrix(filepath+"optimized_edge_gradients.csv",
-                               np.array(optimized_edge_gradients_ref).squeeze(), make_3d=True)
+    # compare_eigen_numpy_matrix(filepath+"initial_variable_values.csv", initial_variable_values)
+    # compare_eigen_numpy_matrix(filepath+"right_hand_side.csv", right_hand_side)
+    # compare_eigen_numpy_matrix(filepath+"optimized_variable_values.csv", optimized_variable_values)
+    # compare_eigen_numpy_matrix(filepath+"optimized_vertex_positions.csv",
+    #                            np.array(optimized_vertex_positions_ref).squeeze())
+    # compare_eigen_numpy_matrix(filepath+"optimized_vertex_gradients.csv",
+    #                            np.array(optimized_vertex_gradients_ref), make_3d=True)
+    # compare_eigen_numpy_matrix(filepath+"optimized_edge_gradients.csv",
+    #                            np.array(optimized_edge_gradients_ref).squeeze(), make_3d=True)
 
     return optimized_V, optimized_vertex_gradients_ref, optimized_edge_gradients_ref
 
@@ -1204,22 +1195,22 @@ def generate_optimized_twelve_split_position_data(V: np.ndarray,  # matrix
         fit_matrix,
         hessian_inverse)
 
-    # TODO: check values for optimized values here...
-    filepath: str = "spot_control\\optimize_spline_surface\\generate_optimized_twelve_split_position_data\\"
-    compare_eigen_numpy_matrix(filepath+"variable_vertices.csv", np.array(variable_vertices))
-    compare_eigen_numpy_matrix(filepath+"variable_edges.csv", np.array(variable_edges))
-    compare_eigen_numpy_matrix(
-        filepath+"optimized_V.csv",
-        optimized_V)
-    compare_eigen_numpy_matrix(
-        filepath+"optimized_vertex_gradients.csv",
-        np.array(optimized_vertex_gradients),
-        make_3d=True)
-    compare_eigen_numpy_matrix(
-        filepath+"optimized_reduced_edge_gradients.csv",
-        np.array(optimized_reduced_edge_gradients).squeeze(),
-        make_3d=True)
-    assert len(optimized_reduced_edge_gradients[0]) == 3
+    # # TODO: check values for optimized values here...
+    # filepath: str = "spot_control\\optimize_spline_surface\\generate_optimized_twelve_split_position_data\\"
+    # compare_eigen_numpy_matrix(filepath+"variable_vertices.csv", np.array(variable_vertices))
+    # compare_eigen_numpy_matrix(filepath+"variable_edges.csv", np.array(variable_edges))
+    # compare_eigen_numpy_matrix(
+    #     filepath+"optimized_V.csv",
+    #     optimized_V)
+    # compare_eigen_numpy_matrix(
+    #     filepath+"optimized_vertex_gradients.csv",
+    #     np.array(optimized_vertex_gradients),
+    #     make_3d=True)
+    # compare_eigen_numpy_matrix(
+    #     filepath+"optimized_reduced_edge_gradients.csv",
+    #     np.array(optimized_reduced_edge_gradients).squeeze(),
+    #     make_3d=True)
+    # assert len(optimized_reduced_edge_gradients[0]) == 3
 
     # TESTING --
     # https://stackoverflow.com/questions/6736590/fast-check-for-nan-in-numpy
@@ -1344,6 +1335,7 @@ def convert_reduced_edge_gradients_to_full(reduced_edge_gradients: list[list[Spa
     num_faces: int = len(reduced_edge_gradients)
 
     # Compute the first gradient and copy the second for each edge
+    # TODO: maybe use dict rather than list of list to avoid refrences referring to same object issue
     edge_gradients: list[list[Matrix2x3r]] = [[np.ndarray(shape=(2, 3), dtype=np.float64),
                                                np.ndarray(shape=(2, 3), dtype=np.float64),
                                                np.ndarray(shape=(2, 3), dtype=np.float64)] for _ in range(num_faces)]

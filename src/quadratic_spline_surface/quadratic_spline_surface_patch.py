@@ -11,6 +11,8 @@ from src.core.bivariate_quadratic_function import *
 
 import polyscope as ps
 
+from typing import TextIO
+
 
 # **************************************
 # Quadratic Spline Surface Patch Helpers
@@ -64,6 +66,7 @@ class QuadraticSplineSurfacePatch:
         # NOTE: domain is not set by the default constructor in ASOC code and can be None type
         if (surface_mapping_coeffs is None) and (domain is None):
             self.m_surface_mapping_coeffs: Matrix6x3r = np.zeros(shape=(6, 3))
+            self.m_domain: None = None
             self.m_normal_mapping_coeffs: Matrix6x3r = np.zeros(shape=(6, 3))
             self.m_normalized_surface_mapping_coeffs: Matrix6x3r = np.zeros(
                 shape=(6, 3))
@@ -189,7 +192,7 @@ class QuadraticSplineSurfacePatch:
     def get_bbox_x_min(self) -> float:
         """
         Get the minimum x-coordinate of the bounding box.
-        Note that min_point is NumPy shape (1, 3)
+        Note that min_point is NumPy shape (1, 2)
 
         :return: self.m_min_point[0][0]: x-coordinate of the minimum point of the bounding box
         :rtype: float
@@ -199,7 +202,7 @@ class QuadraticSplineSurfacePatch:
     def get_bbox_y_min(self) -> float:
         """
         Get the minimum y-coordinate of the bounding box.
-        Note that min_point is NumPy shape (1, 3)
+        Note that min_point is NumPy shape (1, 2)
 
         :return: self.m_min_point[0][1]: y-coordinate of the minimum point of the bounding box
         :rtype: float
@@ -218,7 +221,7 @@ class QuadraticSplineSurfacePatch:
     def get_bbox_x_max(self) -> float:
         """
         Get the maximum x-coordinate of the bounding box.
-        Note that max_point is NumPy shape (1, 3)
+        Note that max_point is NumPy shape (1, 2)
 
         :return: self.m_max_point[0][0]: x-coordinate of the maximum point of the bounding box
         :rtype: float
@@ -368,8 +371,7 @@ class QuadraticSplineSurfacePatch:
         :rtype: list[SpatialVector]
         """
         # Sample the convex domain
-        domain_points: list[PlanarPoint] = self.m_domain.sample(
-            sampling_density)
+        domain_points: list[PlanarPoint] = self.m_domain.sample(sampling_density)
 
         # Lift the domain points to the surface
         num_points: int = len(domain_points)
@@ -384,51 +386,42 @@ class QuadraticSplineSurfacePatch:
 
     def triangulate(self,
                     num_refinements: int,
-                    V_ref: np.ndarray[tuple[int, int], np.dtype[np.float64]],
-                    F_ref: np.ndarray[tuple[int, int], np.dtype[np.int64]],
-                    N_ref: np.ndarray[tuple[int, int], np.dtype[np.float64]]) -> None:
-        # -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+                    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Triangulate the surface patch.
+        NOTE: Changed to return by value since this creates a new patch that has been
+        triangulated anyways, no need to reference the original, if that makes sense.
 
         :param num_refinements: number of refinements of the domain to perform.
         :type num_refinements: int
-
-        # TODO: format params below to sphinx format
-        @param[out] V: triangulated patch vertex positions (shape (n, 3))
-        @param[out] F: triangulated patch faces
-        @param[out] N: triangulated patch vertex normals (shape (n, 3))
-
-        # TODO: remove the return note because it is no longer true.
-        :return: triangulated patch vertex positions (V), faces (F), and vertex normals (N)
+        :return: (V_triangulate, F_triangulate, N_triangulate). Triangulated patch vertex positions (V), 
+        triangulated patch faces (F), and triangulated patch vertex normals (N). V and N shape (n, 3)
         :rtype: tuple[np.ndarray, np.ndarray, np.ndarray]
         """
-
         # Triangulate the domain
-        V_domain: np.ndarray
-        F: np.ndarray
-
-        # TODO: will F be changed by reference or what? What will happen to F as it gets reassigned here?
-        V_domain, F = self.m_domain.triangulate(num_refinements)
+        # NOTE: domain refers to UV coords, which is (N, 2) shape
+        V_domain: np.ndarray[tuple[int, int], np.dtype[np.float64]]
+        F_triangulate: np.ndarray[tuple[int, int], np.dtype[np.int64]]
+        V_domain, F_triangulate = self.m_domain.triangulate(num_refinements)
+        # FIXME: check with V_domain
 
         # Lift the domain vertices to the surface and also compute the normals
-        # reshape to (V_domain.rows(), self.dimension)
-        V_ref.resize((V_domain.shape[ROWS], self.dimension), refcheck=False)
-        N_ref.resize((V_domain.shape[ROWS], self.dimension), refcheck=False)
+        V_triangulate: np.ndarray[tuple[int, int], np.dtype[np.float64]]
+        N_triangulate: np.ndarray[tuple[int, int], np.dtype[np.float64]]
+        V_triangulate = np.ndarray(shape=(V_domain.shape[ROWS], self.dimension), dtype=np.float64)
+        N_triangulate = np.ndarray(shape=(V_domain.shape[ROWS], self.dimension), dtype=np.float64)
 
         for i in range(V_domain.shape[ROWS]):  # V_domain.rows()
             # V_domain of shape
+            # FIXME: normal and surface evaluations are NOT correct....
             surface_point: SpatialVector = self.evaluate(V_domain[[i], :])
             surface_normal: SpatialVector = self.evaluate_normal(V_domain[[i], :])
 
             # TODO: something might go wrong with the broadcasting shapes
-            V_ref[i, :] = surface_point.flatten()
-            N_ref[i, :] = surface_normal.flatten()
+            V_triangulate[i, :] = surface_point.flatten()
+            N_triangulate[i, :] = surface_normal.flatten()
 
-        # Have changes in F reflected back in F_ref parameter
-        # TODO: does this work for F_ref of any size?
-        F_ref.resize(F.shape, refcheck=False)
-        np.copyto(F_ref, F)
+        return V_triangulate, F_triangulate, N_triangulate
 
     def add_patch_to_viewer(self, patch_name: str = "surface_patch") -> None:
         """
@@ -441,17 +434,16 @@ class QuadraticSplineSurfacePatch:
         num_refinements: int = 2
 
         # TODO: does the logic below work? Triangulate modifies by reference and that may bring up some issues with this Python code.
-        V: np.ndarray = np.zeros(shape=(0, 0))
-        F: np.ndarray = np.zeros(shape=(0, 0))
-        N: np.ndarray = np.zeros(shape=(0, 0))
-
-        self.triangulate(num_refinements, V, F, N)
+        V: np.ndarray
+        F: np.ndarray
+        N: np.ndarray
+        V, F, N = self.triangulate(num_refinements)
 
         # Add patch mesh
         ps.init()
         ps.register_surface_mesh(patch_name, V, F)
 
-    def serialize(self, out) -> str:
+    def serialize(self, output_file: TextIO) -> None:
         """
         Write the patch information to the output stream in the format
             c a_0 a_u a_v a_uv a_uu a_vv
@@ -462,19 +454,61 @@ class QuadraticSplineSurfacePatch:
         :return: stream to write serialization to
         :rtype: str
         """
-        todo("figure out python's way of writing to a file")
+        precision: int = 17
+        output_file.write("patch\n")
 
-    def write_patch(self, filename: str):
-        """
-        Write patch to file.
+        # Serialize x coordinate coefficients
+        output_file.write("cx")
+        for i in range(self.m_surface_mapping_coeffs.shape[ROWS]):
+            output_file.write(f" {self.m_surface_mapping_coeffs[i, 0]:.{precision}f}")
+        output_file.write("\n")
 
-        :param filename: file to write serialized patch to.
-        :type filename: str
-        """
-        todo()
+        # Serialize y coordinate coefficients
+        output_file.write("cy")
+        for i in range(self.m_surface_mapping_coeffs.shape[ROWS]):
+            output_file.write(f" {self.m_surface_mapping_coeffs[i, 1]:.{precision}f}")
+        output_file.write("\n")
 
-    # ***************
-    # Private methods
-    # ***************
-    def __formatted_patch(self):
-        todo()
+        # Serialize z coordinate coefficients
+        output_file.write("cz")
+        for i in range(self.m_surface_mapping_coeffs.shape[ROWS]):
+            output_file.write(f" {self.m_surface_mapping_coeffs[i, 2]:.{precision}f}")
+        output_file.write("\n")
+
+        # Serialize domain boundary
+        vertices: Matrix3x2r = self.m_domain.get_vertices
+        if (self.get_cone() == 0):
+            output_file.write("cp1 ")
+        else:
+            output_file.write("p1 ")
+        output_file.write(f"{vertices[0, 0]:.{precision}f} {vertices[0, 1]:.{precision}f}\n")
+
+        if (self.get_cone() == 1):
+            output_file.write("cp2 ")
+        else:
+            output_file.write("p2 ")
+        output_file.write(f"{vertices[1, 0]:.{precision}f} {vertices[1, 1]:.{precision}f}\n")
+
+        if (self.get_cone() == 2):
+            output_file.write("cp3 ")
+        else:
+            output_file.write("p3 ")
+        output_file.write(f"{vertices[2, 0]:.{precision}f} {vertices[2, 1]:.{precision}f}\n")
+
+
+def write_patch(self, filename: str):
+    """
+    Write patch to file.
+
+    :param filename: file to write serialized patch to.
+    :type filename: str
+    """
+    unimplemented("this is only used to check a singular individual patch rather than an entire surface")
+
+# ***************
+# Private methods
+# ***************
+
+
+def __formatted_patch(self):
+    todo()

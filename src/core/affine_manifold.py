@@ -10,6 +10,11 @@ import polyscope as ps
 import mathutils
 from dataclasses import dataclass
 
+import json  # for testing
+
+import numpy as np
+import numpy.testing as npt
+
 
 @dataclass
 class VertexManifoldChart:
@@ -28,13 +33,13 @@ class VertexManifoldChart:
     """
 
     # Index of the vertex in the affine manifold
-    vertex_index: int
+    vertex_index: Index
     # List of manifold vertex indices in the one ring
-    vertex_one_ring: list[int]
+    vertex_one_ring: list[Index]
     # List of manifold face indices in the one ring
-    face_one_ring: list[int]
+    face_one_ring: list[Index]
     # Local uv coordinates of the one ring vertices
-    one_ring_uv_positions: np.ndarray
+    one_ring_uv_positions: np.ndarray  # shape (N, 2)
     # Mark boundary vertices
     is_boundary: bool = False
     # Mark cone vertices
@@ -86,7 +91,7 @@ class FaceManifoldChart:
                  _face_uv_positions: list[PlanarPoint],
                  _is_boundary: bool = False,
                  _is_cone_adjacent: bool = False,
-                 _is_cone_corner: list[bool] = [False, False, False]) -> None:
+                 _is_cone_corner: list[bool] | None = None) -> None:
 
         # -- Face indices --
         self.face_index: Index = _face_index
@@ -104,8 +109,122 @@ class FaceManifoldChart:
         self.is_cone_adjacent: bool = _is_cone_adjacent
 
         # Mark individual corners adjacent to a cone
-        assert len(_is_cone_corner) == 3
-        self.is_cone_corner: list[bool] = _is_cone_corner
+        self.is_cone_corner: list[bool]
+        if _is_cone_corner is None:
+            self.is_cone_corner = [False, False, False]
+        else:
+            assert len(_is_cone_corner) == 3
+            self.is_cone_corner = _is_cone_corner
+
+
+# below was generated for testing!
+def compare_vertex_charts(
+    vertex_charts_control: list[dict],
+    vertex_charts_test: list['VertexManifoldChart']
+):
+    """
+    TEMPORARY: used to test the vertex charts inputs...
+    """
+    assert len(vertex_charts_control) == len(vertex_charts_test), "Mismatch in chart count"
+
+    for i, chart_control in enumerate(vertex_charts_control):
+        control_vertex_index: int = chart_control.get("vertex_index")
+        control_vertex_one_ring: list[int] = chart_control.get("vertex_one_ring")
+        control_face_one_ring: list[int] = chart_control.get("face_one_ring")
+        control_uv_positions: Vector1D = np.array(chart_control.get("one_ring_uv_positions"))
+        control_is_boundary: bool = chart_control.get("is_boundary")
+        control_is_cone: bool = chart_control.get("is_cone")
+        control_is_cone_adjacent: bool = chart_control.get("is_cone_adjacent")
+
+        vertex_chart_test: VertexManifoldChart = vertex_charts_test[i]
+        test_uv_positions: np.ndarray = vertex_chart_test.one_ring_uv_positions
+
+        assert control_vertex_index == vertex_chart_test.vertex_index
+        assert control_vertex_one_ring == vertex_chart_test.vertex_one_ring
+        assert control_face_one_ring == vertex_chart_test.face_one_ring
+        npt.assert_allclose(test_uv_positions, control_uv_positions, atol=1e-6)
+        assert control_is_boundary == vertex_chart_test.is_boundary
+        assert control_is_cone == vertex_chart_test.is_cone
+        assert control_is_cone_adjacent == vertex_chart_test.is_cone_adjacent
+
+
+def compare_edge_charts(edge_charts_control: list[dict],  edge_charts_test: list[EdgeManifoldChart]):
+    """
+    TEMPORARY: used to test the edge charts inputs...
+    """
+    assert len(edge_charts_control) == len(edge_charts_test)
+    for i, chart_control in enumerate(edge_charts_control):
+        control_top_face_idx: int = chart_control.get("top_face_index")
+        control_bot_face_idx: int = chart_control.get("bottom_face_index")
+        control_left_vert_idx: int = chart_control.get("left_vertex_index")
+        control_right_vert_idx: int = chart_control.get("right_vertex_index")
+        control_top_vert_idx: int = chart_control.get("top_vertex_index")
+        control_bot_vert_idx: int = chart_control.get("bottom_vertex_index")
+        control_left_vert_uv_posn: np.ndarray = np.array(chart_control.get("left_vertex_uv_position"))
+        control_right_vert_uv_posn: np.ndarray = np.array(chart_control.get("right_vertex_uv_position"))
+        control_top_vert_uv_posn: np.ndarray = np.array(chart_control.get("top_vertex_uv_position"))
+        control_bottom_vert_uv_posn: np.ndarray = np.array(chart_control.get("bottom_vertex_uv_position"))
+        control_is_boundary_control: bool = chart_control.get("is_boundary")
+
+        edge_chart_test: EdgeManifoldChart = edge_charts_test[i]
+        test_top_face_idx: int = edge_chart_test.top_face_index
+        test_bot_face_idx: int = edge_chart_test.bottom_face_index
+        test_left_vert_idx: int = edge_chart_test.left_vertex_index
+        test_right_vert_idx: int = edge_chart_test.right_vertex_index
+        test_top_vert_idx: int = edge_chart_test.top_vertex_index
+        test_bot_vert_idx: int = edge_chart_test.bottom_vertex_index
+        test_left_vert_uv_posn: np.ndarray = edge_chart_test.left_vertex_uv_position.flatten()
+        test_right_vert_uv_posn: np.ndarray = edge_chart_test.right_vertex_uv_position.flatten()
+        test_top_vert_uv_posn: np.ndarray = edge_chart_test.top_vertex_uv_position.flatten()
+        test_bottom_vert_uv_posn: np.ndarray = edge_chart_test.bottom_vertex_uv_position.flatten()
+        test_is_boundary_control: bool = edge_chart_test.is_boundary
+
+        assert control_top_face_idx == test_top_face_idx
+        assert control_bot_face_idx == test_bot_face_idx
+        assert control_left_vert_idx == test_left_vert_idx
+        assert control_right_vert_idx == test_right_vert_idx
+        assert control_top_vert_idx == test_top_vert_idx
+        assert control_bot_vert_idx == test_bot_vert_idx
+        npt.assert_allclose(test_left_vert_uv_posn, control_left_vert_uv_posn,
+                            atol=FLOAT_EQUAL_PRECISION, verbose=True)
+        npt.assert_allclose(test_right_vert_uv_posn, control_right_vert_uv_posn, atol=0.001)
+        npt.assert_allclose(test_top_vert_uv_posn, control_top_vert_uv_posn, atol=0.001)
+        npt.assert_allclose(test_bottom_vert_uv_posn, control_bottom_vert_uv_posn, atol=0.001)
+        assert control_is_boundary_control == test_is_boundary_control
+
+
+def compare_face_charts(
+    face_charts_control: list[dict],
+    face_charts_test: list['FaceManifoldChart']
+):
+    """
+    Compare control dicts with actual FaceManifoldChart objects.
+    """
+    assert len(face_charts_control) == len(face_charts_test), "Mismatch in number of face charts"
+
+    for i, chart_control in enumerate(face_charts_control):
+        control_face_index: int = chart_control.get("face_index")
+        control_uv_positions: np.ndarray = np.array(chart_control.get(
+            "face_uv_positions"))  # list of PlanarPoint... so Nx2 shape
+        # np.array(p) for p in chart_control.get("face_uv_positions")
+        control_is_boundary: bool = chart_control.get("is_boundary")
+        control_is_cone_adjacent: bool = chart_control.get("is_cone_adjacent")
+        control_is_cone_corner: list[bool] = np.array(chart_control.get("is_cone_corner"))
+
+        chart_test: FaceManifoldChart = face_charts_test[i]
+
+        assert control_face_index == chart_test.face_index, f"Mismatch at face index {i}"
+
+        # Compare UV positions one by one
+
+        npt.assert_allclose(control_uv_positions,
+                            np.array(chart_test.face_uv_positions).squeeze(),
+                            atol=1e-5,
+                            )
+
+        assert control_is_boundary == chart_test.is_boundary, f"Boundary flag mismatch at face {i}"
+        assert control_is_cone_adjacent == chart_test.is_cone_adjacent, f"Cone-adjacent flag mismatch at face {i}"
+        npt.assert_array_equal(np.array(chart_test.is_cone_corner), np.array(control_is_cone_corner))
 
 
 class AffineManifold:
@@ -146,7 +265,7 @@ class AffineManifold:
         # TODO (from ASOC): The faces are duplicated in the halfedge. Our halfedge alway retains
         # the original VF topology, so there is no need to maintain both separately
         # TODO: check if below is actually retrieving what we need properly
-        self.m_F: np.ndarray = F
+        self.m_F: np.ndarray[tuple[int, int], np.dtype[np.int64]] = F
         self.m_halfedge = Halfedge(F)  # Build halfedge
         he_to_edge: list[Index] = self.m_halfedge.get_halfedge_to_edge_map
         self.m_corner_to_he: list[list[Index]] = self.m_halfedge.get_corner_to_he
@@ -175,7 +294,7 @@ class AffineManifold:
         self._align_local_charts(global_uv, F_uv)
 
         # Mark vertices, edges, and faces adjacent to cones
-        self._mark_cones()
+        self._mark_cones()  # FIXME something wrong with the cone marking booleans...
 
         # Check validity
         if not self._is_valid_affine_manifold():
@@ -186,33 +305,33 @@ class AffineManifold:
         # TESTING:
         # ********************
         # TODO: move these to a different test case.
-        if logger.level == logging.DEBUG:
-            filepath: str = "spot_control\\affine_manifold\\"
-            compare_eigen_numpy_matrix(f"{filepath}m_l.csv", np.array(self.m_l))
-            compare_eigen_numpy_matrix(f"{filepath}m_corner_to_edge.csv",
-                                       np.array(self.m_corner_to_edge))
-            compare_eigen_numpy_matrix(
-                f"{filepath}m_corner_to_he.csv", np.array(self.m_corner_to_he))
-            compare_eigen_numpy_matrix(f"{filepath}m_F.csv", self.m_F)
-            compare_eigen_numpy_matrix(f"{filepath}m_F_uv.csv", self.m_F_uv)
-            compare_eigen_numpy_matrix(
-                f"{filepath}m_global_uv.csv", self.m_global_uv)
-            compare_eigen_numpy_matrix(
-                f"{filepath}m_he_to_corner.csv", np.array(self.m_he_to_corner))
-            compare_eigen_numpy_matrix(
-                f"{filepath}he_to_edge.csv", np.array(he_to_edge))
+        # if logger.level == logging.DEBUG:
+        #     filepath: str = "spot_control\\affine_manifold\\"
+        #     compare_eigen_numpy_matrix(f"{filepath}m_l.csv", np.array(self.m_l))
+        #     compare_eigen_numpy_matrix(f"{filepath}m_corner_to_edge.csv",
+        #                                np.array(self.m_corner_to_edge))
+        #     compare_eigen_numpy_matrix(
+        #         f"{filepath}m_corner_to_he.csv", np.array(self.m_corner_to_he))
+        #     compare_eigen_numpy_matrix(f"{filepath}m_F.csv", self.m_F)
+        #     compare_eigen_numpy_matrix(f"{filepath}m_F_uv.csv", self.m_F_uv)
+        #     compare_eigen_numpy_matrix(
+        #         f"{filepath}m_global_uv.csv", self.m_global_uv)
+        #     compare_eigen_numpy_matrix(
+        #         f"{filepath}m_he_to_corner.csv", np.array(self.m_he_to_corner))
+        #     compare_eigen_numpy_matrix(
+        #         f"{filepath}he_to_edge.csv", np.array(he_to_edge))
 
-            vertex_charts_control: list[dict] = load_json(
-                f"{filepath}m_vertex_charts_LAST.json")
-            compare_vertex_charts(vertex_charts_control, self.m_vertex_charts)
+        #     vertex_charts_control: list[dict] = load_json(
+        #         f"{filepath}m_vertex_charts_LAST.json")
+        #     compare_vertex_charts(vertex_charts_control, self.m_vertex_charts)
 
-            edge_charts_control: list[dict] = load_json(
-                f"{filepath}m_edge_charts_LAST.json")
-            compare_edge_charts(edge_charts_control, self.m_edge_charts)
+        #     edge_charts_control: list[dict] = load_json(
+        #         f"{filepath}m_edge_charts_LAST.json")
+        #     compare_edge_charts(edge_charts_control, self.m_edge_charts)
 
-            face_charts_control: list[dict] = load_json(
-                f"{filepath}m_face_charts_LAST.json")
-            compare_face_charts(face_charts_control, self.m_face_charts)
+        #     face_charts_control: list[dict] = load_json(
+        #         f"{filepath}m_face_charts_LAST.json")
+        #     compare_face_charts(face_charts_control, self.m_face_charts)
 
     @property
     def num_faces(self) -> Index:
@@ -233,7 +352,7 @@ class AffineManifold:
         return len(self.m_vertex_charts)
 
     @property
-    def get_faces(self) -> np.ndarray:
+    def get_faces(self) -> np.ndarray[tuple[int, int], np.dtype[np.int64]]:
         """
         Get faces for the manifold
 
@@ -306,7 +425,7 @@ class AffineManifold:
         """
         return self.m_face_charts[face_index]
 
-    def get_face_corner_charts(self, face_index: Index) -> list:
+    def get_face_corner_charts(self, face_index: Index) -> list[Matrix2x2r]:
         """
         Get the portions of the isometric vertex charts corresponding to the
         corners of a given face.
@@ -319,22 +438,21 @@ class AffineManifold:
         @param[in] face_index: index of the face for the chart segments
         @param[out] corner_uv_positions: chart uv positions as enumerated above
         """
-        corner_uv_positions: list[np.ndarray] = [np.zeros(shape=(2, 2)),
-                                                 np.zeros(shape=(2, 2)),
-                                                 # TODO: fill with 0s or some random value for easier debugging like -39..... but yeah... This may be an issue of Eigen innerworkings.
-                                                 np.zeros(shape=(2, 2))]
+        # TODO: fill with 0s or some random value for easier debugging like -39..... but yeah...
+        # This may be an issue of Eigen innerworkings.
+        corner_uv_positions: list[Matrix2x2r] = [np.zeros(shape=(2, 2), dtype=np.float64),
+                                                 np.zeros(shape=(2, 2), dtype=np.float64),
+                                                 np.zeros(shape=(2, 2), dtype=np.float64)]
 
         for i in range(3):
             # Get the chart for vertex i in the given face
-            vertex_index = self.m_F[face_index, i]
+            vertex_index: int = self.m_F[face_index, i]
             chart: VertexManifoldChart = self.m_vertex_charts[vertex_index]
 
             # Iterate over the one ring of face vertex i
-            for j, face in enumerate(chart.face_one_ring):
-                # NOTE: face equivalent to chart.face_one_ring[j]
-
+            for j, _ in enumerate(chart.face_one_ring):
                 # Skip faces until the input face is found
-                if (face != face_index):
+                if (chart.face_one_ring[j] != face_index):
                     continue
 
                 # Get the uv coordinates of the other two face vertices in the chart of face vertex i
@@ -342,16 +460,14 @@ class AffineManifold:
                 second_edge: int = j + 1
 
                 # TODO: check slicing with Eigen .row()
-                corner_uv_positions[i][0,
-                                       :] = chart.one_ring_uv_positions[first_edge, :]
-                corner_uv_positions[i][1,
-                                       :] = chart.one_ring_uv_positions[second_edge, :]
+                corner_uv_positions[i][0, :] = chart.one_ring_uv_positions[first_edge, :]
+                corner_uv_positions[i][1, :] = chart.one_ring_uv_positions[second_edge, :]
                 break
 
         assert len(corner_uv_positions) == 3
         return corner_uv_positions
 
-    def get_face_edge_charts(self, face_index: Index) -> list:
+    def get_face_edge_charts(self, face_index: Index) -> list[Matrix3x2r]:
         """
         Get the portion of the edge charts contained in the interior of the given
         face.
@@ -365,9 +481,9 @@ class AffineManifold:
         @param[out] face_edge_uv_positions: uv positions contained in the given
         face
         """
-        face_edge_uv_positions: list[PlanarPoint] = [PlanarPoint(shape=(1, 2)),
-                                                     PlanarPoint(shape=(1, 2)),
-                                                     PlanarPoint(shape=(1, 2))]
+        face_edge_uv_positions: list[PlanarPoint] = [PlanarPoint(shape=(1, 2), dtype=np.float64),
+                                                     PlanarPoint(shape=(1, 2), dtype=np.float64),
+                                                     PlanarPoint(shape=(1, 2), dtype=np.float64)]
 
         # Iterate over edges
         for i in range(3):
@@ -449,6 +565,7 @@ class AffineManifold:
         @return true iff the manifold is flat at the vertex
         """
         # All vertices with zero curvature are flat
+        # FIXME: something wrong with either compute curvature or is_boundary...
         if float_equal_zero(self.compute_curvature(vertex_index), 1e-5):
             return True
 
@@ -481,6 +598,7 @@ class AffineManifold:
         cones: list[Index] = []
 
         for vertex_index in range(self.num_vertices):
+            # FIXME: something wrong with is_flat
             if not self.is_flat(vertex_index):
                 logger.debug("Getting cone %s of curvature %s",
                              vertex_index, self.compute_curvature(vertex_index))
@@ -501,8 +619,7 @@ class AffineManifold:
 
         for fi in range(self.num_faces):
             for k in range(3):
-                is_cone_corner[fi][k] = self.get_face_chart(
-                    fi).is_cone_corner[k]
+                is_cone_corner[fi][k] = self.get_face_chart(fi).is_cone_corner[k]
 
         return is_cone_corner
 
@@ -593,7 +710,7 @@ class AffineManifold:
         them.
         """
         # TODO: fix the names of these attribute getters...
-        F: np.ndarray = self.get_faces
+        F: np.ndarray[tuple[int, int], np.dtype[np.int64]] = self.get_faces
 
         # Get cone vertices
         cones: list[Index] = self.compute_cones()
@@ -606,11 +723,7 @@ class AffineManifold:
 
             # Get edge chart adjacent to the cone edge
             face_index: Index = vertex_chart.face_one_ring[0]
-            # FIXME: mostly likely going to be a problem with slicing below.., maybe.
-            # Though, probably not since find_face_vertex_index() expects 1D arrays, luckily.
-            # And slicing like below gives 1D arrays of shape (n, )
-            face_vertex_index: Index = find_face_vertex_index(
-                F[face_index, :], vi)
+            face_vertex_index: Index = find_face_vertex_index(F[face_index, :], vi)
 
             edge_chart: EdgeManifoldChart = self.get_edge_chart(
                 face_index, face_vertex_index)
@@ -710,7 +823,7 @@ class AffineManifold:
     # Protected Methods
     # *****************
     def _build_vertex_charts_from_lengths(self,
-                                          F: np.ndarray,
+                                          F:  MatrixXi,
                                           l: list[list[float]]) -> list[VertexManifoldChart]:
         """
         Build isometric charts for a surface with a flat metric
@@ -877,7 +990,6 @@ class AffineManifold:
         """
         num_faces: Index = F.shape[ROWS]
         face_charts: list[FaceManifoldChart] = []
-        # [FaceManifoldChart] * num_faces
 
         for face_index in range(num_faces):
             __face_index: int = face_index
@@ -887,15 +999,11 @@ class AffineManifold:
 
             for face_vertex_index in range(3):
                 uv_vertex_index: Index = F_uv[face_index, face_vertex_index]
-
-                # FIXME: may be  issue with translation from Eigen:row() to NP slicin
                 assert global_uv[[uv_vertex_index], :].shape == (1, 2)  # checking to see if same shape as PlanarPoint
-
                 __face_uv_positions[face_vertex_index] = global_uv[[uv_vertex_index], :]
 
             # append to face_charts
-            face_charts.append(FaceManifoldChart(__face_index,
-                                                 __face_uv_positions))
+            face_charts.append(FaceManifoldChart(__face_index, __face_uv_positions))
         assert len(face_charts) == num_faces
         return face_charts
 
@@ -1101,13 +1209,13 @@ class AffineManifold:
             # Mark vertices adjacent to cones
             logger.debug("Marking cone at adjacent vertices at %s",
                          formatted_vector(chart.vertex_one_ring, ", "))
-            for j, vj in enumerate(chart.vertex_one_ring):
+            for _, vj in enumerate(chart.vertex_one_ring):
                 self.m_vertex_charts[vj].is_cone_adjacent = True
 
             # Mark faces adjacent to cones
             logger.debug("Marking cone adjacent faces at %s",
                          formatted_vector(chart.face_one_ring, ", "))
-            for j, fj in enumerate(chart.face_one_ring):
+            for _, fj in enumerate(chart.face_one_ring):
                 self.m_face_charts[fj].is_cone_adjacent = True
 
                 # Mark individual corners

@@ -188,6 +188,10 @@ class RationalFunction:
 
         # Evaluate the function at the sampled domain points
         # TODO: is this filling of default np.ndarray of zeros correct?
+        # WARNING: REMOVE LIST_RESIZE AND REPLACE WITH MAP.
+        # LIST_RESIZE WITH COMPLEX OBJECTS SIMPLY COPIES THE REFERENCE TO THE SAME OBJECT.
+        # TODO:
+        # URGENT:
         list_resize(points_ref, num_points, np.zeros(shape=(1, 2)))
         for i in range(num_points):
             points_ref[i] = self.__evaluate(t_samples[i])
