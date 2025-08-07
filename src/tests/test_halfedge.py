@@ -1,14 +1,69 @@
+"""
+File to test Halfedge class.
+Also includes test to compare with original implementation.
+"""
 
-from src.core.common import *
-from src.core.halfedge import *
-from src.utils.generate_shapes import *
-
-import numpy as np
+import os
 import pytest
+import numpy as np
+import igl
+
+from src.core.common import (
+    compare_eigen_numpy_matrix,
+    MatrixNx3i,
+    MatrixXf,
+    MatrixXi,
+    Index
+)
+from src.core.halfedge import Halfedge
 
 
-def test_halfedge_one_triangle():
-    F: np.ndarray = np.array([[0, 1, 2]], dtype=int)
+def test_halfedge_from_spot_control() -> None:
+    """
+    Tests constructor of halfedge from spot control mesh.
+    """
+    # Get input mesh
+    V: MatrixXf = np.ndarray(shape=(0, 0), dtype=np.float64)
+    uv: MatrixXf = np.ndarray(shape=(0, 0), dtype=np.float64)
+    N: MatrixXf = np.ndarray(shape=(0, 0), dtype=np.float64)
+    F: MatrixXi = np.ndarray(shape=(0, 0), dtype=np.int64)
+    FT: MatrixXi = np.ndarray(shape=(0, 0), dtype=np.int64)
+    FN: MatrixXi = np.ndarray(shape=(0, 0), dtype=np.int64)
+
+    filename: str = "spot_control_mesh-cleaned_conf_simplified_with_uv.obj"
+    filepath: str = os.path.abspath(f"src\\tests\\spot_control\\{filename}")
+    V, uv, N, F, FT, FN = igl.readOBJ(filepath)
+
+    halfedge = Halfedge(F)
+
+    filepath: str = "spot_control\\halfedge\\"
+    # TODO: maybe test num_edges, num_he, num_faces, and num_vertices members.
+    compare_eigen_numpy_matrix(f"{filepath}corner_to_he.csv",
+                               np.array(halfedge.corner_to_he))
+    compare_eigen_numpy_matrix(f"{filepath}he_to_corner.csv",
+                               np.array(halfedge.he_to_corner))
+    compare_eigen_numpy_matrix(f"{filepath}e2he.csv",
+                               np.array(halfedge.m_e2he))
+    compare_eigen_numpy_matrix(f"{filepath}f2he.csv",
+                               np.array(halfedge.m_f2he))
+    compare_eigen_numpy_matrix(f"{filepath}face.csv",
+                               np.array(halfedge.m_face))
+    compare_eigen_numpy_matrix(f"{filepath}from.csv",
+                               np.array(halfedge.m_from))
+    compare_eigen_numpy_matrix(f"{filepath}he2e.csv",
+                               np.array(halfedge.m_he2e))
+    compare_eigen_numpy_matrix(f"{filepath}next.csv",
+                               np.array(halfedge.m_next))
+    compare_eigen_numpy_matrix(f"{filepath}opp.csv",
+                               np.array(halfedge.m_opp))
+    compare_eigen_numpy_matrix(f"{filepath}out.csv",
+                               np.array(halfedge.m_out))
+    compare_eigen_numpy_matrix(f"{filepath}to.csv",
+                               np.array(halfedge.m_to))
+
+
+def test_halfedge_one_triangle() -> None:
+    F: MatrixNx3i = np.array([[0, 1, 2]], dtype=np.int64)
 
     mesh = Halfedge(F)
     corner_to_he: list[list[Index]] = mesh.get_corner_to_he
@@ -24,9 +79,9 @@ def test_halfedge_one_triangle():
     assert mesh.num_edges == 3
 
     # Get mesh elements
-    he0 = corner_to_he[0][0]
-    he1 = corner_to_he[0][1]
-    he2 = corner_to_he[0][2]
+    he0: int = corner_to_he[0][0]
+    he1: int = corner_to_he[0][1]
+    he2: int = corner_to_he[0][2]
     f0 = 0
     v0 = 0
     v1 = 1
@@ -51,8 +106,8 @@ def test_halfedge_one_triangle():
     assert mesh.halfedge_to_head_vertex(he2) == v1
 
 
-def test_halfedge_two_closed_triangles():
-    F = np.array([[0, 1, 2], [0, 2, 1]], dtype=int)
+def test_halfedge_two_closed_triangles() -> None:
+    F: MatrixNx3i = np.array([[0, 1, 2], [0, 2, 1]], dtype=np.int64)
     mesh = Halfedge(F)
     corner_to_he: list[list[Index]] = mesh.get_corner_to_he
     he_to_corner: list[tuple[Index, Index]] = mesh.get_he_to_corner
@@ -69,12 +124,12 @@ def test_halfedge_two_closed_triangles():
 
     # Get mesh elements
     # Halfedges are indexed by face and global vertex index
-    he00 = corner_to_he[0][0]
-    he01 = corner_to_he[0][1]
-    he02 = corner_to_he[0][2]
-    he10 = corner_to_he[1][0]
-    he11 = corner_to_he[1][2]
-    he12 = corner_to_he[1][1]
+    he00: int = corner_to_he[0][0]
+    he01: int = corner_to_he[0][1]
+    he02: int = corner_to_he[0][2]
+    he10: int = corner_to_he[1][0]
+    he11: int = corner_to_he[1][2]
+    he12: int = corner_to_he[1][1]
     f0 = 0
     f1 = 1
     v0 = 0
@@ -121,8 +176,8 @@ def test_halfedge_two_closed_triangles():
     assert mesh.halfedge_to_head_vertex(he12) == v0
 
 
-def test_halfedge_two_open_triangles():
-    F = np.array([[0, 1, 2], [0, 3, 1]], dtype=int)
+def test_halfedge_two_open_triangles() -> None:
+    F: MatrixNx3i = np.array([[0, 1, 2], [0, 3, 1]], dtype=np.int64)
     mesh = Halfedge(F)
     corner_to_he: list[list[Index]] = mesh.get_corner_to_he
     he_to_corner: list[tuple[Index, Index]] = mesh.get_he_to_corner
@@ -139,12 +194,12 @@ def test_halfedge_two_open_triangles():
 
     # Get mesh elements
     # Halfedges are indexed by face and global vertex index
-    he00 = corner_to_he[0][0]
-    he01 = corner_to_he[0][1]
-    he02 = corner_to_he[0][2]
-    he10 = corner_to_he[1][0]
-    he11 = corner_to_he[1][2]
-    he13 = corner_to_he[1][1]
+    he00: int = corner_to_he[0][0]
+    he01: int = corner_to_he[0][1]
+    he02: int = corner_to_he[0][2]
+    he10: int = corner_to_he[1][0]
+    he11: int = corner_to_he[1][2]
+    he13: int = corner_to_he[1][1]
     f0 = 0
     f1 = 1
     v0 = 0

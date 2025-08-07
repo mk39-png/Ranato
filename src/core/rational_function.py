@@ -177,24 +177,24 @@ class RationalFunction:
     def split_at_knot(self):
         pass
 
-    def sample_points(self, num_points: int, points_ref: list[np.ndarray]) -> None:
+    def sample_points(self, num_points: int) -> list[Vector2D]:
         """
         @brief Sample points in the rational function. 
+
+        sample_points() seen with PlanarPoint and SpatialVector.
         @param[in] num_points: number of points to sample
         @param[out] points: vector of sampled points. list of matrices of shape (1, 2). dtype of elements == float
         """
         # Get sample of the domain
         t_samples: list[float] = self.m_domain.sample_points(num_points)
+        points: list[Vector2D] = []
 
-        # Evaluate the function at the sampled domain points
-        # TODO: is this filling of default np.ndarray of zeros correct?
-        # WARNING: REMOVE LIST_RESIZE AND REPLACE WITH MAP.
-        # LIST_RESIZE WITH COMPLEX OBJECTS SIMPLY COPIES THE REFERENCE TO THE SAME OBJECT.
-        # TODO:
-        # URGENT:
-        list_resize(points_ref, num_points, np.zeros(shape=(1, 2)))
         for i in range(num_points):
-            points_ref[i] = self.__evaluate(t_samples[i])
+            evaluated_rational_function: Vector2D = self.__evaluate(t_samples[i])
+            points.append(evaluated_rational_function)
+
+        assert len(points) == num_points
+        return points
 
     def start_point(self):
         pass

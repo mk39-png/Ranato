@@ -3,4 +3,5 @@ __pycache__/
 .vscode/
 .pytest_cache
 .src/utils/cholespy/
+cholespy/
 spot_control/

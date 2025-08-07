@@ -302,13 +302,13 @@ class ConvexPolygon:
 
         # TODO: logic of triangulate might be weird in comparison to the original ASOC code
 
-        V: np.ndarray = self.m_vertices
-        F: np.ndarray = np.array([[0, 1, 2]], dtype=np.int64)
+        V: MatrixNx3f = self.m_vertices
+        F: MatrixNx3i = np.array([[0, 1, 2]], dtype=np.int64)
         assert F.shape == (1, 3)
 
         for i in range(num_refinements):
-            V_refined: np.ndarray
-            F_refined: np.ndarray  # int64
+            V_refined: MatrixNx3f
+            F_refined: MatrixNx3i
             V_refined, F_refined = refine_triangles(V, F)
             V = V_refined
             F = F_refined
@@ -335,8 +335,8 @@ class ConvexPolygon:
         y1: float = upper_right_corner[0, 1]
 
         # Compute points
-        x_axis: VectorX = generate_linspace(x0, x1, num_samples)
-        y_axis: VectorX = generate_linspace(y0, y1, num_samples)
+        x_axis: Vector1D = generate_linspace(x0, x1, num_samples)
+        y_axis: Vector1D = generate_linspace(y0, y1, num_samples)
         # Asserting ndim == 1 because ASOC code has x_axis and y_axis as VectorXr
         assert x_axis.ndim == 1
         assert y_axis.ndim == 1

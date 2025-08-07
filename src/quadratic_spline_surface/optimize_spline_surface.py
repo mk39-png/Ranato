@@ -914,30 +914,12 @@ def build_twelve_split_spline_energy_system(initial_V: np.ndarray,
     he_to_corner: list[tuple[Index, Index]] = affine_manifold.get_he_to_corner
     halfedge: Halfedge = affine_manifold.get_halfedge
     num_edges: int = halfedge.num_edges
-    # TODO: move to different test case. TESTING
-    # if (float_equal(optimization_params.parametrized_quadratic_surface_mapping_factor, 0.0)):
-    #     compare_eigen_numpy_matrix(
-    #         "spot_control\\optimize_spline_surface\\build_twelve_split_spline_energy_system\\fit_he_to_corner.csv", np.array(he_to_corner))
-    # else:
-    #     compare_eigen_numpy_matrix(
-    #         "spot_control\\optimize_spline_surface\\build_twelve_split_spline_energy_system\\he_to_corner.csv", np.array(he_to_corner))
 
     # Assume all vertices and edges are variable
     fixed_vertices: list[int] = []
     fixed_edges: list[int] = []
     variable_vertices: list[int] = index_vector_complement(fixed_vertices, num_vertices)
     variable_edges: list[int] = index_vector_complement(fixed_edges, num_edges)
-    # TODO: move to different test case. TESTING
-    # if (float_equal(optimization_params.parametrized_quadratic_surface_mapping_factor, 0.0)):
-    #     compare_eigen_numpy_matrix(
-    #         "spot_control\\optimize_spline_surface\\build_twelve_split_spline_energy_system\\fit_variable_vertices.csv", np.array(variable_vertices))
-    #     compare_eigen_numpy_matrix(
-    #         "spot_control\\optimize_spline_surface\\build_twelve_split_spline_energy_system\\fit_variable_edges.csv", np.array(variable_edges))
-    # else:
-    #     compare_eigen_numpy_matrix(
-    #         "spot_control\\optimize_spline_surface\\build_twelve_split_spline_energy_system\\variable_vertices.csv", np.array(variable_vertices))
-    #     compare_eigen_numpy_matrix(
-    #         "spot_control\\optimize_spline_surface\\build_twelve_split_spline_energy_system\\variable_edges.csv", np.array(variable_edges))
 
     # Get variable counts
     num_variable_vertices: int = len(variable_vertices)
@@ -1041,7 +1023,7 @@ def optimize_twelve_split_spline_surface(
         he_to_corner: list[tuple[Index, Index]],
         variable_vertices: list[int],
         variable_edges: list[int],
-        fit_matrix: csr_matrix,
+        fit_matrix: coo_matrix,
         hessian_inverse: CholeskySolverD
 ) -> tuple[MatrixNx3, list[Matrix2x3r], list[list[SpatialVector]]]:
     """
@@ -1143,12 +1125,10 @@ def optimize_twelve_split_spline_surface(
     return optimized_V, optimized_vertex_gradients_ref, optimized_edge_gradients_ref
 
 
-def generate_optimized_twelve_split_position_data(V: np.ndarray,  # matrix
+def generate_optimized_twelve_split_position_data(V: MatrixXf,
                                                   affine_manifold: AffineManifold,
                                                   fit_matrix: coo_matrix,
                                                   hessian_inverse: CholeskySolverD,
-                                                  #   corner_data_ref: list[list[TriangleCornerData]],
-                                                  #   corner_data_ref: dict[int, list[TriangleCornerData]],
                                                   corner_data_ref: dict[int, dict[int, TriangleCornerData]],
                                                   midpoint_data_ref: dict[int, dict[int, TriangleMidpointData]]
                                                   ) -> None:
@@ -1176,13 +1156,14 @@ def generate_optimized_twelve_split_position_data(V: np.ndarray,  # matrix
     num_edges: int = halfedge.num_edges
 
     # Assume all vertices and edges are variable
+    # TODO: index_vector_complement does not need list parameter.
     fixed_vertices: list[int] = []
     fixed_edges: list[int] = []
     variable_vertices: list[int] = index_vector_complement(fixed_vertices, num_vertices)
     variable_edges: list[int] = index_vector_complement(fixed_edges, num_edges)
 
     # Run optimization
-    optimized_V: np.ndarray  # matrix
+    optimized_V: MatrixNx3f
     optimized_vertex_gradients: list[Matrix2x3r]
     optimized_reduced_edge_gradients: list[list[SpatialVector]]  # list[SpatialVector] of length 3
     optimized_V, optimized_vertex_gradients, optimized_reduced_edge_gradients = optimize_twelve_split_spline_surface(
@@ -1195,10 +1176,8 @@ def generate_optimized_twelve_split_position_data(V: np.ndarray,  # matrix
         fit_matrix,
         hessian_inverse)
 
-    # # TODO: check values for optimized values here...
+    # TODO: check values for optimized values here...
     # filepath: str = "spot_control\\optimize_spline_surface\\generate_optimized_twelve_split_position_data\\"
-    # compare_eigen_numpy_matrix(filepath+"variable_vertices.csv", np.array(variable_vertices))
-    # compare_eigen_numpy_matrix(filepath+"variable_edges.csv", np.array(variable_edges))
     # compare_eigen_numpy_matrix(
     #     filepath+"optimized_V.csv",
     #     optimized_V)

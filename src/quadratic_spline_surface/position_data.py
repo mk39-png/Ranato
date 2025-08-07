@@ -292,7 +292,7 @@ def compute_edge_midpoint_with_gradient(edge_origin_corner_data: TriangleCornerD
     return midpoint, midpoint_edge_gradient
 
 
-def generate_corner_data_matrices(corner_data: list[list[TriangleCornerData]],
+def generate_corner_data_matrices(corner_data: dict[int, dict[int, TriangleCornerData]],
                                   ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Given per corner position data, rearrange it into matrices with row i
@@ -327,11 +327,8 @@ def generate_corner_data_matrices(corner_data: list[list[TriangleCornerData]],
     return position_matrix, first_derivative_matrix, second_derivative_matrix
 
 
-def generate_midpoint_data_matrices(corner_data: list[list[TriangleCornerData]],
-                                    midpoint_data: list[list[TriangleMidpointData]],
-                                    # position_matrix_ref: np.ndarray,
-                                    # tangent_derivative_matrix_ref: np.ndarray,
-                                    # normal_derivative_matrix_ref: np.ndarray
+def generate_midpoint_data_matrices(corner_data: dict[int, dict[int, TriangleCornerData]],
+                                    midpoint_data: dict[int, dict[int, TriangleMidpointData]]
                                     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Given position data, rearrange the edge midpoint data into matrices with row i
@@ -343,10 +340,10 @@ def generate_midpoint_data_matrices(corner_data: list[list[TriangleCornerData]],
     NOTE: function used in twelve_split_spline.cpp
 
     :param corner_data: quadratic vertex position and derivative data
-    :type corner_data: list[list[TriangleCornerData, TriangleCornerData, TriangleCornerData]]
+    :type corner_data: dict[int, dict[int, TriangleCornerData]],
 
     :param midpoint_data: quadratic edge midpoint derivative data
-    :type midpoint_data: list[list[TriangleMidpointData, TriangleMidpointData, TriangleMidpointData]]
+    :type midpoint_data: dict[int, dict[int, TriangleMidpointData]]
 
     :return:
         - position_matrix: matrix with midpoint position data as rows
@@ -354,14 +351,15 @@ def generate_midpoint_data_matrices(corner_data: list[list[TriangleCornerData]],
         - normal_derivative_matrix: matrix with normal derivative data as rows
     :rtype: tuple[np.ndarray, np.ndarray, np.ndarray]
     """
+    # Lazy size checking.
     assert len(corner_data[0]) == 3
     assert len(midpoint_data[0]) == 3
     num_faces: int = len(corner_data)
 
     # Resize the corner data matrices
-    position_matrix: np.ndarray[tuple[int, int], np.dtype[np.float64]]
-    tangent_derivative_matrix: np.ndarray[tuple[int, int], np.dtype[np.float64]]
-    normal_derivative_matrix: np.ndarray[tuple[int, int], np.dtype[np.float64]]
+    position_matrix: MatrixXf
+    tangent_derivative_matrix: MatrixXf
+    normal_derivative_matrix: MatrixXf
     position_matrix = np.zeros(shape=(3 * num_faces, 3), dtype=np.float64)
     tangent_derivative_matrix = np.zeros(shape=(3 * num_faces, 3), dtype=np.float64)
     normal_derivative_matrix = np.zeros(shape=(3 * num_faces, 3), dtype=np.float64)

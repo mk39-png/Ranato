@@ -1,42 +1,124 @@
-"""
-A lot of the ASOC code seems like deprecated things from the 6-split spline implementation of 
-the quadratic surface.
-"""
+import numpy as np
+import pytest
+import os
+
+from src.core.common import (
+    todo,
+    compare_eigen_numpy_matrix,
+    convert_nested_vector_to_matrix,  # TODO: move this test case to test_common.py
+    convert_polylines_to_edges,  # TODO: move this test case to test_common.py
+    SpatialVector,
+    MatrixNx3f,
+    MatrixNx3i)
+from src.quadratic_spline_surface.quadratic_spline_surface import (
+    QuadraticSplineSurface,
+    SurfaceDiscretizationParameters)
 
 
-from src.core.common import *
-from src.quadratic_spline_surface.quadratic_spline_surface import *
-from src.utils.generate_shapes import *
-from src.quadratic_spline_surface.optimize_spline_surface import *
-
-
-def test_quadratic_reproduction(u_curvature: float = 0.0,
-                                v_curvature: float = 0.0) -> bool:
+def test_spot_control_triangulate_patch_patch_index_0() -> None:
+    """ 
+    This is dependent on QuadraticSplineSurface.read_spline() working properly.
     """
-    Helper function that was commented out in the ASOC code.
+    # Need to initialize QuadraticSplineSurface with our test file
+    filename: str = "spot_control_mesh-cleaned_conf_simplified_with_uv_CONTROL.txt"
+    filepath: str = os.path.abspath(f"src\\tests\\spot_control\\{filename}")
+    spline_surface: QuadraticSplineSurface = QuadraticSplineSurface.from_file(filepath)
+
+    patch_index: int = 0
+    num_subdivisions: int = 2
+    V_patch_0: np.ndarray[tuple[int], np.dtype[np.float64]]
+    F_patch_0: np.ndarray[tuple[int], np.dtype[np.int64]]
+    N_patch_0: np.ndarray[tuple[int], np.dtype[np.float64]]
+    V_patch_0, F_patch_0, N_patch_0 = spline_surface.triangulate_patch(patch_index, num_subdivisions)
+
+    compare_eigen_numpy_matrix(
+        "spot_control\\quadratic_spline_surface\\discretize\\F_triangulate_patch_0.csv", F_patch_0)
+    compare_eigen_numpy_matrix(
+        "spot_control\\quadratic_spline_surface\\discretize\\V_triangulate_patch_0.csv", V_patch_0)
+    compare_eigen_numpy_matrix(
+        "spot_control\\quadratic_spline_surface\\discretize\\N_triangulate_patch_0.csv", N_patch_0)
+
+
+def test_spot_control_discretize() -> None:
     """
-    resolution: int = 10
-    param_grid: list[list[SpatialVector]]
-    param_V: np.ndarray
-    param_F: np.ndarray
-    param_l: list[list[float]]
-    control_point_grid: list[list[SpatialVector]]
-    control_V: np.ndarray
-    control_F: np.ndarray
-    l: list[list[float]]
-    face_to_patch_indices: list[list[int]]
-    patch_to_face_indices: list[int]
+    This is dependent on QuadraticSplineSurface.read_spline() working properly.
+    TODO: this is redundant with test in test_quadratic_spline.py
+    """
+    # Need to initialize QuadraticSplineSurface with our test file
+    filename: str = "spot_control_mesh-cleaned_conf_simplified_with_uv_CONTROL.txt"
+    filepath: str = os.path.abspath(f"src\\tests\\spot_control\\{filename}")
+    spline_surface: QuadraticSplineSurface = QuadraticSplineSurface.from_file(filepath)
 
-    todo("I don't think this method is used that much anymore. As in, it's deprecated.")
+    num_subdivisions: int = 2
+    surface_disc_params = SurfaceDiscretizationParameters(num_subdivisions=num_subdivisions)
+    V: MatrixNx3f
+    F: MatrixNx3i
+    N: MatrixNx3f
 
-    layout_point_grid: list[list[PlanarPoint]
-                            ] = generate_global_layout_grid(resolution)
-    control_point_grid = generate_quadratic_grid(layout_point_grid, u_curvature, v_curvature, 0)
-    control_V, control_F, l = generate_mesh_from_grid(control_point_grid, True)
-    param_grid = generate_plane_grid(resolution, 0.0, 0.0)
-    param_V, param_F, param_l = generate_mesh_from_grid(param_grid, True)
+    V, F, N = spline_surface.discretize(surface_disc_params)
+    compare_eigen_numpy_matrix(
+        "spot_control\\quadratic_spline_surface\\add_surface_to_viewer\\F_discretized_2_subdiv.csv", F)
+    compare_eigen_numpy_matrix(
+        "spot_control\\quadratic_spline_surface\\add_surface_to_viewer\\V_discretized_2_subdiv.csv", V)
+    compare_eigen_numpy_matrix(
+        "spot_control\\quadratic_spline_surface\\add_surface_to_viewer\\N_discretized_2_subdiv.csv", N)
 
-    # quadratic_spline_params(spline_type=powell_sabin_six_split)
-    optimization_params = OptimizationParameters()
 
-    QuadraticSplineSurface()
+def test_spot_control_discretize_patch_boundaries() -> None:
+    """
+    This is dependent on QuadraticSplineSurface.read_spline() working properly.
+    TODO: this is redundant with test in test_quadratic_spline.py
+    """
+    # Need to initialize QuadraticSplineSurface with our test file
+    filename: str = "spot_control_mesh-cleaned_conf_simplified_with_uv_CONTROL.txt"
+    filepath: str = os.path.abspath(f"src\\tests\\spot_control\\{filename}")
+    spline_surface: QuadraticSplineSurface = QuadraticSplineSurface.from_file(filepath)
+
+    boundary_points: list[SpatialVector]
+    boundary_polylines: list[list[int]]
+    boundary_points, boundary_polylines = spline_surface.discretize_patch_boundaries()
+
+    compare_eigen_numpy_matrix("spot_control\\quadratic_spline_surface\\add_surface_to_viewer\\boundary_points.csv",
+                               np.array(boundary_points).squeeze())
+    compare_eigen_numpy_matrix("spot_control\\quadratic_spline_surface\\add_surface_to_viewer\\boundary_polylines.csv",
+                               np.array(boundary_polylines))
+
+
+def test_spot_control_boundary_points_matrix() -> None:
+    """
+    This is dependent on QuadraticSplineSurface.read_spline() working properly.
+    This is dependent on QuadraticSplineSurface.discretize_patch_boundaries() working properly.
+    TODO: this is redundant with test in test_quadratic_spline.py
+    """
+    # Need to initialize QuadraticSplineSurface with our test file
+    filename: str = "spot_control_mesh-cleaned_conf_simplified_with_uv_CONTROL.txt"
+    filepath: str = os.path.abspath(f"src\\tests\\spot_control\\{filename}")
+    spline_surface: QuadraticSplineSurface = QuadraticSplineSurface.from_file(filepath)
+
+    boundary_points: list[SpatialVector]
+    _boundary_polylines: list[list[int]]
+    boundary_points, _boundary_polylines = spline_surface.discretize_patch_boundaries()
+
+    boundary_points_matrix: np.ndarray = convert_nested_vector_to_matrix(boundary_points)
+    compare_eigen_numpy_matrix("spot_control\\quadratic_spline_surface\\add_surface_to_viewer\\boundary_points_mat.csv",
+                               np.array(boundary_points_matrix))
+
+
+def test_spot_control_boundary_edges() -> None:
+    """
+    This is dependent on QuadraticSplineSurface.read_spline() working properly.
+    This is dependent on QuadraticSplineSurface.discretize_patch_boundaries() working properly.
+    TODO: this is redundant with test in test_quadratic_spline.py
+    """
+    # Need to initialize QuadraticSplineSurface with our test file
+    filename: str = "spot_control_mesh-cleaned_conf_simplified_with_uv_CONTROL.txt"
+    filepath: str = os.path.abspath(f"src\\tests\\spot_control\\{filename}")
+    spline_surface: QuadraticSplineSurface = QuadraticSplineSurface.from_file(filepath)
+
+    _boundary_points: list[SpatialVector]
+    boundary_polylines: list[list[int]]
+    _boundary_points, boundary_polylines = spline_surface.discretize_patch_boundaries()
+
+    boundary_edges: list[tuple[int, int]] = convert_polylines_to_edges(boundary_polylines)
+    compare_eigen_numpy_matrix("spot_control\\quadratic_spline_surface\\add_surface_to_viewer\\boundary_edges.csv",
+                               np.array(boundary_edges).squeeze())

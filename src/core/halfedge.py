@@ -13,7 +13,8 @@ from src.core.common import *
 from src.core.vertex_circulator import *
 
 
-def build_halfedge_to_edge_maps(opp: list[Index]) -> tuple[list[Index], list[tuple[Index, Index]]]:
+def build_halfedge_to_edge_maps(opp: list[Index]
+                                ) -> tuple[list[Index], list[tuple[Index, Index]]]:
     """
     Builds lists of halfedges to edges maps.
 
@@ -25,8 +26,8 @@ def build_halfedge_to_edge_maps(opp: list[Index]) -> tuple[list[Index], list[tup
         e2he (list[tuple[Index, Index]]): edges to halfedges.
     """
 
-    num_he: Index = len(opp)
-    he2e: list[Index] = [None] * num_he
+    num_he: int = len(opp)
+    he2e: list[Index] = [PLACEHOLDER_INDEX] * num_he
     e2he: list[tuple[Index, Index]] = []
 
     # Iterate over halfedges to build maps between halfedges and edges
@@ -42,7 +43,7 @@ def build_halfedge_to_edge_maps(opp: list[Index]) -> tuple[list[Index], list[tup
             he2e[he] = e_index
 
             # Only valid for interior edges
-            if (not is_boundary):
+            if not is_boundary:
                 he2e[opp[he]] = e_index
 
             # Update current edge index
@@ -52,18 +53,20 @@ def build_halfedge_to_edge_maps(opp: list[Index]) -> tuple[list[Index], list[tup
 
 
 class Halfedge:
-
+    """
+    Boilerplate halfedge mesh representation.
+    """
     # ************
     # CONSTRUCTORS
     # ************
-    def __init__(self, F: np.ndarray) -> None:
+
+    def __init__(self, F: MatrixNx3i) -> None:
         """
         TODO: deal with actually default constructor where Default trivial halfedge is made.
         Build halfedge mesh from mesh faces F with.
 
-        FIXME: Need to actually take in a corner_to_he and he_to_corner rather than making one from scratch in here...
-        Because affine_manifold requires us to do just that...
-        # Basically, be more like the C++ implementation.
+        :param F: faces to build halfedge mesh from
+        :type F: MatrixNx3i
         """
         # *******
         # PRIVATE
@@ -78,28 +81,35 @@ class Halfedge:
         m_out:  list[Index]
         m_f2he: list[Index]
         m_F: np.ndarray
-        m_num_vertices: Index
-        m_num_faces: Index
-        m_num_halfedges: Index
-        m_num_edges: Index
+        m_num_vertices: int
+        m_num_faces: int
+        m_num_halfedges: int
+        m_num_edges: int
+
+        # **************************
+        # Invalid index constructors (used across all Halfedge objects)
+        # **************************
+
+        self.INVALID_HALFEDGE_INDEX = -1
+        self.INVALID_VERTEX_INDEX = -1
+        self.INVALID_FACE_INDEX = -1
+        self.INVALID_EDGE_INDEX = -1
 
         # Why does this start off with clear when nothing exists yet?
-        # self.clear()
         # NOTE: ensuring that F is a matrix rather than a vector...
         assert F.ndim > 1
 
         # TODO: store F into m_F
         self.m_F = F
-        num_faces: Index = F.shape[0]
+        num_faces: int = F.shape[0]
         num_vertices: int = F.max() + 1
         num_halfedges: int = 3 * num_faces
 
-        # TODO: check validity if that's something that needs to be done.
-        # if CHECK_VALIDITY:
-        #     if !is_manifold(F):
-        #         logger.error("Input mesh is not manifold")
-        #         cls.clear()
-        #         return
+        if logger.getEffectiveLevel == logging.DEBUG:
+            if not is_manifold(F):
+                logger.error("Input mesh is not manifold")
+                self.clear()
+                return
 
         # Build maps between corners and halfedges
         self.corner_to_he: list[list[Index]]
@@ -172,44 +182,11 @@ class Halfedge:
         self.m_num_edges = len(self.m_e2he)
 
         #  Check validity
-        # #if CHECK_VALIDITY
-        #   if (!is_valid()) {
-        #     spdlog::error("Could not build halfedge");
-        #     clear();
-        #     return;
-        #   }
-        # #endif
-
-        # TESTING
-        # TODO: also double check num_edges, num_he, num_faces, and num_vertices members.
-        # if logger.level == logging.DEBUG:
-        #     filepath: str = "spot_control\\halfedge\\"
-        #     compare_eigen_numpy_matrix(f"{filepath}corner_to_he.csv",
-        #                                np.array(self.corner_to_he))
-        #     compare_eigen_numpy_matrix(f"{filepath}he_to_corner.csv",
-        #                                np.array(self.he_to_corner))
-        #     compare_eigen_numpy_matrix(f"{filepath}m_e2he.csv",
-        #                                np.array(self.m_e2he))
-        #     compare_eigen_numpy_matrix(f"{filepath}m_f2he.csv",
-        #                                np.array(self.m_f2he))
-        #     compare_eigen_numpy_matrix(f"{filepath}m_face.csv",
-        #                                np.array(self.m_face))
-        #     compare_eigen_numpy_matrix(f"{filepath}m_from.csv",
-        #                                np.array(self.m_from))
-        #     compare_eigen_numpy_matrix(f"{filepath}m_he2e.csv",
-        #                                np.array(self.m_he2e))
-        #     compare_eigen_numpy_matrix(f"{filepath}m_next.csv",
-        #                                np.array(self.m_next))
-        #     compare_eigen_numpy_matrix(f"{filepath}m_opp.csv",
-        #                                np.array(self.m_opp))
-        #     compare_eigen_numpy_matrix(f"{filepath}m_out.csv",
-        #                                np.array(self.m_out))
-        #     compare_eigen_numpy_matrix(f"{filepath}m_to.csv",
-        #                                np.array(self.m_to))
-
-    # ******
-    # PUBLIC
-    # ******
+        if logger.getEffectiveLevel() == logging.DEBUG:
+            if not self.is_valid():
+                logger.error("Could not build halfedge")
+                self.clear()
+                return
 
     # **************
     # Element counts
@@ -217,24 +194,36 @@ class Halfedge:
 
     @property
     def num_halfedges(self) -> Index:
+        """Retrieves num_halfedges."""
         return self.m_num_halfedges
 
     @property
     def num_faces(self) -> Index:
+        """Retrieves num_faces."""
+
         return self.m_num_faces
 
     @property
     def num_vertices(self) -> Index:
+        """Retrieves num_vertices."""
+
         return self.m_num_vertices
 
     @property
     def num_edges(self) -> Index:
+        """Retrieves num_edges."""
+
         return self.m_num_edges
 
     # *********
     # Adjacency
     # *********
     def next_halfedge(self, he: Index) -> Index:
+        """
+        Retrieves self.next at index he.
+        :param he: [in] index to retrieve next Halfedge
+        :return: index of next Halfedge
+        """
         if not self.is_valid_halfedge_index(he):
             return self.INVALID_HALFEDGE_INDEX
         return self.m_next[he]
@@ -350,9 +339,7 @@ class Halfedge:
         self.m_face.clear()
         self.m_out.clear()
         self.m_f2he.clear()
-
-        # TODO: do some clearing thing for m_F
-        # self.m_F.resize(0, 0)
+        self.m_F.resize(0, 0)
 
     def build_corner_to_he_maps(self, num_faces: Index) -> tuple[list[list[Index]], list[tuple[Index, Index]]]:
         """
@@ -368,15 +355,14 @@ class Halfedge:
         """
 
         # FIXME: resizing probably all works, but find a way that's neater than whatever is below
-        PLACEHOLDER = -1
         corner_to_he: list[list[Index]] = [[] for _ in range(num_faces)]
-        he_to_corner: list[tuple[Index, Index]] = [(PLACEHOLDER, PLACEHOLDER) for _ in range(3 * num_faces)]
+        he_to_corner: list[tuple[Index, Index]] = [(PLACEHOLDER_INDEX, PLACEHOLDER_INDEX) for _ in range(3 * num_faces)]
 
         # Iterate over faces to build corner to he maps
         he_index: Index = 0
 
         for face_index in range(num_faces):
-            corner_to_he[face_index] = [PLACEHOLDER] * 3
+            corner_to_he[face_index] = [PLACEHOLDER_INDEX] * 3
 
             for i in range(3):
                 # Assign indices
@@ -406,26 +392,18 @@ class Halfedge:
         return True
 
     def is_valid_face_index(self, face_index: Index) -> bool:
-        if (face_index < 0):
+        if face_index < 0:
             return False
-        if (face_index >= self.num_faces):
+        if face_index >= self.num_faces:
             return False
         return True
 
     def is_valid_edge_index(self, edge_index: Index) -> bool:
-        if (edge_index < 0):
+        if edge_index < 0:
             return False
-        if (edge_index >= self.num_edges):
+        if edge_index >= self.num_edges:
             return False
         return True
-
-    # **************************
-    # Invalid index constructors
-    # **************************
-    INVALID_HALFEDGE_INDEX = -1
-    INVALID_VERTEX_INDEX = -1
-    INVALID_FACE_INDEX = -1
-    INVALID_EDGE_INDEX = -1
 
     def is_valid(self) -> bool:
         if len(self.m_next) != self.num_halfedges:

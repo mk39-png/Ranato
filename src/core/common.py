@@ -1,31 +1,26 @@
+# from typing import NewType
+import logging
+from typing import Annotated, Literal, TypeVar
+import mathutils
+import math
+import sys
+import os
+import json  # for testing
+import csv
+from io import StringIO  # used for testing
+
 import numpy as np
 import numpy.linalg as LA
 import numpy.typing as npt
-from typing import Annotated, Literal, TypeVar
 import scipy as sp
-
-# from typing import NewType
-import logging
-import mathutils
-import math
-
+import igl
+import numpy.testing as npt
+import numpy.typing as npty
 from scipy.sparse import linalg as splinalg, csr_matrix
 # import scipy.sparse as s
 # from cvxopt import spmatrix
-import sys
-import os
-
-
-import igl
-import numpy.testing as npt
-
-from io import StringIO  # used for testing
-
-import json  # for testing
-import csv
 
 logger: logging.Logger = logging.getLogger(__name__)
-# logging.basicConfig(filename='example.log', encoding='utf-8', level=logging.NOTSET)
 logging.basicConfig(level=logging.DEBUG)
 
 # *******
@@ -44,7 +39,7 @@ DISCRETIZATION_LEVEL: int = 2
 # Size of spline surface hash table
 HASH_TABLE_SIZE: int = 70
 
-# Real number representations
+# *** Real number representations ***
 
 # Including typing here for better code.
 # https://stackoverflow.com/questions/71109838/numpy-typing-with-specific-shape-and-datatype
@@ -52,53 +47,82 @@ OneFormXr = np.ndarray  # TODO: what shape is this... I forget
 PlanarPoint = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (1, 2)
 PlanarPoint1d = np.ndarray[tuple[int], np.dtype[np.float64]]  # shape (2, )
 SpatialVector = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (1, 3)
-# SpatialVector = Annotated[npt.NDArray[], Literal[1, 3]]
-PatchIndex = int
-# TODO: combine VectorX and VectorXr into one?
-VectorX = np.ndarray  # shape (n, )... sometimes. Oftentimes it's shape (n, 1) or (1, n)...
-VectorXr = np.ndarray  # TODO: maybe change name to Vector1D to denote that it's shape (n, )
-Vector2D = np.ndarray  # shape (1, n) (or sometimes shape (n, 1) as in the case of optimize_spline_surface)
-Vector1D = np.ndarray  # shape (n, )
-MatrixXr = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (n, m)
-MatrixNx3 = np.ndarray[tuple[int, int], np.dtype[np.float64]]
-Matrix6x6r = np.ndarray
-Matrix3x6r = np.ndarray
-Matrix12x12r = np.ndarray
-Matrix12x3f = np.ndarray
-MatrixXi = np.ndarray[tuple[int, int], np.dtype[np.int64]]
 Index = int
 FaceIndex = int
 VertexIndex = int
-Edge = list[int]  # length 2
+PatchIndex = int
 
-# NOTE: VectorX also encompasses SpatialVectors as well.
-# VectorX = np.ndarray
+# NOTE: Since NumPu does not have typing, it has been done so as below for readability reasons.
+VectorX = np.ndarray  # shape (n, )... sometimes. Oftentimes it's shape (n, 1) or (1, n)...
+# shape (1, n) (or sometimes shape (n, 1) as in the case of optimize_spline_surface)... might just be easier to flatten and use Vector1D... I don't see the point of having Vector2D if it will just be more confusing.
+Vector2D = np.ndarray
+Vector1D = np.ndarray  # shape (n, )
+MatrixNx3 = np.ndarray[tuple[int, int], np.dtype[np.float64]]
+Matrix3x6r = np.ndarray
+Matrix2x2r = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (2, 2)
+Matrix2x3r = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (2, 3)
+Matrix3x1r = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (3, 1)
+Matrix3x2r = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (3, 2)
+Matrix3x2f = np.ndarray[tuple[int, int], np.dtype[np.float64]]
+Matrix3x3r = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (3, 3)
+Matrix6x3r = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (6, 3)
+Matrix6x3f = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (6, 3)
+Matrix6x6r = np.ndarray[tuple[int, int], np.dtype[np.float64]]
+Matrix6x12f = np.ndarray[tuple[int, int], np.dtype[np.float64]]
+Matrix12x3f = np.ndarray[tuple[int, int], np.dtype[np.float64]]
+Matrix12x12r = np.ndarray[tuple[int, int], np.dtype[np.float64]]
+TwelveSplitGradient = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (36, 1)
+TwelveSplitHessian = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (36, 36)
+
+MatrixXi = np.ndarray[tuple[int, int], np.dtype[np.int64]]
+MatrixXf = np.ndarray[tuple[int, int], np.dtype[np.float64]]
+MatrixXr = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (n, m)
+
+# NOTE: N denotes any arbitrary number of rows.
+# This is not suggesting that MatrixNx3f and MatrixNx3i has the same number of rows.
+MatrixNx3f = np.ndarray[tuple[int, int], np.dtype[np.float64]]
+MatrixNx3i = np.ndarray[tuple[int, int], np.dtype[np.int64]]
 
 # Used for accessing numpy shape for clarity sake
 ROWS = 0
 COLS = 1
-
-# PlanarPoint = NewType('PlanarPoint', npt.NDArray(shape=[(1, 2)], dtype=float))
-# SpatialVector = np.ndarray(shape=(1, 3), dtype=float)
-# Edge = list[int, int]
-
-Matrix3x1r = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (3, 1)
-Matrix2x3r = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (2, 3)
-Matrix2x2r = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (2, 2)
-Matrix3x2r = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (3, 2)
-Matrix3x3r = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (3, 3)
-Matrix6x3r = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (6, 3)
-
-TwelveSplitGradient = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (36, 1)
-TwelveSplitHessian = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (36, 36)
+PLACEHOLDER_VALUE = -1
+PLACEHOLDER_INDEX = -1
+PLACEHOLDER_BOOL = False
 
 
 # **********************
-# Debug/Helper Methods
+# Debug/Helper Methods (keep here for now, especially when comparing later contours code)
 # **********************
 
-def load_json(filename: str):
+def initialize_spot_control_mesh():
+    """ 
+    Used for testing spot_control mesh in generating 
+    the TwelveSplitSplineSurface.
+    Returns only the parts of the mesh that are needed
+
+    :return: tuple V, uv, F, FT
+    :rtype: tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]
     """
+    # Get input mesh
+    V: MatrixXf = np.ndarray(shape=(0, 0), dtype=np.float64)
+    uv: MatrixXf = np.ndarray(shape=(0, 0), dtype=np.float64)
+    N: MatrixXf = np.ndarray(shape=(0, 0), dtype=np.float64)
+    F: MatrixXi = np.ndarray(shape=(0, 0), dtype=np.int64)
+    FT: MatrixXi = np.ndarray(shape=(0, 0), dtype=np.int64)
+    FN: MatrixXi = np.ndarray(shape=(0, 0), dtype=np.int64)
+
+    filename: str = "spot_control_mesh-cleaned_conf_simplified_with_uv.obj"
+    filepath: str = os.path.abspath(f"src\\tests\\spot_control\\{filename}")
+    V, uv, N, F, FT, FN = igl.readOBJ(filepath)
+
+    return V, uv, F, FT
+
+
+# TODO: move to affine_manifold test.
+def load_json(filename: str) -> list[dict]:
+    """
+    Used by affine_manifold tests.
 
     """
     filepath: str = os.path.abspath(f"src\\tests\\{filename}")
@@ -138,68 +162,13 @@ def compare_list_list_varying_lengths(filename: str, rows_test: list[list[int]])
                                np.array(rows_control[i]))
 
 
-def compare_eigen_numpy_matrix(filename: str, numpy_array: np.ndarray, make_3d: bool = False) -> bool:
+def compare_eigen_numpy_matrix(filename: str, numpy_array: np.ndarray, make_3d: bool = False, atol=FLOAT_EQUAL_PRECISION) -> None:
     """ 
-    Standardized function for comparing matrices for testing? 
-    Maybe? 
+    Standardized function for comparing matrices for testing.
+    Takes a filename and creates an absolute filepath to src/tests/
     """
     eigen_array: np.ndarray = deserialize_eigen_matrix_csv_to_numpy(filename, make_3d)
-    npt.assert_allclose(numpy_array, eigen_array, atol=FLOAT_EQUAL_PRECISION)
-
-
-# def compare_eigen_3d_to_numpy_matrix_at_index(eigen_array: np.ndarray,
-#                                               numpy_array: np.ndarray,
-#                                               index: int) -> bool:
-#     """
-#     Standardized function for comparing matrices for testing?
-#     Maybe?
-#     """
-#     eigen_array: np.ndarray = deserialize_eigen_matrix_csv_to_numpy(filename, make_3d)
-#     npt.assert_allclose(numpy_array, eigen_array, atol=FLOAT_EQUAL_PRECISION)
-
-
-def compare_eigen_list_trianglecornerdata(filename: str, numpy_array: np.ndarray, make_3d: bool = False) -> bool:
-    """ 
-    Standardized function for comparing matrices for testing? 
-    Maybe? 
-    """
-    eigen_array: np.ndarray = deserialize_eigen_matrix_csv_to_numpy(filename, make_3d)
-    npt.assert_allclose(numpy_array, eigen_array, atol=FLOAT_EQUAL_PRECISION)
-
-
-def serialize_vector_array() -> None:
-    """
-    // This could be any size list
-    inline void serialize_list_int(std::string filename, )
-    """
-
-    unreachable("This is a placeholder for testing C++ code")
-
-
-def serialize_eigen_matrix_f() -> None:
-    """
-    // This could be any matrix of any size. Scalable.
-    inline void serialize_eigen_matrix_f(std::string filename, Eigen::MatrixXf M) {
-        spdlog::info("Writing matrix data to {}", filename);
-        std::ofstream output_file(filename, std::ios::out | std::ios::trunc);
-
-        int prec = 17;
-
-        // Print out by row order
-        for (Eigen::Index i = 0; i < M.rows(); ++i) {
-            // Printing out the first element of the row separately since we do not want the comma at the start
-            output_file << std::setprecision(prec) << M(i, 0);
-
-            for (Eigen::Index j = 1; j < M.cols(); ++j) {
-                output_file << std::setprecision(prec) << "," << M(i, j);
-            }
-            output_file << std::endl;
-        }
-
-        output_file.close();
-    }
-    """
-    unreachable("This is just a placeholder for the C++ code that  will be written into the ASOC code")
+    npt.assert_allclose(numpy_array, eigen_array, atol=atol)
 
 
 def deserialize_eigen_matrix_csv_to_numpy(filename: str, make_3d: bool = False) -> np.ndarray:
@@ -237,110 +206,52 @@ def deserialize_eigen_matrix_csv_to_numpy(filename: str, make_3d: bool = False) 
     return arr
 
 
-def deserialize_eigen_matrix_csv_to_numpy_4d(filename: str) -> np.ndarray:
+def deprecated(msg: str = "Method no longer in use") -> Exception:
     """
-    Turns Eigen matrix .csv into NumPy array
-    Used for testing.
+    Used to show methods that are no longer in use.
 
-    :param make_3d: parses a 3D csv into a 3D nnumpy array. usually equivalent structure is a list of matrices.
+    :param str: Message to be displayed for the error. 
     """
-    filepath: str = os.path.abspath(f"src\\tests\\{filename}")
-
-    arr: np.ndarray
-
-    with open(filepath, "r") as file:
-        file_lines_raw: str = file.read()
-        file_lines: list[str] = file_lines_raw.split("\n\n")
-
-        arr_list: list[np.ndarray] = []  # build this list 3d then convert to np
-        for line_raw in file_lines:
-            # NOTE: sometimes the last line can be '' empty string since we remove "\n\n"
-            if len(line_raw) == 0:
-                continue
-            # convert to stringio because that's what loadtxt works with
-            s = StringIO(line_raw)
-            line: np.ndarray = np.loadtxt(s, delimiter=',')  # get matrix values to put in list of matrices
-            arr_list.append(line)
-
-        arr = np.array(arr_list)
-        assert arr.ndim == 3
-    file.close()
-
-    return arr
+    raise NotImplementedError(msg)
 
 
-def deprecated(msg: str = "Method no longer in use"):
-    raise Exception(msg)
+def unimplemented(msg: str = "Method yet to be implemented") -> Exception:
+    """
+    Used to show methods that are not yet implemented.
+
+    :param str: Message to be displayed for the error. 
+    """
+    raise NotImplementedError(msg)
 
 
-def unimplemented(msg: str = "Method yet to be implemented"):
+def todo(msg: str = "Method needs some work") -> Exception:
+    """
+    Used to show methods that need to be implemented.
 
-    raise Exception(msg)
-
-
-def todo(msg: str = "Method needs some work"):
-    raise Exception(msg)
-
-
-def unreachable(msg: str = "Method should never reach this part"):
-    raise Exception(msg)
+    :param str: Message to be displayed for the error. 
+    """
+    raise NotImplementedError(msg)
 
 
-# class PlanarPoint(np.ndarray):
-#     def __new__(cls, input_array):
-#         arr = np.asarray(input_array, dtype=float)
+def unreachable(msg: str = "Method should never reach this part") -> Exception:
+    """
+    Used to show methods that need to be implemented.
 
-#         # Flatten all allowed forms to shape (2,)
-#         if arr.shape == (2,):
-#             flat = arr
-#         elif arr.shape == (1, 2) or arr.shape == (2, 1):
-#             flat = arr.reshape(2,)
-#         else:
-#             raise ValueError(
-#                 "PlanarPoint must be shape (2,), (1, 2), or (2, 1)")
-
-#         obj = flat.view(cls)
-#         return obj
+    :param str: Message to be displayed for the error. 
+    """
+    raise RuntimeError(msg)
 
 
-# class Index(int):
-#     # Basically, this is unsigned stuff only. that's it.
-#     todo()
-
-
-class Matrix:
-    def __init__(self, arr: np.ndarray):
-        assert arr.ndim != 1
-        self.arr = arr
-
-    def row(self, i):
-        todo()
-
-
-# Colors
-MINT_GREEN = np.array([[0.170], [0.673], [0.292]])
-SKY_BLUE = np.array([[0.297], [0.586], [0.758]])
-OFF_WHITE = np.array([[0.896], [0.932], [0.997]])
-GOLD_YELLOW = np.array([[0.670], [0.673], [0.292]])
-
-
-# *******************************************
-# New functionality for Python implementation
-# *******************************************
-# https://stackoverflow.com/questions/8849833/python-list-reserving-space-resizing
-def list_resize(l: list, newsize: int, filling=None) -> None:
-    if newsize > len(l):
-        l.extend([filling for x in range(len(l), newsize)])
-    else:
-        del l[newsize:]
-
+# Colors for PolyScope display.
+MINT_GREEN: tuple[float, float, float] = (0.170, 0.673, 0.292)
+SKY_BLUE: tuple[float, float, float] = (0.297, 0.586, 0.758)
+OFF_WHITE:  tuple[float, float, float] = (0.896, 0.932, 0.997)
+GOLD_YELLOW:  tuple[float, float, float] = (0.670, 0.673, 0.292)
 
 # -----------------------------------------
 
 
-def float_equal_zero(x: float, eps=FLOAT_EQUAL_PRECISION):
-    # TODO: I don't think this is used since anyone could just input 0.0 into "y" of float_equal....
-    # So maybe get rid of this method or at least note that it is out of use
+def float_equal_zero(x: float, eps=FLOAT_EQUAL_PRECISION) -> bool:
     """
     /// @brief  Check if some floating point value is numerically zero.
     ///
@@ -439,7 +350,8 @@ def cross_product(v_ref: Matrix3x1r, w_ref: Matrix3x1r) -> Matrix3x1r:
     assert v.size == 3
     assert w.size == 3
 
-    # TODO: make these 2D matrices act like Eigen matrices with shape (n, 1) where they can be accessed like vectors and whatnot
+    # TODO: make these 2D matrices act like Eigen matrices with shape (n, 1)
+    # where they can be accessed like vectors and whatnot
     # TODO: use NumPy's version of cross products
     n: Matrix3x1r = np.array([
         [v[1] * w[2] - v[2] * w[1]],
@@ -640,7 +552,6 @@ def convert_nested_vector_to_matrix(vec: list[Vector2D]) -> np.ndarray:
     """
     WARNING: Do not use this method, implementation does not generalize to a list types.
     Especially with list[np.ndarray] where ndarray is some shape (n, 1) or (1, n)
-
     """
     # n: int = len(vec)
     # if (n <= 0):
@@ -654,7 +565,8 @@ def convert_nested_vector_to_matrix(vec: list[Vector2D]) -> np.ndarray:
     #     inner_vec: np.ndarray = vec[i].flatten()
     #     for j in range(inner_vec.size):
     #         matrix[i, j] = vec[i].flatten()[j]
-    matrix = np.array(vec).squeeze()
+
+    matrix: np.ndarray = np.array(vec).squeeze()
     # assert matrix.shape == (len(vec))
 
     return matrix
@@ -674,9 +586,18 @@ def read_camera_matrix():
     todo()
 
 
-def generate_linspace(t_0: float, t_1: float, num_points: int) -> np.ndarray:
+def generate_linspace(t_0: float, t_1: float, num_points: int) -> Vector1D:
     """
     Originally under "Pythonic methods" in ASOC code.
+
+    :param t_0: starting value
+    :type t_0: float
+    :param t_1: ending value
+    :type t_1: float
+    :param num_points: number of points to sample between interval.
+    :type num_points: int
+    :return: linspace vector
+    :rtype: Vector1D
     """
     # TODO: compare NumPy linspace with ASOC linspace
     return np.linspace(t_0, t_1, num_points)
@@ -690,7 +611,7 @@ def arrange():
 #  *******************
 
 
-def contains_vertex(face: np.ndarray[tuple[int], np.dtype[np.int_]], vertex_index: int) -> bool:
+def contains_vertex(face: Vector1D, vertex_index: int) -> bool:
     """
     Returns true iff the face contains the given vertex.
 
@@ -705,7 +626,7 @@ def contains_vertex(face: np.ndarray[tuple[int], np.dtype[np.int_]], vertex_inde
     return vertex_index in face
 
 
-def find_face_vertex_index(face: np.ndarray, vertex_index: int) -> int:
+def find_face_vertex_index(face: Vector1D, vertex_index: int) -> int:
     """
     :param face: np.ndarray of shape (n, ) of ndim = 1
     :type face: np.ndarray
@@ -727,7 +648,7 @@ def find_face_vertex_index(face: np.ndarray, vertex_index: int) -> int:
     return -1
 
 
-def is_manifold(F: np.ndarray) -> bool:
+def is_manifold(F: MatrixXi) -> bool:
     """
     @brief Check if F describes a manifold mesh with a single component
 
@@ -779,19 +700,32 @@ def area_from_length(l0: float, l1: float, l2: float) -> float:
     return area
 
 
-def area_from_positions(p0: np.ndarray, p1: np.ndarray, p2: np.ndarray) -> float:
-    assert p0.shape[0] == 1  # making sure that p0 is shape (1, n)
-    assert p0.shape == p1.shape
-    assert p1.shape == p2.shape
+def area_from_positions(p0: PlanarPoint, p1: PlanarPoint, p2: PlanarPoint) -> float:
+    """
+    Compute the area of a triangle from the vertex positions
 
-    # TODO: double check that numpy norm is doing what we want
-    l0: float = LA.norm(p2 - p1)
-    l1: float = LA.norm(p0 - p2)
-    l2: float = LA.norm(p1 - p0)
+    :param p0: [in] first vertex position
+    :param p1: [in] second vertex position
+    :param p2: [in] third vertex position
+    :return: triangle area
+    """
+    deprecated("Method only used in generate_twelve_split_domain_areas, which is no longer in use.")
 
-    assert isinstance(l0, float)
+    # assert p0.shape == (1, 2)
+    # assert p1.shape == (1, 2)
+    # assert p2.shape == (1, 2)
+    # assert p0.shape[0] == 1  # making sure that p0 is shape (1, n)
+    # assert p0.shape == p1.shape
+    # assert p1.shape == p2.shape
 
-    return area_from_length(l0, l1, l2)
+    # # TODO: double check that numpy norm is doing what we want
+    # l0: float = LA.norm(p2 - p1)
+    # l1: float = LA.norm(p0 - p2)
+    # l2: float = LA.norm(p1 - p0)
+
+    # assert isinstance(l0, float)
+
+    # return area_from_length(l0, l1, l2)
 
 
 def angle_from_length(edge_length_opposite_corner: float,
@@ -799,15 +733,12 @@ def angle_from_length(edge_length_opposite_corner: float,
                       second_adjacent_edge_length: float
                       ) -> float:
     """
-    @brief Compute the angle of a triangle corner with given edge lengths
+    Compute the angle of a triangle corner with given edge lengths
 
-    @param[in] edge_length_opposite_corner: length of the edge opposite the
-    corner
-    @param[in] first_adjacent_edge_length: length of one of the edges adjacent
-    to the corner
-    @param[in] first_adjacent_edge_length: length of the other edge adjacent to
-    the corner
-    @return angle of the corner
+    :param edge_length_opposite_corner: [in]  length of the edge opposite the corner
+    :param first_adjacent_edge_length:  [in] length of one of the edges adjacent to the corner
+    :param first_adjacent_edge_length:  [in] length of the other edge adjacent to the corner
+    :return: angle of the corner
     """
     # Rename variables for readability
     l0: float = edge_length_opposite_corner
@@ -816,12 +747,11 @@ def angle_from_length(edge_length_opposite_corner: float,
 
     # Compute the angle
     # FIXME Avoid potential division by 0
-    Ijk: float = (-l0 * l0 + l1 * l1 + l2 * l2)
-    return math.acos(min(max(Ijk / (2.0 * l1 * l2), -1.0), 1.0))
+    ijk: float = (-l0 * l0 + l1 * l1 + l2 * l2)
+    return math.acos(min(max(ijk / (2.0 * l1 * l2), -1.0), 1.0))
 
 
-def angle_from_positions(dimension: int,
-                         angle_corner_position: np.ndarray,
+def angle_from_positions(angle_corner_position: np.ndarray,
                          second_corner_position: np.ndarray,
                          third_corner_position: np.ndarray) -> float:
     """
@@ -835,9 +765,9 @@ def angle_from_positions(dimension: int,
     triangle
     @return angle of the corner
     """
-    assert angle_corner_position.shape == (1, dimension)
-    assert second_corner_position.shape == (1, dimension)
-    assert third_corner_position.shape == (1, dimension)
+    assert angle_corner_position.shape == (1, 2)
+    assert second_corner_position.shape == (1, 2)
+    assert third_corner_position.shape == (1, 2)
 
     # TODO: double check that the below are going to be floats...
     # FIXME: really silly error was here
@@ -852,31 +782,32 @@ def interval_lerp():
     todo()
 
 
-def compute_point_cloud_bounding_box(points: np.ndarray) -> tuple[SpatialVector, SpatialVector]:
+def compute_point_cloud_bounding_box(points: MatrixNx3f) -> tuple[SpatialVector, SpatialVector]:
     """ Compute the bounding box for a matrix of points in R^n.
     The points are assumed to be the rows of the points matrix.
 
     :param points: points to compute the bounding box for.
     :type points: np.ndarray
 
-    :return (min_point, max_point): tuple of (point with minimum coordinates for the bounding box, point with maximum coordinates for the bounding box).
+    :return (min_point, max_point): tuple of (point with minimum coordinates for the bounding box,
+    point with maximum coordinates for the bounding box).
     :rtype: tuple[Vector, Vector]
     """
+    # TODO: change type of points to matrix
+    num_points: int = points.shape[ROWS]
+    dimension: int = points.shape[COLS]
 
-    # TODO: cahnge type of points to matrix
-    num_points = points.shape[0]
-    dimension = points.shape[1]
-
-    if (num_points == 0):
-        todo("deal with 0 case")
-    if (dimension == 0):
-        todo("deal with 0 case")
+    if num_points == 0:
+        raise ValueError("num_points cannot be 0")
+    if dimension == 0:
+        raise ValueError("dimension cannot be 0")
 
     # Get minimum and maximum coordinates for the points
     # TODO: test this with NumPy, and also maybe mathutils
     # Get minimum and maximum coordinates for the points
-    min_point = points[[0], :]
-    max_point = points[[0], :]
+    min_point: SpatialVector = points[[0], :]
+    max_point: SpatialVector = points[[0], :]
+    # NOTE: asserting (1, 3) since these points must be SpatialVectors
     assert min_point.shape == (1, 3)
     assert max_point.shape == (1, 3)
 
@@ -889,8 +820,8 @@ def compute_point_cloud_bounding_box(points: np.ndarray) -> tuple[SpatialVector,
     return min_point, max_point
 
 
-def remove_mesh_faces(V: np.ndarray,
-                      F: np.ndarray,
+def remove_mesh_faces(V: MatrixNx3f,
+                      F: MatrixNx3i,
                       faces_to_remove: list[FaceIndex]) -> tuple[np.ndarray, np.ndarray]:
     """
     Using igl to remove unreferenced vertices from V using faces_to_remove and updating F accordingly.
@@ -905,7 +836,7 @@ def remove_mesh_faces(V: np.ndarray,
     :return: tuple of V and F submeshes (V, F)
     :rtype: tuple[np.ndarray, np.ndarray]
     """
-    faces_to_keep: list[FaceIndex] = index_vector_complement(faces_to_remove, F.shape[0])  # rows
+    faces_to_keep: list[FaceIndex] = index_vector_complement(faces_to_remove, F.shape[ROWS])  # rows
 
     # TODO: in the ASOC code, this F_unsimplified_submesh was initialized to shape (faces_to_keep.size(), F.cols()) and then immediately resized.
     F_unsimplified_submesh: np.ndarray = np.ndarray(shape=(len(faces_to_keep), 3), dtype=int)
@@ -918,16 +849,16 @@ def remove_mesh_faces(V: np.ndarray,
     F_submesh: np.ndarray
     V_submesh: np.ndarray
     # TODO: Pylint shows error with igl not having member, but I'm sure it is fine.
-    F_submesh, V_submesh, __placeholder1, __placeholder2 = igl.remove_unreferenced(F, V)
+    F_submesh, V_submesh, _, _ = igl.remove_unreferenced(F, V)
 
     logger.info("Final mesh has %s faces and %s vertices",
-                F_submesh.shape[0], V_submesh.shape[0])  # rows
+                F_submesh.shape[ROWS], V_submesh.shape[ROWS])
 
     return V_submesh, F_submesh
 
 
-def remove_mesh_vertices(V: np.ndarray,
-                         F: np.ndarray[tuple[int], np.dtype[np.int_]],
+def remove_mesh_vertices(V: MatrixNx3f,
+                         F: MatrixNx3i,
                          vertices_to_remove: list[VertexIndex]) -> tuple[np.ndarray, np.ndarray, list[FaceIndex]]:
     """
     Removes mesh vertices from V based on the indices inside vertices_to_remove and updates F accordingly.
@@ -942,8 +873,8 @@ def remove_mesh_vertices(V: np.ndarray,
     :return: tuple of vertex matrix with vertices removed, updated faces, and list of face indices that were removed
     :rtype: tuple[np.ndarray, np.ndarray, list[FaceIndex]]
     """
-    logger.info("Removing %s vertices from mesh with %s faces and %s vertices", len(
-        vertices_to_remove), F.shape[0], V.shape[0])
+    logger.info("Removing %s vertices from mesh with %s faces and %s vertices",
+                len(vertices_to_remove), F.shape[ROWS], V.shape[ROWS])
 
     # Tag faces adjacent to the vertices to remove
     # TODO: implement some numpy version of of finding a vertex in a row of F
@@ -983,19 +914,20 @@ def vector_contains_nan(vec: np.ndarray) -> bool:
     return np.isnan(vec).any()
 
 
-def convert_polylines_to_edges(polylines: list[list[int]]) -> list[Edge]:
+def convert_polylines_to_edges(polylines: list[list[int]]) -> list[tuple[int, int]]:
     """
-    TODO: is this really needed? check if polylines are just list of edges in Python cuz the ASOC code may just be some vector to array conversion.
-    NOTE: returning list[list[Edge]], which is really jsut list[list[int, int]]... but the change is the switch to NumPy arrays since Polyscope used in add_surface_to_viewer() in quadratic_spline_surface.py need NumPy arrays rather than Python list[list[int]].... though...
+    Polylines are vector<vector<int>> in the original C++ code. 
+    Meanwhile, this function returns list[array[int, 2]]. 
+    So this takes the arbitrary length polylines and converts to list of list of 2 int elements.
     """
 
     # TODO: check to see if functionality of NumPy version is the same as the old one.
-    edges: list[Edge] = []
-    for i, polyline in enumerate(polylines):
+    edges: list[tuple[int, int]] = []
+    for _, polyline in enumerate(polylines):
         # polyline equivalent to polylines[i]
         edge_length: int = len(polyline)
         for j in range(1, edge_length):
-            edge: Edge = [polyline[j - 1], polyline[j]]
+            edge: tuple[int, int] = (polyline[j - 1], polyline[j])
             edges.append(edge)
 
     return edges

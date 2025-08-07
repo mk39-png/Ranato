@@ -171,10 +171,9 @@ def compute_vertex_one_ring(F: np.ndarray,
         face_one_ring: [out].
     """
     # TODO: double check logic of this method and if it makes sense to return a new value
-    PLACEHOLDER_INT = -1
     num_faces:       int = len(adjacent_faces)
-    vertex_one_ring: list[int] = [PLACEHOLDER_INT] * (num_faces + 1)
-    face_one_ring:   list[int] = [PLACEHOLDER_INT] * num_faces
+    vertex_one_ring: list[int] = [PLACEHOLDER_VALUE] * (num_faces + 1)
+    face_one_ring:   list[int] = [PLACEHOLDER_VALUE] * num_faces
 
     if len(adjacent_faces) == 0:
         return [], []
@@ -212,24 +211,19 @@ class VertexCirculator:
     # ***************
     # Constructor
     # ***************
-    def __init__(self, F: np.ndarray):
+    def __init__(self, F: MatrixNx3i) -> None:
         """
         Constructor for the vertex circulator from the faces of the mesh.
 
-        Args:
-            F: [in] input mesh faces
-
-        Returns:
-            None
+        :param F: [in] input mesh faces
+        :return: None
         """
         # ***************
         # Private Members
         # ***************
-        self.m_F: np.ndarray[tuple[int, int], np.dtype[np.int64]] = F
+        self.m_F: MatrixNx3i = F
 
-        #  Initialize adjacent faces list
-        # TODO: what is maxCoeff FYI?
-        # TODO: shouldn't this be called num_faces?
+        # Initialize adjacent faces list
         num_vertices: int = F.max() + 1
         self.m_all_adjacent_faces: list[list[int]] = compute_adjacent_faces(F)
 
@@ -244,17 +238,6 @@ class VertexCirculator:
             self.m_all_vertex_one_rings[i], self.m_all_face_one_rings[i] = compute_vertex_one_ring(F,
                                                                                                    i,
                                                                                                    self.m_all_adjacent_faces[i])
-
-        # TESTING:
-        # if logger.level == logging.DEBUG:
-        #     filepath: str = "spot_control\\vertex_circulator\\"
-        #     compare_eigen_numpy_matrix(f"{filepath}F.csv", self.m_F)
-        #     compare_list_list_varying_lengths(f"{filepath}m_all_adjacent_faces.csv",
-        #                                       self.m_all_adjacent_faces)
-        #     compare_list_list_varying_lengths(f"{filepath}m_all_face_one_rings.csv",
-        #                                       self.m_all_face_one_rings)
-        #     compare_list_list_varying_lengths(f"{filepath}m_all_vertex_one_rings.csv",
-        #                                       self.m_all_vertex_one_rings)
 
     # ***************
     # Public Members

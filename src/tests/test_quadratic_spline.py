@@ -5,11 +5,9 @@ from src.core.generate_transformation import *
 from src.core.compute_boundaries import *
 from src.contour_network.contour_network import *
 from src.quadratic_spline_surface.quadratic_spline_surface_patch import QuadraticSplineSurfacePatch
-from src.utils.generate_shapes import *
 from src.quadratic_spline_surface.quadratic_spline_surface import *
 from src.quadratic_spline_surface.optimize_spline_surface import *
 from src.quadratic_spline_surface.twelve_split_spline import *
-from igl import readOBJ, writeOBJ
 
 import logging
 import sys
@@ -35,9 +33,9 @@ def test_read_write_spline_surface_serialization() -> None:
 
     # NOTE: need a placeholder to call write_spline() and deserialize()...
     # TODO: better to separate deserialize() and write_spline() as separate from, QuadraticSplineSurface class and take QuadraticSplineSurface as the parameter or whatnot.
-    spline_surface_placeholder = QuadraticSplineSurface(filename=filename_control)
+    spline_surface_placeholder = QuadraticSplineSurface(filepath=filepath_control)
     # Write the saved spline data to an external file. So, converting Eigen TXT -> Numpy Implementation -> NumPy TXT
-    spline_surface_placeholder.write_spline(filename_test)
+    spline_surface_placeholder.write_spline(filepath_test)
 
     # FIXME: make deserialize() independent of QudaraticSplineSurface...
     # TODO: now compare the files to see that they ghave the same contents
@@ -74,51 +72,9 @@ def test_read_view_spline_surface_deserialization() -> None:
     """
     Testing to see that the file can be deserialized and the surface displayed properly.
     """
+
     filename: str = "spot_control_mesh-cleaned_conf_simplified_with_uv_CONTROL.txt"
-    spline_surface = QuadraticSplineSurface(filename=filename)
-    spline_surface.view()  # FIXME surface mesh displayed properly, but patch_boundaries is not working.
+    filepath: str = os.path.abspath(f"src\\tests\\spot_control\\{filename}")
 
-
-def test_discretize_patch_boundaries() -> None:
-    """
-    NOTE: also includes convert_nested_vector_to_matrix() and convert_polylines_to_edges() test.
-    """
-    filename: str = "spot_control_mesh-cleaned_conf_simplified_with_uv_CONTROL.txt"
-    spline_surface = QuadraticSplineSurface(filename=filename)
-    boundary_points: list[SpatialVector]
-    boundary_polylines: list[list[int]]
-    boundary_points, boundary_polylines = spline_surface.discretize_patch_boundaries()
-
-    # Discretize patch boundaries
-    compare_eigen_numpy_matrix(
-        "spot_control\\quadratic_spline_surface\\add_surface_to_viewer\\boundary_points.csv", np.array(boundary_points).squeeze())
-    compare_eigen_numpy_matrix(
-        "spot_control\\quadratic_spline_surface\\add_surface_to_viewer\\boundary_polylines.csv", np.array(boundary_polylines))
-
-    # View contour curve network
-    boundary_points_matrix: np.ndarray = convert_nested_vector_to_matrix(boundary_points)
-
-    # FIXME: boundary polylines are not made properly...
-    boundary_edges: list[list[int]] = convert_polylines_to_edges(boundary_polylines)
-
-    compare_eigen_numpy_matrix(
-        "spot_control\\quadratic_spline_surface\\add_surface_to_viewer\\boundary_points_mat.csv", boundary_points_matrix)
-    compare_eigen_numpy_matrix(
-        "spot_control\\quadratic_spline_surface\\add_surface_to_viewer\\boundary_edges.csv", np.array(boundary_edges))
-
-
-def test_discretize() -> None:
-    filename: str = "spot_control_mesh-cleaned_conf_simplified_with_uv_CONTROL.txt"
-    surface_disc_params: SurfaceDiscretizationParameters = SurfaceDiscretizationParameters()
-    spline_surface = QuadraticSplineSurface(filename=filename)
-    V: np.ndarray[tuple[int, int], np.dtype[np.float64]]
-    F: np.ndarray[tuple[int, int], np.dtype[np.int64]]
-    N: np.ndarray[tuple[int, int], np.dtype[np.float64]]
-    V, F, N = spline_surface.discretize(surface_disc_params)
-
-    compare_eigen_numpy_matrix(
-        "spot_control\\quadratic_spline_surface\\add_surface_to_viewer\\F_discretized_2_subdiv.csv", F)
-    compare_eigen_numpy_matrix(
-        "spot_control\\quadratic_spline_surface\\add_surface_to_viewer\\V_discretized_2_subdiv.csv", V)
-    compare_eigen_numpy_matrix(
-        "spot_control\\quadratic_spline_surface\\add_surface_to_viewer\\N_discretized_2_subdiv.csv", N)
+    spline_surface = QuadraticSplineSurface(filepath=filepath)
+    spline_surface.view()
