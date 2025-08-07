@@ -63,23 +63,24 @@ class QuadraticSplineSurface:
         @param[in] patches: quadratic surface patches
         """
 
-        # NOTE: self._patches protected since it's accessed and used by subclass TwelveSplitSplineSurface
+        # NOTE: self._patches protected since it's accessed and used by
+        # subclass TwelveSplitSplineSurface
         self._patches: list[QuadraticSplineSurfacePatch] = patches
 
         # Hash table parameters
-        self.__patches_bbox_x_min: float = 0.0
-        self.__patches_bbox_x_max: float = 0.0
-        self.__patches_bbox_y_min: float = 0.0
-        self.__patches_bbox_y_max: float = 0.0
-        self.hash_x_interval: float = 0.0
-        self.hash_y_interval: float = 0.0
+        # TODO: these have been commented because they are not used for anything.
+        # self.__patches_bbox_x_min: float = 0.0
+        # self.__patches_bbox_x_max: float = 0.0
+        # self.__patches_bbox_y_min: float = 0.0
+        # self.__patches_bbox_y_max: float = 0.0
+        # self.hash_x_interval: float = 0.0
+        # self.hash_y_interval: float = 0.0
 
-        # Hash table data
-        # hash_table is a 2D list of list[int]
+        # Hash table data in a 2D list of list[int]
         # NOTE: hash_table is HASH_TABLE_SIZE x HASH_TABLE_SIZE 2D list with elements list[int]
         # TODO: utilize some sort of pythonic hash table type
-        # FIXME: I think the hash table is where everything goes wrong and is the one function I did not check yet...
-        self._hash_table: list[list[list[int]]] = self.compute_patch_hash_tables()
+        # FIXME: I think the hash table is where everything goes wrong and is the one function
+        self._hash_table: list[list[list[int]]] = self.compute_patch_hash_tables(patches)
 
         # TODO: the below does not seem like it's used for anything yet
         # self.reverse_hash_table: list[list[tuple[int, int]]]
@@ -555,7 +556,9 @@ class QuadraticSplineSurface:
 
         return patches
 
-    def compute_patch_hash_tables(self) -> list[list[list[int]]]:
+    def compute_patch_hash_tables(self,
+                                  patches_ref: list[QuadraticSplineSurfacePatch]
+                                  ) -> list[list[list[int]]]:
         """
         Compute hash tables for the surface.
         NOTE: Used in twelve_split_spline.py inside of init_twelve_split_patches().
@@ -573,30 +576,27 @@ class QuadraticSplineSurface:
         ]
 
         # Compute bounding box for all the patches
-        # TODO: why not compute the patches inside of the constructor rather than this function?
-        # Makes things less confusing with nesting.
-        self.__compute_patches_bbox()
-
         # Alias for readability
-        x_min: float = self.__patches_bbox_x_min
-        x_max: float = self.__patches_bbox_x_max
-        y_min: float = self.__patches_bbox_y_min
-        y_max: float = self.__patches_bbox_y_max
+        x_min: float
+        x_max: float
+        y_min: float
+        y_max: float
+        x_min, x_max, y_min, y_max = self.__compute_patches_bbox(patches_ref)
 
         for i in range(1, num_patch):
-            if (x_min > self._patches[i].get_bbox_x_min()):
-                x_min = self._patches[i].get_bbox_x_min()
-            if (x_max < self._patches[i].get_bbox_x_max()):
-                x_max = self._patches[i].get_bbox_x_max()
-            if (y_min > self._patches[i].get_bbox_y_min()):
-                y_min = self._patches[i].get_bbox_y_min()
-            if (y_max < self._patches[i].get_bbox_y_max()):
-                y_max = self._patches[i].get_bbox_y_max()
+            if (x_min > patches_ref[i].get_bbox_x_min()):
+                x_min = patches_ref[i].get_bbox_x_min()
+            if (x_max < patches_ref[i].get_bbox_x_max()):
+                x_max = patches_ref[i].get_bbox_x_max()
+            if (y_min > patches_ref[i].get_bbox_y_min()):
+                y_min = patches_ref[i].get_bbox_y_min()
+            if (y_max < patches_ref[i].get_bbox_y_max()):
+                y_max = patches_ref[i].get_bbox_y_max()
 
         x_interval: float = (x_max - x_min) / hash_size_x
         y_interval: float = (y_max - y_min) / hash_size_y
 
-        # FIXME: below are not used anywhere...
+        # TODO: below are not used anywhere...
         # self.hash_x_interval = x_interval
         # self.hash_y_interval = y_interval
 
@@ -604,10 +604,10 @@ class QuadraticSplineSurface:
 
         # Hash into each box
         for i in range(num_patch):
-            left_x: int = int((self._patches[i].get_bbox_x_min() - eps - x_min) / x_interval)
-            right_x: int = int(hash_size_x - int((x_max - self._patches[i].get_bbox_x_max() - eps) / x_interval) - 1)
-            left_y: int = int((self._patches[i].get_bbox_y_min() - eps - y_min) / y_interval)
-            right_y: int = int(hash_size_y - int((y_max - self._patches[i].get_bbox_y_max() - eps) / y_interval) - 1)
+            left_x: int = int((patches_ref[i].get_bbox_x_min() - eps - x_min) / x_interval)
+            right_x: int = int(hash_size_x - int((x_max - patches_ref[i].get_bbox_x_max() - eps) / x_interval) - 1)
+            left_y: int = int((patches_ref[i].get_bbox_y_min() - eps - y_min) / y_interval)
+            right_y: int = int(hash_size_y - int((y_max - patches_ref[i].get_bbox_y_max() - eps) / y_interval) - 1)
 
             for j in range(left_x, right_x + 1):
                 for k in range(left_y, right_y + 1):
@@ -651,35 +651,39 @@ class QuadraticSplineSurface:
 
         return True
 
-    def __compute_patches_bbox(self, patches_ref: list[QuadraticSplineSurfacePatch]) -> None:
+    def __compute_patches_bbox(self,
+                               patches_ref: list[QuadraticSplineSurfacePatch]
+                               ) -> tuple[float, float, float, float]:
         """
         Compute bounding boxes for the patches.
-        As in, calculates values for member variables below:
-        - self.patches_bbox_x_min
-        - self.patches_bbox_x_max
-        - self.patches_bbox_y_min
-        - self.patches_bbox_y_max
+        As in, calculates values for variables below:
+        - patches_bbox_x_min
+        - patches_bbox_x_max
+        - patches_bbox_y_min
+        - patches_bbox_y_max
 
         :return: tuple (x_min, x_max, y_min, y_max):
         :rtype: tuple[float, float, float, float]
         """
-        x_min: float = self._patches[0].get_bbox_x_min()
-        x_max: float = self._patches[0].get_bbox_x_max()
-        y_min: float = self._patches[0].get_bbox_y_min()
-        y_max: float = self._patches[0].get_bbox_y_max()
+        x_min: float = patches_ref[0].get_bbox_x_min()
+        x_max: float = patches_ref[0].get_bbox_x_max()
+        y_min: float = patches_ref[0].get_bbox_y_min()
+        y_max: float = patches_ref[0].get_bbox_y_max()
 
         for i in range(1, self.num_patches):
-            if (x_min > self._patches[i].get_bbox_x_min()):
-                x_min = self._patches[i].get_bbox_x_min()
-            if (x_max < self._patches[i].get_bbox_x_max()):
-                x_max = self._patches[i].get_bbox_x_max()
-            if (y_min > self._patches[i].get_bbox_y_min()):
-                y_min = self._patches[i].get_bbox_y_min()
-            if (y_max < self._patches[i].get_bbox_y_max()):
-                y_max = self._patches[i].get_bbox_y_max()
+            if (x_min > patches_ref[i].get_bbox_x_min()):
+                x_min = patches_ref[i].get_bbox_x_min()
+            if (x_max < patches_ref[i].get_bbox_x_max()):
+                x_max = patches_ref[i].get_bbox_x_max()
+            if (y_min > patches_ref[i].get_bbox_y_min()):
+                y_min = patches_ref[i].get_bbox_y_min()
+            if (y_max < patches_ref[i].get_bbox_y_max()):
+                y_max = patches_ref[i].get_bbox_y_max()
 
-        # TODO: isn't it more pythonic to return these in a tuple?
-        self.__patches_bbox_x_min: float = x_min
-        self.__patches_bbox_x_max: float = x_max
-        self.__patches_bbox_y_min: float = y_min
-        self.__patches_bbox_y_max: float = y_max
+        # Alias for readability.
+        patches_bbox_x_min: float = x_min
+        patches_bbox_x_max: float = x_max
+        patches_bbox_y_min: float = y_min
+        patches_bbox_y_max: float = y_max
+
+        return patches_bbox_x_min, patches_bbox_x_max, patches_bbox_y_min, patches_bbox_y_max

@@ -8,6 +8,8 @@ from collections import defaultdict
 
 from src.core.common import (
     compare_eigen_numpy_matrix,
+    initialize_spot_control_mesh,
+    vector_equal,
     SKY_BLUE,
     DISCRETIZATION_LEVEL,
     logger,
@@ -15,6 +17,7 @@ from src.core.common import (
     SpatialVector,
     MatrixXf,
     MatrixXi,
+    Matrix3x2f,
     Matrix6x3r,
 )
 from src.core.affine_manifold import (
@@ -100,6 +103,56 @@ def initialize_twelve_split_spline_from_spot_mesh() -> tuple[TwelveSplitSplineSu
 # ****************
 # Test Methods
 # ****************
+def test_generate_optimized_twelve_split_position_data() -> None:
+    """
+    Dependencies:
+    * build_twelve_split_spline_energy_system
+    """
+    V, uv, F, FT = initialize_spot_control_mesh()
+    affine_manifold: AffineManifold = AffineManifold(F, uv, FT)
+    optimization_params: OptimizationParameters = OptimizationParameters()
+    spline_surface: TwelveSplitSplineSurface = TwelveSplitSplineSurface(V,
+                                                                        affine_manifold,
+                                                                        optimization_params)
+
+    # NOTE: corner_data.csv is set up such that it represents the below: (either that or... just combine it all smoothly...)
+    # CORNER 1
+    # 0, 1, 2 function_value
+    # 0, 1, 2 first_edge_derivative
+    # 0, 1, 2 second_edge_derivative
+    # CORNER 2
+    # 0, 1, 2 function_value
+    # 0, 1, 2 first_edge_derivative
+    # 0, 1, 2 second_edge_derivative
+    # CORNER 3
+    # 0, 1, 2 function_value
+    # 0, 1, 2 first_edge_derivative
+    # 0, 1, 2 second_edge_derivative
+    # ...
+    # Nvm... just bash it all together into 1 big chunk..
+
+    corner_data_ref = spline_surface.corner_data
+    midpoint_data_ref = spline_surface.midpoint_data
+
+    corner_data_test: list[np.ndarray] = []
+    for outer_key in sorted(corner_data_ref):
+        for inner_key in sorted(corner_data_ref[outer_key]):
+            triangle_corner_data: TriangleCornerData = corner_data_ref[outer_key][inner_key]
+            corner_data_test.append(triangle_corner_data.function_value.flatten())
+            corner_data_test.append(triangle_corner_data.first_edge_derivative.flatten())
+            corner_data_test.append(triangle_corner_data.second_edge_derivative.flatten())
+    compare_eigen_numpy_matrix("spot_control\\12_split_spline\\corner_data.csv",
+                               np.array(corner_data_test),
+                               atol=1e-6)
+
+    midpoint_data_test: list[np.ndarray] = []
+    for outer_key in sorted(midpoint_data_ref):
+        for inner_key in sorted(midpoint_data_ref[outer_key]):
+            triangle_midpoint_data: TriangleMidpointData = midpoint_data_ref[outer_key][inner_key]
+            midpoint_data_test.append(triangle_midpoint_data.normal_derivative.flatten())
+    compare_eigen_numpy_matrix("spot_control\\12_split_spline\\midpoint_data.csv",
+                               np.array(midpoint_data_test))
+
 
 def test_init_twelve_split_patches_from_spot_mesh() -> None:
     """
@@ -118,20 +171,20 @@ def test_init_twelve_split_patches_from_spot_mesh() -> None:
     V: MatrixXf = np.ndarray(shape=(0, 0), dtype=np.float64)
     spline_surface, affine_manifold, V = initialize_twelve_split_spline_from_spot_mesh()
 
-    corner_data: dict[int, dict[int, TriangleCornerData]] = defaultdict(dict)
-    midpoint_data: dict[int, dict[int, TriangleMidpointData]] = defaultdict(dict)
-    face_to_patch_indices: list[list[int]]
-    patch_to_face_indices: list[int]
+    # corner_data: dict[int, dict[int, TriangleCornerData]] = defaultdict(dict)
+    # midpoint_data: dict[int, dict[int, TriangleMidpointData]] = defaultdict(dict)
+    # face_to_patch_indices: list[list[int]]
+    # patch_to_face_indices: list[int]
     is_cone_corner: list[list[bool]] = affine_manifold.compute_cone_corners()
 
-    face_to_patch_indices, patch_to_face_indices = spline_surface.init_twelve_split_patches(corner_data,
-                                                                                            midpoint_data,
-                                                                                            is_cone_corner)
+    # spline_surface.__init_twelve_split_patches(spline_surface.corner_data,
+    #                                            spline_surface.midpoint_data,
+    #                                            is_cone_corner)
 
     compare_eigen_numpy_matrix("spot_control\\12_split_spline\\init_twelve_split_patches\\face_to_patch_indices.csv",
-                               np.array(face_to_patch_indices))
+                               np.array(spline_surface.face_to_patch_indices))
     compare_eigen_numpy_matrix("spot_control\\12_split_spline\\init_twelve_split_patches\\patch_to_face_indices.csv",
-                               np.array(patch_to_face_indices))
+                               np.array(spline_surface.patch_to_face_indices))
 
 
 def test_generate_twelve_split_spline_patch_patch_to_corner_map_from_spot_mesh() -> None:
@@ -245,13 +298,13 @@ def test_twelve_split_spline_patches_with_spot_control() -> None:
     filepath_control: str = os.path.abspath(f"src\\tests\\spot_control\\{filename_control}")
 
     # NOTE: need the placeholder to utilize its deserialize() method
-    spline_surface_placeholder = QuadraticSplineSurface(filepath=filepath_control)
+    spline_surface_placeholder = QuadraticSplineSurface.from_file(filepath=filepath_control)
     with open(filepath_control, "r", encoding="utf-8") as file_control:
         control_patches: list[QuadraticSplineSurfacePatch] = spline_surface_placeholder.deserialize(file_control)
         file_control.close()
 
     # Now, grabbing the patches made from twelve_split_spline (i.e. our patches to test)
-    test_patches: list[QuadraticSplineSurfacePatch] = spline_surface.m_patches
+    test_patches: list[QuadraticSplineSurfacePatch] = spline_surface._patches
     assert len(control_patches) == len(test_patches)
     num_patches: int = len(control_patches)
 
@@ -259,11 +312,11 @@ def test_twelve_split_spline_patches_with_spot_control() -> None:
     for i in range(num_patches):
         surface_mapping_coeffs_control: Matrix6x3r = control_patches[i].get_surface_mapping()  # cx, cy, cz
         domain_control: ConvexPolygon = control_patches[i].get_domain
-        vertices_control: Matrix3x2r = domain_control.get_vertices  # p1, p2, p3
+        vertices_control: Matrix3x2f = domain_control.get_vertices  # p1, p2, p3
 
         surface_mapping_coeffs_test: Matrix6x3r = test_patches[i].get_surface_mapping()  # cx, cy, cz
         domain_test: ConvexPolygon = test_patches[i].get_domain
-        vertices_test: Matrix3x2r = domain_test.get_vertices  # p1, p2, p3
+        vertices_test: Matrix3x2f = domain_test.get_vertices  # p1, p2, p3
 
         # lower precision because serialization loses precision
         npt.assert_allclose(vertices_control, vertices_test, atol=1e-5)

@@ -44,7 +44,7 @@ def test_generate_optimized_twelve_split_position_data_from_spot_mesh() -> None:
     """
 
 
-def test_generate_zero_vertex_gradients_from_spot_mesh() -> None:
+# def test_generate_zero_vertex_gradients_from_spot_mesh() -> None:
 
 
 def test_generate_zero_edge_gradients_from_spot_mesh() -> None:
