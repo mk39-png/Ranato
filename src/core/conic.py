@@ -1,8 +1,10 @@
 
 
 from enum import Enum
-from ..core.rational_function import *
-from ..core.bivariate_quadratic_function import formatted_bivariate_quadratic_mapping
+
+from src.core.bivariate_quadratic_function import \
+    formatted_bivariate_quadratic_mapping
+from src.core.rational_function import *
 
 
 class ConicType(Enum):
@@ -80,7 +82,8 @@ class Conic(RationalFunction):
 
         logger.info("v function before pullback: (%s)/(%s)",
                     v_coeffs, Q_coeffs)
-        # formatted_polynomial(self.get_degree, self.get_dimension, u_coeffs), formatted_polynomial(self.get_degree, self.get_dimension, Q_coeffs))
+        # formatted_polynomial(self.get_degree, self.get_dimension, u_coeffs),
+        # formatted_polynomial(self.get_degree, self.get_dimension, Q_coeffs))
 
         # Compute (homogenized) polynomial coefficients for the quadratic terms
         QQ_coeffs = np.ndarray(shape=(5, 1))
@@ -103,7 +106,8 @@ class Conic(RationalFunction):
             2, 2, 1, v_coeffs, v_coeffs)
 
         # Combine quadratic monomial functions into a matrix
-        # NOTE: need to flatten the NP matrices into vectors from (5,1) to (5,) shape for broadcasting to work
+        # NOTE: need to flatten the NP matrices into vectors from (5,1) to (5,)
+        # shape for broadcasting to work
         # NOTE: Also transposing with .T to be shape (5,6) rather than (6,5)
         monomial_coeffs = np.array([QQ_coeffs.flatten(),
                                     Qu_coeffs.flatten(),
@@ -126,7 +130,8 @@ class Conic(RationalFunction):
                     QQ_coeffs)
         # formatted_polynomial(self.get_degree, self.get_dimension, QQ_coeffs))
 
-        # XXX: domain() is in the C++. Meanwhile, Python code here uses self.m_domain... may cause problems.
+        # XXX: domain() is in the C++. Meanwhile, Python code here uses self.m_domain...
+        # may cause problems.
         # XXX: specifically, just be wary of the getter that's used in the C++ code.
         # NOTE: below RationalFunction is made from interval
         pullback_function = RationalFunction(
@@ -138,9 +143,9 @@ class Conic(RationalFunction):
         return pullback_function
 
     def __is_valid(self):
-        if (self.m_numerator_coeffs.shape[1] == 0):
+        if self.m_numerator_coeffs.shape[1] == 0:
             return False
-        if (self.m_denominator_coeffs.size == 0):
+        if self.m_denominator_coeffs.size == 0:
             return False
 
         return True

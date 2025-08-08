@@ -4,21 +4,17 @@ Also includes test to compare with original implementation.
 """
 
 import os
-import pytest
-import numpy as np
-import igl
 
-from src.core.common import (
-    compare_eigen_numpy_matrix,
-    MatrixNx3i,
-    MatrixXf,
-    MatrixXi,
-    Index
-)
+import igl
+import numpy as np
+import pytest
+
+from src.core.common import (Index, MatrixNx3i, MatrixXf, MatrixXi,
+                             compare_eigen_numpy_matrix)
 from src.core.halfedge import Halfedge
 
 
-def test_halfedge_from_spot_control() -> None:
+def test_halfedge_spot_mesh() -> None:
     """
     Tests constructor of halfedge from spot control mesh.
     """
@@ -43,31 +39,31 @@ def test_halfedge_from_spot_control() -> None:
     compare_eigen_numpy_matrix(f"{filepath}he_to_corner.csv",
                                np.array(halfedge.he_to_corner))
     compare_eigen_numpy_matrix(f"{filepath}e2he.csv",
-                               np.array(halfedge.m_e2he))
+                               np.array(halfedge.edge_to_halfedge_map))
     compare_eigen_numpy_matrix(f"{filepath}f2he.csv",
-                               np.array(halfedge.m_f2he))
+                               np.array(halfedge.f2he))
     compare_eigen_numpy_matrix(f"{filepath}face.csv",
-                               np.array(halfedge.m_face))
+                               np.array(halfedge.face))
     compare_eigen_numpy_matrix(f"{filepath}from.csv",
-                               np.array(halfedge.m_from))
+                               np.array(halfedge._from))
     compare_eigen_numpy_matrix(f"{filepath}he2e.csv",
-                               np.array(halfedge.m_he2e))
+                               np.array(halfedge.halfedge_to_edge_map))
     compare_eigen_numpy_matrix(f"{filepath}next.csv",
-                               np.array(halfedge.m_next))
+                               np.array(halfedge.next))
     compare_eigen_numpy_matrix(f"{filepath}opp.csv",
-                               np.array(halfedge.m_opp))
+                               np.array(halfedge.opp))
     compare_eigen_numpy_matrix(f"{filepath}out.csv",
-                               np.array(halfedge.m_out))
+                               np.array(halfedge.out))
     compare_eigen_numpy_matrix(f"{filepath}to.csv",
-                               np.array(halfedge.m_to))
+                               np.array(halfedge.to))
 
 
 def test_halfedge_one_triangle() -> None:
     F: MatrixNx3i = np.array([[0, 1, 2]], dtype=np.int64)
 
     mesh = Halfedge(F)
-    corner_to_he: list[list[Index]] = mesh.get_corner_to_he
-    he_to_corner: list[tuple[Index, Index]] = mesh.get_he_to_corner
+    corner_to_he: list[list[Index]] = mesh.corner_to_he
+    he_to_corner: list[tuple[Index, Index]] = mesh.he_to_corner
 
     # Check size information
     assert len(corner_to_he) == 1
@@ -109,8 +105,8 @@ def test_halfedge_one_triangle() -> None:
 def test_halfedge_two_closed_triangles() -> None:
     F: MatrixNx3i = np.array([[0, 1, 2], [0, 2, 1]], dtype=np.int64)
     mesh = Halfedge(F)
-    corner_to_he: list[list[Index]] = mesh.get_corner_to_he
-    he_to_corner: list[tuple[Index, Index]] = mesh.get_he_to_corner
+    corner_to_he: list[list[Index]] = mesh.corner_to_he
+    he_to_corner: list[tuple[Index, Index]] = mesh.he_to_corner
 
     # Check size information
     assert len(corner_to_he) == 2
@@ -179,8 +175,8 @@ def test_halfedge_two_closed_triangles() -> None:
 def test_halfedge_two_open_triangles() -> None:
     F: MatrixNx3i = np.array([[0, 1, 2], [0, 3, 1]], dtype=np.int64)
     mesh = Halfedge(F)
-    corner_to_he: list[list[Index]] = mesh.get_corner_to_he
-    he_to_corner: list[tuple[Index, Index]] = mesh.get_he_to_corner
+    corner_to_he: list[list[Index]] = mesh.corner_to_he
+    he_to_corner: list[tuple[Index, Index]] = mesh.he_to_corner
 
     # Check size information
     assert len(corner_to_he) == 2

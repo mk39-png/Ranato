@@ -1,21 +1,25 @@
-from src.core.common import *
-from src.core.apply_transformation import *
-from src.core.convex_polygon import ConvexPolygon
-from src.core.generate_transformation import *
-from src.core.compute_boundaries import *
-from src.contour_network.contour_network import *
-from src.quadratic_spline_surface.quadratic_spline_surface_patch import QuadraticSplineSurfacePatch
-from src.quadratic_spline_surface.quadratic_spline_surface import *
-from src.quadratic_spline_surface.optimize_spline_surface import *
-from src.quadratic_spline_surface.twelve_split_spline import *
-
-import logging
-import sys
 import argparse
+import logging
 import os
-import pytest
+import sys
+
 import numpy as np
 import numpy.testing as npt
+import pytest
+
+from src.contour_network.contour_network import *
+from src.core.apply_transformation import *
+from src.core.common import *
+from src.core.compute_boundaries import *
+from src.core.convex_polygon import ConvexPolygon
+from src.core.generate_transformation import *
+from src.quadratic_spline_surface.optimize_spline_surface import *
+from src.quadratic_spline_surface.quadratic_spline_surface import *
+from src.quadratic_spline_surface.quadratic_spline_surface import \
+    QuadraticSplineSurface
+from src.quadratic_spline_surface.quadratic_spline_surface_patch import \
+    QuadraticSplineSurfacePatch
+from src.quadratic_spline_surface.twelve_split_spline import *
 
 
 def test_read_write_spline_surface_serialization() -> None:
@@ -33,7 +37,7 @@ def test_read_write_spline_surface_serialization() -> None:
 
     # NOTE: need a placeholder to call write_spline() and deserialize()...
     # TODO: better to separate deserialize() and write_spline() as separate from, QuadraticSplineSurface class and take QuadraticSplineSurface as the parameter or whatnot.
-    spline_surface_placeholder = QuadraticSplineSurface(filepath=filepath_control)
+    spline_surface_placeholder: QuadraticSplineSurface = QuadraticSplineSurface.from_file(filepath=filepath_control)
     # Write the saved spline data to an external file. So, converting Eigen TXT -> Numpy Implementation -> NumPy TXT
     spline_surface_placeholder.write_spline(filepath_test)
 
@@ -76,5 +80,5 @@ def test_read_view_spline_surface_deserialization() -> None:
     filename: str = "spot_control_mesh-cleaned_conf_simplified_with_uv_CONTROL.txt"
     filepath: str = os.path.abspath(f"src\\tests\\spot_control\\{filename}")
 
-    spline_surface = QuadraticSplineSurface(filepath=filepath)
+    spline_surface: QuadraticSplineSurface = QuadraticSplineSurface.from_file(filepath=filepath)
     spline_surface.view()

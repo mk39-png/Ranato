@@ -1,33 +1,48 @@
 """
 Methods to optimize a spline surface
 """
-
+import copy  # used for shifting array
+from collections import defaultdict
 from dataclasses import dataclass
 
-# from numpy._core.multiarray import _Array
-from src.core.common import *
-from src.quadratic_spline_surface.PS12_patch_coeffs import *
+import numpy as np
+import numpy.testing as npt
+from cholespy import CholeskySolverD, MatrixType
+from scipy.sparse import coo_matrix
 
 from src.core.affine_manifold import AffineManifold, EdgeManifoldChart
-# from src.core.differentiable_variable import *
-# from src.core.halfedge import *
-from src.core.halfedge import Halfedge
-from src.core.polynomial_function import *
-
-from src.quadratic_spline_surface.position_data import TriangleCornerData, TriangleMidpointData
-from src.quadratic_spline_surface.powell_sabin_local_to_global_indexing import *
-from src.quadratic_spline_surface.compute_local_twelve_split_hessian import *
-
+from src.core.common import (COLS, ROWS, Index,  # Matrix2x3f,; MatrixNx3i,
+                             Matrix2x2r, Matrix2x3r, Matrix3x2r, Matrix12x12r,
+                             MatrixNx3, MatrixNx3f, MatrixXf, MatrixXi,
+                             PlanarPoint, SpatialVector, TwelveSplitGradient,
+                             TwelveSplitHessian, Vector1D, Vector2D, VectorX,
+                             float_equal, index_vector_complement, logger,
+                             unimplemented)
+# from src.core.differentiable_variable import compute_variable_gradient
+from src.core.halfedge import Halfedge, TwelveSplitGradient
+from src.quadratic_spline_surface.compute_local_twelve_split_hessian import (
+    build_local_smoothness_hessian, get_C_gl)
+# from src.quadratic_spline_surface.PS12_patch_coeffs import PS12_patch_coeffs
 from src.quadratic_spline_surface.planarH import planarHfun
+from src.quadratic_spline_surface.position_data import (  # generate_affine_manifold_chart_corner_data,
+    TriangleCornerData, TriangleMidpointData,
+    generate_affine_manifold_corner_data,
+    generate_affine_manifold_midpoint_data)
+from src.quadratic_spline_surface.powell_sabin_local_to_global_indexing import (  # generate_local_variable_matrix_index,; generate_affine_manifold_chart_corner_data,; generate_corner_data_matrices,
+    build_face_variable_vector, build_variable_edge_indices_map,
+    build_variable_vertex_indices_map, compute_edge_midpoint_with_gradient,
+    find_face_vertex_index, generate_affine_manifold_corner_data,
+    generate_affine_manifold_midpoint_data,
+    generate_local_edge_gradient_variable_index,
+    generate_local_vertex_gradient_variable_index,
+    generate_local_vertex_position_variable_index,
+    generate_twelve_split_local_to_global_map,
+    generate_twelve_split_variable_value_vector,
+    update_edge_gradient_variables, update_energy_quadratic,
+    update_position_variables, update_vertex_gradient_variables)
 
-import copy  # used for shifting array
-import numpy as np
-from scipy.sparse import csr_matrix, coo_matrix
-import scipy.linalg as spl
-from cholespy import CholeskySolverD, MatrixType, CholeskySolverF
-# import numpy.typing as npt
-
-import numpy.testing as npt
+# from src.core.polynomial_function import (
+# )
 
 
 @dataclass
@@ -99,11 +114,14 @@ class LocalHessianData:
                                     is_cone: list[bool],
                                     is_cone_adjacent: list[bool],
                                     face_normal: SpatialVector,
-                                    optimization_params: OptimizationParameters) -> "LocalHessianData":
+                                    optimization_params: OptimizationParameters
+                                    ) -> "LocalHessianData":
         """
         Assemble the energy quadratic Hessian data.
         TODO: finish docstring 
-        TODO: rename "param" to something else like "description" or some thing to denote that they are not params since I used param so that they appear when hovering over the method.
+        TODO: rename "param" to something else like "description" or some thing to 
+        denote that they are not params since I used param so that they appear when 
+        hovering over the method.
         :param H_f: shape (12, 12)
         :param H_s: shape (12, 12)
         :param H_p: shape (36, 36)
@@ -127,21 +145,22 @@ class LocalHessianData:
         assert uv.shape == (3, 2)
 
         # H_f: position fit hessian
-        H_f: Matrix12x12r = build_local_fit_hessian(is_cone, is_cone_adjacent, optimization_params)
+        H_f: Matrix12x12r = build_local_fit_hessian(is_cone,
+                                                    is_cone_adjacent,
+                                                    optimization_params)
 
         # H_s: local smoothness hessian
-        # FIXME: last few columns of H_s are wrong.... maybe because I was getting row and column order wrong. Try H_s.T to transpose.
-        H_s: Matrix12x12r = build_local_smoothness_hessian(
-            uv,
-            corner_to_corner_uv_positions,
-            reverse_edge_orientations)  # FIXME: might be making H_s all wrong...
+        H_s: Matrix12x12r = build_local_smoothness_hessian(uv,
+                                                           corner_to_corner_uv_positions,
+                                                           reverse_edge_orientations)
 
         # H_p: planar fitting term
         # DEPRECATED (according to ASOC code)
         H_p: np.ndarray  # matrix shape (36, 36)
 
-        # FIXME: below results in NaN values for second build_twelve_split_spline_energy_system() of __init__ for TwelveSplitSplineSurface
-        # WARNING: below operation must remain a float comparison "!= 0.0". Do not attempt using float comparison with tolerance or else you will get NaN values in H_p
+        # WARNING: below operation must remain a float comparison "!= 0.0".
+        # Do not attempt using float comparison with tolerance or else you
+        # will get NaN values in H_p
         if (optimization_params.cone_normal_orthogonality_factor != 0.0):
             H_p = build_planar_constraint_hessian(uv,
                                                   corner_to_corner_uv_positions,
@@ -170,14 +189,18 @@ class LocalDOFData:
     """
 
     def __init__(self,
-                 __r_alpha_0: np.ndarray,  # shape (12, 3)
-                 __r_alpha: np.ndarray,  # shape (12, 3)
-                 __r_alpha_flat: Vector2D,  # shape (36, 1)
+                 in_r_alpha_0: np.ndarray,  # shape (12, 3)
+                 in_r_alpha: np.ndarray,  # shape (12, 3)
+                 in_r_alpha_flat: Vector2D,  # shape (36, 1)
                  ) -> None:
+        assert in_r_alpha_0.shape == (12, 3)
+        assert in_r_alpha.shape == (12, 3)
+        assert in_r_alpha_flat.shape == (36, 1)
+
         # NOTE: default types added to be more Pythonic.
-        self.r_alpha_0: np.ndarray = __r_alpha_0  # initial local DOF
-        self.r_alpha: np.ndarray = __r_alpha  # local DOF
-        self.r_alpha_flat: np.ndarray = __r_alpha_flat  # flattened local DOF
+        self.r_alpha_0: np.ndarray = in_r_alpha_0  # initial local DOF
+        self.r_alpha: np.ndarray = in_r_alpha  # local DOF
+        self.r_alpha_flat: np.ndarray = in_r_alpha_flat  # flattened local DOF
 
     @classmethod
     def generate_local_dof_data(cls,
@@ -251,7 +274,8 @@ class LocalDOFData:
 
 
 def compute_local_twelve_split_energy_quadratic(local_hessian_data: LocalHessianData,
-                                                local_dof_data: LocalDOFData) -> tuple[float, TwelveSplitGradient, TwelveSplitHessian]:
+                                                local_dof_data: LocalDOFData
+                                                ) -> tuple[float, TwelveSplitGradient, TwelveSplitHessian]:
     """
     Compute the local twelve split energy quadratic from Hessian and local
     degree of freedom data
@@ -315,14 +339,15 @@ def compute_local_twelve_split_energy_quadratic(local_hessian_data: LocalHessian
         local_derivatives[3 * i + 1, 0] = g_alpha[i, 1]
         local_derivatives[3 * i + 2, 0] = g_alpha[i, 2]
 
-    # Add planar constraint term FIXME: maybe adjust the multiplication order below to match ASOC?
+    # Add planar constraint term
     local_derivatives += 2.0 * w_p * H_p @ r_alpha_flat
 
-    # TODO: double check that smoothness_term adn fit_term are not 0.0 for any other parameters passed in.
+    # TODO: double check that smoothness_term and fit_term are not 0.0
+    # for any other parameters passed in.
 
     # Add smoothness term
     smoothness_term: float = 0.0
-    for i in range(3):  # FIXME below is probably wrong... somehow...
+    for i in range(3):
         # r_alpha shape sliced = (12, 1)
         __temp = (r_alpha[:, [i]].T @ (w_s * H_s) @ r_alpha[:, [i]])
         assert __temp.shape == (1, 1)
@@ -358,50 +383,43 @@ def shift_array(arr_ref: list, shift: int) -> None:
     """
     Helper function to cyclically shift an array of three elements.
 
-    NOTE: performs DEEP copy and then shifts. So good for basic datatypes but not something like list[np.ndarray] for performance reasons.
-
-    TODO: check that this modifies by reference
+    NOTE: performs DEEP copy and then shifts. So good for basic 
+    datatypes but not something like list[np.ndarray] for performance reasons.
     """
-
-    # FIXME: I don't think that the shift_array is working correctly for numpy arrays...
-    # Because it seems to shift the original copy, which we don't want...
     arr_copy: list = copy.deepcopy(arr_ref)
-    for i in range(3):  # FIXME: this is not doing anything to arr_ref... like it's not changing ANY values whatsoever...
+    for i in range(3):
         arr_ref[i] = arr_copy[(i + shift) % 3]
-
-    # return arr
 
 
 def shift_local_energy_quadratic_vertices(
-        vertex_positions_T: list[SpatialVector],
-        vertex_gradients_T: list[Matrix2x3r],
-        edge_gradients_T: list[SpatialVector],
-        initial_vertex_positions_T: list[SpatialVector],
-        face_vertex_uv_positions: list[PlanarPoint],  # FIXME: fails here because it's planar point????
-        corner_to_corner_uv_positions: list[Matrix2x2r],
-        reverse_edge_orientations: list[bool],
-        is_cone: list[bool],
-        is_cone_adjacent: list[bool],
-        face_global_vertex_indices: list[int],
-        face_global_edge_indices: list[int],
+        vertex_positions_T_ref: list[SpatialVector],
+        vertex_gradients_T_ref: list[Matrix2x3r],
+        edge_gradients_T_ref: list[SpatialVector],
+        initial_vertex_positions_T_ref: list[SpatialVector],
+        face_vertex_uv_positions_ref: list[PlanarPoint],
+        corner_to_corner_uv_positions_ref: list[Matrix2x2r],
+        reverse_edge_orientations_ref: list[bool],
+        is_cone_ref: list[bool],
+        is_cone_adjacent_ref: list[bool],
+        face_global_vertex_indices_ref: list[int],
+        face_global_edge_indices_ref: list[int],
         shift: int) -> None:
     """
     Method to cyclically shift the indexing of all energy quadratic data arrays
     for triangle vertex values.
     NOTE: all array arguments/parameters for this function should be size 3.
-    NOTE: should modify all parameters by reference... I think? either way... yeah... they really should.
     """
-    shift_array(vertex_positions_T, shift)
-    shift_array(vertex_gradients_T, shift)
-    shift_array(edge_gradients_T, shift)
-    shift_array(initial_vertex_positions_T, shift)
-    shift_array(face_vertex_uv_positions, shift)
-    shift_array(corner_to_corner_uv_positions, shift)
-    shift_array(reverse_edge_orientations, shift)
-    shift_array(is_cone, shift)
-    shift_array(is_cone_adjacent, shift)
-    shift_array(face_global_vertex_indices, shift)
-    shift_array(face_global_edge_indices, shift)
+    shift_array(vertex_positions_T_ref, shift)
+    shift_array(vertex_gradients_T_ref, shift)
+    shift_array(edge_gradients_T_ref, shift)
+    shift_array(initial_vertex_positions_T_ref, shift)
+    shift_array(face_vertex_uv_positions_ref, shift)
+    shift_array(corner_to_corner_uv_positions_ref, shift)
+    shift_array(reverse_edge_orientations_ref, shift)
+    shift_array(is_cone_ref, shift)
+    shift_array(is_cone_adjacent_ref, shift)
+    shift_array(face_global_vertex_indices_ref, shift)
+    shift_array(face_global_edge_indices_ref, shift)
 
 
 def compute_twelve_split_energy_quadratic(
@@ -421,7 +439,8 @@ def compute_twelve_split_energy_quadratic(
     Compute the energy system for a twelve-split spline.
 
     NEW BEHAVIOR: also calculates the hessian_inverse because that is needed.
-    NOTE: derivatives shape (num_independent_variables, 1) because trying to be similar to TwelveSplitGradient shape of (36, 1)
+    NOTE: derivatives shape (num_independent_variables, 1) because trying to 
+    be similar to TwelveSplitGradient shape of (36, 1)
 
     :param vertex_positions:         /
     :param vertex_gradients:         /
@@ -443,43 +462,33 @@ def compute_twelve_split_energy_quadratic(
     derivatives: Vector2D = np.zeros(shape=(num_independent_variables, 1), dtype=np.float64)
     hessian_entries: list[tuple[int, int, float]] = []
 
-    # TODO: setup the tester to read from a file.
-    # Each element corresponds to face_index.
-    filepath: str = "spot_control\\optimize_spline_surface\\compute_twelve_split_energy_quadratic"
-    filepath_shifted: str = "spot_control\\optimize_spline_surface\\compute_twelve_split_energy_quadratic\\_shifted_"
-
-    if (float_equal(optimization_params.parametrized_quadratic_surface_mapping_factor, 0.0)):
-        filepath += "\\fit_"
-        filepath_shifted += "\\fit_"
-    else:
-        filepath += "\\"
-        filepath_shifted += "\\"
-
     for face_index in range(manifold.num_faces):
         # Get face vertices
-        F: MatrixXi = manifold.get_faces
+        F: MatrixXi = manifold.faces
         __i: int = F[face_index, 0]
         __j: int = F[face_index, 1]
         __k: int = F[face_index, 2]
 
         # Bundle relevant global variables into per face local vectors (all list of length 3)
-        initial_vertex_positions_T: list[SpatialVector] = build_face_variable_vector(initial_vertex_positions,
-                                                                                     __i,
-                                                                                     __j,
-                                                                                     __k)
-        vertex_positions_T: list[SpatialVector] = build_face_variable_vector(vertex_positions, __i, __j, __k)
+        initial_vertex_positions_T: list[SpatialVector] = build_face_variable_vector(
+            initial_vertex_positions, __i, __j, __k)
+        vertex_positions_T: list[SpatialVector] = build_face_variable_vector(vertex_positions,
+                                                                             __i,
+                                                                             __j,
+                                                                             __k)
         edge_gradients_T: list[SpatialVector] = edge_gradients[face_index]
-        vertex_gradients_T: list[Matrix2x3r] = build_face_variable_vector(vertex_gradients, __i, __j, __k)
+        vertex_gradients_T: list[Matrix2x3r] = build_face_variable_vector(vertex_gradients,
+                                                                          __i,
+                                                                          __j,
+                                                                          __k)
         assert len(initial_vertex_positions_T) == 3
         assert len(vertex_positions_T) == 3
         assert len(edge_gradients_T) == 3
         assert len(vertex_gradients_T) == 3
 
         # Get the global uv values for the face vertices
-        # FIXME: get_face_global_uv is incorrect for the non-fit case...
-        # TODO: because it's NOT making the elements in the correct order... for some reason...
-
-        # TODO: denote below is by referrence XXX: DO NOT MODIFY BELOW BY REFERNCE. CHANGES SHOULD BE LOCAL TO EACH ITERATION OF THE FOR LOOP
+        # XXX: DO NOT MODIFY BELOW BY REFERNCE.
+        # CHANGES SHOULD BE LOCAL TO EACH ITERATION OF THE FOR LOOP
         face_vertex_uv_positions: list[PlanarPoint] = copy.deepcopy(
             manifold.get_face_global_uv(face_index))  # length 3
         assert len(face_vertex_uv_positions) == 3
@@ -490,7 +499,6 @@ def compute_twelve_split_energy_quadratic(
         # Since vertex gradients are defined in terms of these local vertex charts, we must
         # use these directions when computing edge direction gradients from the vertex uv
         # gradients.
-        # TODO: denote below is by refernece
         corner_to_corner_uv_positions: list[Matrix2x2r] = copy.deepcopy(
             manifold.get_face_corner_charts(face_index))  # length 3
         assert len(corner_to_corner_uv_positions) == 3
@@ -523,63 +531,12 @@ def compute_twelve_split_energy_quadratic(
             global_vertex_indices, __i, __j, __k)  # length 3
         face_global_edge_indices: list[int] = global_edge_indices[face_index]  # length 3
 
-        # ---------------------------------
-        # ULTIMATE TESTER BELOW
-        # ---------------------------------
-        # TODO: below works for fit and non-fit cases. Move to separate testing case
-        # compare_eigen_numpy_matrix(
-        #     f"{filepath}initial_vertex_positions_T\\_{face_index}.csv",
-        #     np.array(initial_vertex_positions_T).squeeze())
-        # compare_eigen_numpy_matrix(
-        #     f"{filepath}vertex_positions_T\\_{face_index}.csv",
-        #     np.array(vertex_positions_T).squeeze())
-        # compare_eigen_numpy_matrix(
-        #     f"{filepath}vertex_gradients_T\\_{face_index}.csv",
-        #     np.array(vertex_gradients_T),
-        #     make_3d=True)
-        # compare_eigen_numpy_matrix(
-        #     f"{filepath}edge_gradients_T\\_{face_index}.csv",
-        #     np.array(edge_gradients_T).squeeze())
-        # compare_eigen_numpy_matrix(
-        #     f"{filepath}face_vertex_uv_positions\\_{face_index}.csv",
-        #     np.array(face_vertex_uv_positions).squeeze())
-        # compare_eigen_numpy_matrix(
-        #     f"{filepath}corner_to_corner_uv_positions\\_{face_index}.csv",
-        #     np.array(corner_to_corner_uv_positions).squeeze(),
-        #     make_3d=True)
-        # compare_eigen_numpy_matrix(
-        #     f"{filepath}reverse_edge_orientations\\_{face_index}.csv",
-        #     np.array(reverse_edge_orientations).squeeze())
-        # compare_eigen_numpy_matrix(
-        #     f"{filepath}is_cone\\_{face_index}.csv",
-        #     np.array(is_cone).squeeze())
-        # compare_eigen_numpy_matrix(
-        #     f"{filepath}is_cone_adjacent\\_{face_index}.csv",
-        #     np.array(is_cone_adjacent).squeeze())
-        # compare_eigen_numpy_matrix(
-        #     f"{filepath}face_global_vertex_indices\\_{face_index}.csv",
-        #     np.array(face_global_vertex_indices).squeeze())
-        # compare_eigen_numpy_matrix(
-        #     f"{filepath}face_global_edge_indices\\_{face_index}.csv",
-        #     np.array(face_global_edge_indices).squeeze())
-
-        # control = deserialize_eigen_matrix_csv_to_numpy("spot_control\\optimize_spline_surface\\compute_twelve_split_energy_quadratic\\fit_face_vertex_uv_positions\\_{face_index}.csv")
-        # These 2 should be equal... I don't know why they are not equal....
-        # They both use the same manifold... right?
-        # test = deserialize_eigen_matrix_csv_to_numpy(
-        #     f"spot_control\\optimize_spline_surface\\compute_twelve_split_energy_quadratic\\face_vertex_uv_positions\\_{face_index}.csv")
-        # compare_eigen_numpy_matrix(f"spot_control\\optimize_spline_surface\\compute_twelve_split_energy_quadratic\\fit_face_vertex_uv_positions\\_{face_index}.csv",
-        #                            test)
-
         # Check if an edge is collapsing and make sure any collapsing edges have
         # local vertex indices 0 and 1
         # WARNING: This is a somewhat fragile operation that must occur after all
         # of these arrays are build and before the local to global map is built
         # and is not necessary in the current framework used in the paper but is for
         # some deprecated experimental methods
-
-        # FIXME: potentially below changes vertex_gradients_T all wrong and whatnot...
-        # But, it may be advised that we create local clones... rather than not doing so...
         is_cone_adjacent_face: bool = False
         for i in range(3):
             if is_cone[(i + 2) % 3]:
@@ -597,43 +554,6 @@ def compute_twelve_split_energy_quadratic(
                                                       i)
                 is_cone_adjacent_face = True
                 break
-
-        # TODO: below works for fit and non-fit cases. Move to separate testing case
-        # compare_eigen_numpy_matrix(
-        #     f"{filepath_shifted}initial_vertex_positions_T\\_{face_index}.csv",
-        #     np.array(initial_vertex_positions_T).squeeze())
-        # compare_eigen_numpy_matrix(
-        #     f"{filepath_shifted}vertex_positions_T\\_{face_index}.csv",
-        #     np.array(vertex_positions_T).squeeze())
-        # compare_eigen_numpy_matrix(
-        #     f"{filepath_shifted}vertex_gradients_T\\_{face_index}.csv",
-        #     np.array(vertex_gradients_T),
-        #     make_3d=True)
-        # compare_eigen_numpy_matrix(
-        #     f"{filepath_shifted}edge_gradients_T\\_{face_index}.csv",
-        #     np.array(edge_gradients_T).squeeze())
-        # compare_eigen_numpy_matrix(  # FIXME : face vertex UV positions is off for the non-fit case...
-        #     f"{filepath_shifted}face_vertex_uv_positions\\_{face_index}.csv",
-        #     np.array(face_vertex_uv_positions).squeeze())
-        # compare_eigen_numpy_matrix(
-        #     f"{filepath_shifted}corner_to_corner_uv_positions\\_{face_index}.csv",
-        #     np.array(corner_to_corner_uv_positions).squeeze(),
-        #     make_3d=True)
-        # compare_eigen_numpy_matrix(
-        #     f"{filepath_shifted}reverse_edge_orientations\\_{face_index}.csv",
-        #     np.array(reverse_edge_orientations).squeeze())
-        # compare_eigen_numpy_matrix(
-        #     f"{filepath_shifted}is_cone\\_{face_index}.csv",
-        #     np.array(is_cone).squeeze())
-        # compare_eigen_numpy_matrix(
-        #     f"{filepath_shifted}is_cone_adjacent\\_{face_index}.csv",
-        #     np.array(is_cone_adjacent).squeeze())
-        # compare_eigen_numpy_matrix(
-        #     f"{filepath_shifted}face_global_vertex_indices\\_{face_index}.csv",
-        #     np.array(face_global_vertex_indices).squeeze())
-        # compare_eigen_numpy_matrix(
-        #     f"{filepath_shifted}face_global_edge_indices\\_{face_index}.csv",
-        #     np.array(face_global_edge_indices).squeeze())
 
         # Get normal for the face
         normal: SpatialVector = np.zeros(shape=(1, 3))
@@ -660,10 +580,7 @@ def compute_twelve_split_energy_quadratic(
             normal,
             optimization_params)
 
-        #
         # Compute local degree of freedom data
-        # FIXME: local_dof_data looking mighty suspect since it contains r_alpha, which is used alongside w_s in local_energy and local_derivatives... both of which are WRONG and result in WRONG global energy and WRONG global derivative.
-        #
         local_dof_data: LocalDOFData = LocalDOFData.generate_local_dof_data(
             initial_vertex_positions_T,
             vertex_positions_T,
@@ -680,29 +597,10 @@ def compute_twelve_split_energy_quadratic(
             local_dof_data
         )
 
-        # TODO: below works for fit and non-fit cases. Move to separate testing case
-        # compare_eigen_numpy_matrix(f"{filepath}normal\\_{face_index}.csv", normal.squeeze())
-        # compare_eigen_numpy_matrix(f"{filepath}local_to_global_map\\_{face_index}.csv",
-        #                            np.array(local_to_global_map).squeeze())
-        # compare_eigen_numpy_matrix(f"{filepath}local_hessian_data_H_f\\_{face_index}.csv", local_hessian_data.H_f)
-        # compare_eigen_numpy_matrix(f"{filepath}local_hessian_data_H_s\\_{face_index}.csv", local_hessian_data.H_s)
-        # compare_eigen_numpy_matrix(f"{filepath}local_hessian_data_H_p\\_{face_index}.csv", local_hessian_data.H_p)
-        # # assert local_hessian_data.w_f == 1  # magic numbers from ASOC code result
-        # # assert local_hessian_data.w_s == 0  # magic numbers from ASOC code result
-        # # assert local_hessian_data.w_p == 0  # magic numbers from ASOC code result
-        # compare_eigen_numpy_matrix(
-        #     f"{filepath}local_dof_data_r_alpha_0\\_{face_index}.csv", local_dof_data.r_alpha_0)
-        # compare_eigen_numpy_matrix(f"{filepath}local_dof_data_r_alpha\\_{face_index}.csv", local_dof_data.r_alpha)
-        # compare_eigen_numpy_matrix(
-        #     f"{filepath}local_dof_data_r_alpha_flat\\_{face_index}.csv", local_dof_data.r_alpha_flat.squeeze())
-        # # assert float_equal(local_energy, 0.0)  # magic numbers from ASOC code result
-        # compare_eigen_numpy_matrix(f"{filepath}local_derivatives\\_{face_index}.csv", local_derivatives.squeeze())
-        # compare_eigen_numpy_matrix(f"{filepath}local_hessian\\_{face_index}.csv", local_hessian)
-
         # Update the energy quadratic with the new face energy
         # NOTE: update_energy_quadratic is only used here.
-        # Meanwhile, hessian entries are updated... #FIXME: as of 4:36 pm, Aug 7... I localized error to funct below
-        energy = update_energy_quadratic(local_energy,  # NOTE: looks fine now.
+        # NOTE: derivatives and hessian_entries and are in the method below.
+        energy = update_energy_quadratic(local_energy,
                                          local_derivatives,
                                          local_hessian,
                                          local_to_global_map,
@@ -710,63 +608,33 @@ def compute_twelve_split_energy_quadratic(
                                          derivatives,
                                          hessian_entries)
 
-    # TODO: below works for fit and non-fit cases. Move to separate testing case
-    # if (float_equal(optimization_params.parametrized_quadratic_surface_mapping_factor, 0.0)):
-    #     float_equal(energy, 0.0)
-    # else:
-    #     float_equal(energy, 1269.98, eps=0.01)
-    # compare_eigen_numpy_matrix(
-    #     f"{filepath}derivatives_energy_quadratic.csv", derivatives.squeeze())
-    # compare_eigen_numpy_matrix(
-    #     f"{filepath}hessian_entries_energy_quadratic.csv", np.array(hessian_entries))
-
     # Set hessian from the triplets
     # https://stackoverflow.com/questions/65126682/create-sparse-matrix-from-list-of-tuples
-    # TODO: might be more efficient to just modify hessian by reference and resize when needed... which then overrides the elements in hessian as we setFromTriplets
     global_indices_i: tuple[int, ...]  # equivalent to rows
     global_indices_j: tuple[int, ...]  # equivalent to cols
     hessian_value: tuple[float, ...]  # equivalent to data
     global_indices_i, global_indices_j, hessian_value = zip(*hessian_entries)
-    rows: np.ndarray[tuple[int], np.dtype[np.int32]] = np.array(global_indices_i, dtype=np.int32)
-    cols: np.ndarray[tuple[int], np.dtype[np.int32]] = np.array(global_indices_j, dtype=np.int32)
-    data: np.ndarray[tuple[int], np.dtype[np.float32]] = np.array(hessian_value, dtype=np.float32)
+    rows: Vector1D = np.array(global_indices_i, dtype=np.int64)
+    cols: Vector1D = np.array(global_indices_j, dtype=np.int64)
+    data: Vector1D = np.array(hessian_value, dtype=np.float64)
 
-    # NOTE: Cholespy needed to be modified to treat "positive definite" warning not as an error like in ASOC CHOLDMOD.
-    # NOTE: hessian is not used anywhere else but optimize_spline_surface... in the original ASOC code...
-    # which is no longer needed with the Cholespy module.
+    # NOTE: Cholespy needed to be modified to treat "positive definite" warning not
+    # as an error like in ASOC CHOLDMOD.
+    # NOTE: hessian is not used anywhere else but optimize_spline_surface...
+    # in the original ASOC code... which is no longer needed with the Cholespy module.
     hessian: coo_matrix = coo_matrix((data, (rows, cols)),
                                      #  shape=(num_independent_variables, num_independent_variables),
                                      dtype=np.float64)
-    # FIXME: change hessian back to the sparse matrix above once I figure out why .solve for hessian_inverse doesn't work.
-    hessian: coo_matrix
-    num_rows: int = len(rows)
+
     assert derivatives.shape == (num_independent_variables, 1)
 
     # Build the inverse.
     # TODO: This is very finicky with CSR sparse matrices...
-    # NOTE: -1 to num_rows or else it acts up with COO matrices.
-    # hessian_inverse: CholeskySolverF = CholeskySolverF(num_rows - 1,
-    #                                                    rows,
-    #                                                    cols,
-    #                                                    data,
-    #                                                    MatrixType.COO)
-
-    hessian_inverse: CholeskySolverF = CholeskySolverF(num_independent_variables,
+    hessian_inverse: CholeskySolverD = CholeskySolverD(num_independent_variables,
                                                        rows,
                                                        cols,
                                                        data,
                                                        MatrixType.COO)
-
-    # # XXX: remove the stuff below after done experimenting...
-    # # b = np.ones(num_rows - 1, dtype=np.float32)
-    # b = np.ones(int(num_independent_variables), dtype=np.float32)
-    # # WAIT! is it num_rows 10 million? or is it the num indpeendent variables that is b shape????
-    # # No, its num of indep varaibel... yeah.
-    # x = np.zeros_like(b, dtype=np.float32)
-    # hessian_inverse.solve(b, x)
-    # what = np.count_nonzero(x)
-
-    # TODO: check the energy after each iteration of compute_twelve_split_energy_quadratic to see if all good... it's not... hessian_entries  and energy are not what they should be.
     return energy, derivatives, hessian, hessian_inverse
 
 
@@ -911,8 +779,8 @@ def build_twelve_split_spline_energy_system(initial_V: np.ndarray,
     num_faces: int = affine_manifold.num_faces
 
     # Build halfedge
-    he_to_corner: list[tuple[Index, Index]] = affine_manifold.get_he_to_corner
-    halfedge: Halfedge = affine_manifold.get_halfedge
+    he_to_corner: list[tuple[Index, Index]] = affine_manifold.he_to_corner
+    halfedge: Halfedge = affine_manifold.halfedge
     num_edges: int = halfedge.num_edges
 
     # Assume all vertices and edges are variable
@@ -938,60 +806,13 @@ def build_twelve_split_spline_energy_system(initial_V: np.ndarray,
     # NOTE: assertion == 3 below since ASOC code originally has array<int, 3> as elements of edge_gradients
     assert len(edge_gradients[0]) == 3
 
-    # TODO: test with c++ code... though probably not needed since we've already checked V earlier.
-    # TODO: move to different test case. TESTING
-    # if (float_equal(optimization_params.parametrized_quadratic_surface_mapping_factor, 0.0)):
-    #     compare_eigen_numpy_matrix(
-    #         "spot_control\\optimize_spline_surface\\build_twelve_split_spline_energy_system\\fit_vertex_positions.csv",
-    #         np.array(vertex_positions).squeeze())
-    #     compare_eigen_numpy_matrix(
-    #         "spot_control\\optimize_spline_surface\\build_twelve_split_spline_energy_system\\fit_initial_vertex_positions.csv",
-    #         np.array(initial_vertex_positions).squeeze())
-    #     compare_eigen_numpy_matrix(
-    #         "spot_control\\optimize_spline_surface\\build_twelve_split_spline_energy_system\\fit_vertex_gradients.csv",
-    #         np.array(vertex_gradients).squeeze(),
-    #         make_3d=True)
-    #     compare_eigen_numpy_matrix(
-    #         "spot_control\\optimize_spline_surface\\build_twelve_split_spline_energy_system\\fit_edge_gradients.csv",
-    #         np.array(edge_gradients).squeeze(),
-    #         make_3d=True)
-    # else:
-    #     compare_eigen_numpy_matrix(
-    #         "spot_control\\optimize_spline_surface\\build_twelve_split_spline_energy_system\\vertex_positions.csv",
-    #         np.array(vertex_positions).squeeze())
-    #     compare_eigen_numpy_matrix(
-    #         "spot_control\\optimize_spline_surface\\build_twelve_split_spline_energy_system\\initial_vertex_positions.csv",
-    #         np.array(initial_vertex_positions).squeeze())
-    #     compare_eigen_numpy_matrix(
-    #         "spot_control\\optimize_spline_surface\\build_twelve_split_spline_energy_system\\vertex_gradients.csv",
-    #         np.array(vertex_gradients).squeeze(),
-    #         make_3d=True)
-    #     compare_eigen_numpy_matrix(
-    #         "spot_control\\optimize_spline_surface\\build_twelve_split_spline_energy_system\\edge_gradients.csv",
-    #         np.array(edge_gradients).squeeze(),
-    #         make_3d=True)
-
     # Build vertex variable indices
     global_vertex_indices: list[int] = build_variable_vertex_indices_map(num_vertices, variable_vertices)
-    # TODO: move to different test case
-    # if (float_equal(optimization_params.parametrized_quadratic_surface_mapping_factor, 0.0)):
-    #     compare_eigen_numpy_matrix(
-    #         "spot_control\\optimize_spline_surface\\build_twelve_split_spline_energy_system\\fit_global_vertex_indices.csv", np.array(global_vertex_indices))
-    # else:
-    #     compare_eigen_numpy_matrix(
-    #         "spot_control\\optimize_spline_surface\\build_twelve_split_spline_energy_system\\global_vertex_indices.csv", np.array(global_vertex_indices))
 
     # Build edge variable indices
     global_edge_indices: list[list[int]] = build_variable_edge_indices_map(
         num_faces, variable_edges, halfedge, he_to_corner)
     assert len(global_edge_indices[0]) == 3  # this asserts that the list[array[int, 3]]
-    # TODO: move to different test case
-    # if (float_equal(optimization_params.parametrized_quadratic_surface_mapping_factor, 0.0)):
-    #     compare_eigen_numpy_matrix(
-    #         "spot_control\\optimize_spline_surface\\build_twelve_split_spline_energy_system\\fit_global_edge_indices.csv", np.array(global_edge_indices))
-    # else:
-    #     compare_eigen_numpy_matrix(
-    #         "spot_control\\optimize_spline_surface\\build_twelve_split_spline_energy_system\\global_edge_indices.csv", np.array(global_edge_indices))
 
     # Build energy for the affine manifold (all below)
     energy: float
@@ -1045,7 +866,7 @@ def optimize_twelve_split_spline_surface(
     :return: (optimized_V, optimized_vertex_gradients, optimized_edge_gradients) with optimized_spatial_vector with list[SpatialVector] of length 3
     :rtype: tuple[MatrixNx3, list[Matrix2x3r], list[list[SpatialVector]]]
     """
-    # Get variable coutns
+    # Get variable counts
     assert initial_V.shape[COLS] == 3
     num_vertices: int = initial_V.shape[ROWS]
     num_faces: int = affine_manifold.num_faces
@@ -1073,27 +894,23 @@ def optimize_twelve_split_spline_surface(
                                                                                     he_to_corner)
     assert initial_variable_values.ndim == 1
     logger.info("Initial variable value vector:\n%s", initial_variable_values)
-    # TODO: test initial_variable_values
 
     # Solve hessian system to get optimized values
-    # TODO: double check that behavior below is like that of Eigen FIXME : right hand size has nan elements which its not supposed to have
-    right_hand_side: Vector1D = np.array(fit_matrix * initial_variable_values, dtype=np.float32)
-    optimized_variable_values: Vector1D = np.zeros_like(right_hand_side, dtype=np.float32)
-
-    # FIXME the below caused an access violation error, from generate_optimized_twelve_split_position_data
+    right_hand_side: Vector1D = np.array(fit_matrix * initial_variable_values, dtype=np.float64)
+    optimized_variable_values: Vector1D = np.zeros_like(right_hand_side, dtype=np.float64)
     hessian_inverse.solve(right_hand_side, optimized_variable_values)
-    # TODO: test optimized_variable_values
 
     # Update variables
-    # NOTE: Below are simply references to the original lists, but renamed for readability. FIXME or maybe have these deep copied...
-    optimized_vertex_positions_ref: list[SpatialVector] = vertex_positions
-    optimized_vertex_gradients_ref: list[Matrix2x3r] = vertex_gradients
-    optimized_edge_gradients_ref: list[list[SpatialVector]] = edge_gradients
+    # NOTE: Below are simply references to the original lists, but renamed for readability.
+    # FIXME or maybe have these deep copied...
+    optimized_vertex_positions_ref: list[SpatialVector] = copy.deepcopy(vertex_positions)
+    optimized_vertex_gradients_ref: list[Matrix2x3r] = copy.deepcopy(vertex_gradients)
+    optimized_edge_gradients_ref: list[list[SpatialVector]] = copy.deepcopy(edge_gradients)
     update_position_variables(
         optimized_variable_values, variable_vertices, optimized_vertex_positions_ref)
     update_vertex_gradient_variables(
         optimized_variable_values, variable_vertices, optimized_vertex_gradients_ref)
-    update_edge_gradient_variables(optimized_variable_values,  # FIXME this might be wrong
+    update_edge_gradient_variables(optimized_variable_values,
                                    variable_vertices,
                                    variable_edges,
                                    halfedge,
@@ -1105,22 +922,6 @@ def optimize_twelve_split_spline_surface(
     for i in range(num_vertices):
         # Flattens so that broadcasting works.
         optimized_V[i, :] = optimized_vertex_positions_ref[i].flatten()
-
-    # FIXME: I tried to include the lines below to fix the NaN issue, but it ends up breaking the program sometimes
-    # TODO: even with the lines below, the output in polyscope is the same
-    # optimized_V = np.nan_to_num(optimized_V)
-    # optimized_vertex_gradients_ref = np.nan_to_num(optimized_vertex_gradients_ref)
-    # optimized_edge_gradients_ref = np.nan_to_num(optimized_edge_gradients_ref)
-    filepath = "spot_control\\optimize_spline_surface\\optimize_twelve_split_spline_surface\\"
-    # compare_eigen_numpy_matrix(filepath+"initial_variable_values.csv", initial_variable_values)
-    # compare_eigen_numpy_matrix(filepath+"right_hand_side.csv", right_hand_side)
-    # compare_eigen_numpy_matrix(filepath+"optimized_variable_values.csv", optimized_variable_values)
-    # compare_eigen_numpy_matrix(filepath+"optimized_vertex_positions.csv",
-    #                            np.array(optimized_vertex_positions_ref).squeeze())
-    # compare_eigen_numpy_matrix(filepath+"optimized_vertex_gradients.csv",
-    #                            np.array(optimized_vertex_gradients_ref), make_3d=True)
-    # compare_eigen_numpy_matrix(filepath+"optimized_edge_gradients.csv",
-    #                            np.array(optimized_edge_gradients_ref).squeeze(), make_3d=True)
 
     return optimized_V, optimized_vertex_gradients_ref, optimized_edge_gradients_ref
 
@@ -1135,24 +936,25 @@ def generate_optimized_twelve_split_position_data(V: MatrixXf,
     """
     Compute the optimal per triangle position data for given vertex positions.
     NOTE: used by twelve_split_spline.py
-    NOTE: used by update_positions() in TwelveSplitSplineSurface, which is reliant on corner_data and midpoint_data being modified by reference rather than returned as new lists.
+    NOTE: used by update_positions() in TwelveSplitSplineSurface, which is reliant 
+    on corner_data and midpoint_data being modified by reference rather than returned 
+    as new lists.
 
-    @param[in] V: vertex positions
-    @param[in] affine_manifold: mesh topology and affine manifold structure
-    @param[in] fit_matrix: quadratic fit energy Hessian matrix
-    @param[in] hessian_inverse: solver for inverting the energy Hessian
-
-    # TODO: remove the modify by reference and just create them as new. As in, return a new copy of corner_data rather than reference that's been modified.
-    # NOTE: this may make some problems with update_positions... maybe...
-    @param[out] corner_data: quadratic vertex position and derivative data with list[TriangleCornerData] of length 3
-    @param[out] midpoint_data: quadratic edge midpoint derivative data with list[TriangleMidpointData] of length 3
+    :param[in] V: vertex positions
+    :param[in] affine_manifold: mesh topology and affine manifold structure
+    :param[in] fit_matrix: quadratic fit energy Hessian matrix
+    :param[in] hessian_inverse: solver for inverting the energy Hessian
+    :param[out] corner_data: quadratic vertex position and derivative data with 
+    list[TriangleCornerData] of length 3
+    :param[out] midpoint_data: quadratic edge midpoint derivative data with 
+    list[TriangleMidpointData] of length 3
     """
     assert V.ndim == 2
     num_vertices: int = V.shape[ROWS]
 
     # Build halfedge
-    he_to_corner: list[tuple[int, int]] = affine_manifold.get_he_to_corner
-    halfedge: Halfedge = affine_manifold.get_halfedge
+    he_to_corner: list[tuple[int, int]] = affine_manifold.he_to_corner
+    halfedge: Halfedge = affine_manifold.halfedge
     num_edges: int = halfedge.num_edges
 
     # Assume all vertices and edges are variable
@@ -1175,21 +977,7 @@ def generate_optimized_twelve_split_position_data(V: MatrixXf,
         variable_edges,
         fit_matrix,
         hessian_inverse)
-
-    # TODO: check values for optimized values here...
-    # filepath: str = "spot_control\\optimize_spline_surface\\generate_optimized_twelve_split_position_data\\"
-    # compare_eigen_numpy_matrix(
-    #     filepath+"optimized_V.csv",
-    #     optimized_V)
-    # compare_eigen_numpy_matrix(
-    #     filepath+"optimized_vertex_gradients.csv",
-    #     np.array(optimized_vertex_gradients),
-    #     make_3d=True)
-    # compare_eigen_numpy_matrix(
-    #     filepath+"optimized_reduced_edge_gradients.csv",
-    #     np.array(optimized_reduced_edge_gradients).squeeze(),
-    #     make_3d=True)
-    # assert len(optimized_reduced_edge_gradients[0]) == 3
+    assert len(optimized_reduced_edge_gradients[0]) == 3  # lazy size cehcking
 
     # TESTING --
     # https://stackoverflow.com/questions/6736590/fast-check-for-nan-in-numpy
@@ -1203,43 +991,19 @@ def generate_optimized_twelve_split_position_data(V: MatrixXf,
                                          affine_manifold,
                                          optimized_vertex_gradients,
                                          corner_data_ref)
-    # TODO: move test to separate case. passes
-    # corner_data_test: list[np.ndarray] = []
-    # for outer_key in sorted(corner_data_ref):
-    #     for inner_key in sorted(corner_data_ref[outer_key]):
-    #         triangle_corner_data: TriangleCornerData = corner_data_ref[outer_key][inner_key]
-    #         corner_data_test.append(triangle_corner_data.function_value.flatten())
-    #         corner_data_test.append(triangle_corner_data.first_edge_derivative.flatten())
-    #         corner_data_test.append(triangle_corner_data.second_edge_derivative.flatten())
-    # compare_eigen_numpy_matrix("spot_control\\12_split_spline\\m_corner_data.csv",
-    #                            np.array(corner_data_test))
 
     # Build the full edge gradients with first gradient determined by the corner position data
-    optimized_edge_gradients: list[list[Matrix2x3r]] = convert_reduced_edge_gradients_to_full(
+    optimized_edge_gradients: dict[int, dict[int, Matrix2x3r]] = convert_reduced_edge_gradients_to_full(
         optimized_reduced_edge_gradients,
         corner_data_ref,
         affine_manifold)  # list[Matrix2x3r] of length 3
     assert len(optimized_edge_gradients[0]) == 3
-
-    # TODO: move test to separate case. passes.
-    # compare_eigen_numpy_matrix(
-    #     filepath+"optimized_edge_gradients.csv",
-    #     np.array(optimized_edge_gradients).reshape(-1, 3))
 
     # Build midpoint position data from the optimized gradients
     generate_affine_manifold_midpoint_data(
         affine_manifold,
         optimized_edge_gradients,
         midpoint_data_ref)
-
-    # TODO: move test to separate case. passes
-    # midpoint_data_test: list[np.ndarray] = []
-    # for outer_key in sorted(midpoint_data_ref):
-    #     for inner_key in sorted(midpoint_data_ref[outer_key]):
-    #         triangle_midpoint_data: TriangleMidpointData = midpoint_data_ref[outer_key][inner_key]
-    #         midpoint_data_test.append(triangle_midpoint_data.normal_derivative.flatten())
-    # compare_eigen_numpy_matrix("spot_control\\12_split_spline\\m_midpoint_data.csv",
-    #                            np.array(midpoint_data_test))
 
     # Making sure list with sublists of length 3
     assert len(corner_data_ref[0]) == 3
@@ -1297,7 +1061,7 @@ def convert_reduced_edge_gradients_to_full(reduced_edge_gradients: list[list[Spa
                                            #    corner_data with FaceIndex as outerkey and FaceVertexIndex as innerkey
                                            corner_data: dict[int, dict[int, TriangleCornerData]],
                                            affine_manifold: AffineManifold
-                                           ) -> list[list[Matrix2x3r]]:
+                                           ) -> dict[int, dict[int, Matrix2x3r]]:
     """
     Given edge direction gradients at triangle edge midpoints, append the gradients in the
     direction of the opposite triangle corners, which are determined by gradients and
@@ -1310,23 +1074,18 @@ def convert_reduced_edge_gradients_to_full(reduced_edge_gradients: list[list[Spa
     @param[in] affine_manifold: mesh topology and affine manifold structure
     @param[out] edge_gradients: edge and corner directed gradients per edge midpoints with list[Matrix2x3r] of length 3
     """
-    F: MatrixXi = affine_manifold.get_faces
+    F: MatrixXi = affine_manifold.faces
     num_faces: int = len(reduced_edge_gradients)
 
     # Compute the first gradient and copy the second for each edge
-    # TODO: maybe use dict rather than list of list to avoid refrences referring to same object issue
-    edge_gradients: list[list[Matrix2x3r]] = [[np.ndarray(shape=(2, 3), dtype=np.float64),
-                                               np.ndarray(shape=(2, 3), dtype=np.float64),
-                                               np.ndarray(shape=(2, 3), dtype=np.float64)] for _ in range(num_faces)]
+    edge_gradients: dict[int, dict[int, Matrix2x3r]] = defaultdict(dict)
 
     # FIXME: edge_gradients not in order we need...
     for i in range(num_faces):
-        # edge_gradients.append([np.ndarray(shape=(2, 3), dtype=np.float64),
-        #                        np.ndarray(shape=(2, 3), dtype=np.float64),
-        #                        np.ndarray(shape=(2, 3), dtype=np.float64)])
+
         for j in range(3):
             chart: EdgeManifoldChart = affine_manifold.get_edge_chart(i, j)
-            f_top: int = chart.top_face_index
+            f_top: np.int64 = np.int64(chart.top_face_index)
             if f_top != i:
                 continue  # Only process top faces of edge charts to prevent redundancy
 
@@ -1339,8 +1098,16 @@ def convert_reduced_edge_gradients_to_full(reduced_edge_gradients: list[list[Spa
                 corner_data[i][(j + 2) % 3])
 
             # Copy the gradients
-            edge_gradients[i][j][0, :] = midpoint_edge_gradient.flatten()  # row(0)
-            edge_gradients[i][j][1, :] = reduced_edge_gradients[i][j].flatten()  # row(1)
+            edge_gradient: Matrix2x3r = np.array([
+                midpoint_edge_gradient.flatten(),  # row(0)
+                reduced_edge_gradients[i][j].flatten()  # row(1)
+            ], dtype=np.float64)
+            assert edge_gradient.shape == (2, 3)
+
+            edge_gradients[i][j] = edge_gradient
+
+            # edge_gradients[i][j][0, :] = midpoint_edge_gradient.flatten()  # row(0)
+            # edge_gradients[i][j][1, :] = reduced_edge_gradients[i][j].flatten()  # row(1)
 
             # If the edge isn't on the boundary, set the other face corner corresponding to it
             if not chart.is_boundary:

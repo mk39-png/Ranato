@@ -1,7 +1,7 @@
-from src.core.common import *
 import pytest
 
 from src.core.affine_manifold import AffineManifold
+from src.core.common import *
 from src.core.halfedge import Halfedge
 
 # *******************
@@ -9,7 +9,7 @@ from src.core.halfedge import Halfedge
 # *******************
 
 
-def test_index_vector_complement_from_spot_control() -> None:
+def test_index_vector_complement_spot_mesh() -> None:
     """
     Tests index_vector_complement() to initialize variable_vertices and variable_edges 
     for generate_optimized_twelve_split_position_data() for the spot_control mesh.
@@ -18,8 +18,8 @@ def test_index_vector_complement_from_spot_control() -> None:
     # Get input mesh
     V, uv, F, FT = initialize_spot_control_mesh()
     affine_manifold: AffineManifold = AffineManifold(F, uv, FT)
-    he_to_corner: list[tuple[Index, Index]] = affine_manifold.get_he_to_corner
-    halfedge: Halfedge = affine_manifold.get_halfedge
+    he_to_corner: list[tuple[Index, Index]] = affine_manifold.he_to_corner
+    halfedge: Halfedge = affine_manifold.halfedge
 
     num_vertices: int = V.shape[ROWS]
     num_edges: int = halfedge.num_edges

@@ -1,65 +1,45 @@
-import os
+import copy
 import logging
-import pytest
+import os
+from collections import defaultdict
+
 import igl
 import numpy as np
 import numpy.testing as npt
-from collections import defaultdict
+import pytest
+from cholespy import CholeskySolverD
+from scipy.sparse import coo_matrix
 
-from src.core.common import (
-    compare_eigen_numpy_matrix,
-    initialize_spot_control_mesh,
-    vector_equal,
-    SKY_BLUE,
-    DISCRETIZATION_LEVEL,
-    logger,
-    PlanarPoint,
-    SpatialVector,
-    MatrixXf,
-    MatrixXi,
-    Matrix3x2f,
-    Matrix6x3r,
-)
-from src.core.affine_manifold import (
-    AffineManifold,
-    ParametricAffineManifold,
-)
-from src.core.bivariate_quadratic_function import (
-    evaluate_quadratic_mapping
-)
-
+from src.core.affine_manifold import AffineManifold, ParametricAffineManifold
+from src.core.bivariate_quadratic_function import evaluate_quadratic_mapping
+from src.core.common import (DISCRETIZATION_LEVEL, SKY_BLUE, Matrix3x2f,
+                             Matrix6x3r, MatrixNx3f, MatrixXf, MatrixXi,
+                             PlanarPoint, SpatialVector,
+                             compare_eigen_numpy_matrix,
+                             initialize_spot_control_mesh, logger,
+                             vector_equal)
 from src.core.convex_polygon import ConvexPolygon
-
-from src.quadratic_spline_surface.quadratic_spline_surface_patch import QuadraticSplineSurfacePatch
-from src.quadratic_spline_surface.quadratic_spline_surface import QuadraticSplineSurface
 from src.quadratic_spline_surface.optimize_spline_surface import (
-    OptimizationParameters,
-    build_twelve_split_spline_energy_system,
-    generate_optimized_twelve_split_position_data,
-)
-
-from src.quadratic_spline_surface.twelve_split_spline import (
-    TriangleCornerData,
-    TriangleMidpointData,
-    TwelveSplitSplineSurface,
-    # generate_affine_manifold_corner_data,
-    # generate_affine_manifold_midpoint_data,
-    generate_twelve_split_spline_patch_surface_mapping,
+    OptimizationParameters, build_twelve_split_spline_energy_system,
+    generate_optimized_twelve_split_position_data)
+from src.quadratic_spline_surface.quadratic_spline_surface import \
+    QuadraticSplineSurface
+from src.quadratic_spline_surface.quadratic_spline_surface_patch import \
+    QuadraticSplineSurfacePatch
+from src.quadratic_spline_surface.twelve_split_spline import (  # generate_affine_manifold_corner_data,; generate_affine_manifold_midpoint_data,
+    TriangleCornerData, TriangleMidpointData, TwelveSplitSplineSurface,
     generate_twelve_split_spline_patch_patch_boundaries,
     generate_twelve_split_spline_patch_patch_to_corner_map,
-)
-
+    generate_twelve_split_spline_patch_surface_mapping)
 from src.utils.generate_position_data import (
-    QuadraticGradientFunction,
-    QuadraticPositionFunction,
+    QuadraticGradientFunction, QuadraticPositionFunction,
     generate_parametric_affine_manifold_corner_data,
-    generate_parametric_affine_manifold_midpoint_data,
-)
-
+    generate_parametric_affine_manifold_midpoint_data)
 
 # ****************
 # Helper Methods
 # ****************
+
 
 def initialize_twelve_split_spline_from_spot_mesh() -> tuple[TwelveSplitSplineSurface, AffineManifold, MatrixXf]:
     """
@@ -103,8 +83,10 @@ def initialize_twelve_split_spline_from_spot_mesh() -> tuple[TwelveSplitSplineSu
 # ****************
 # Test Methods
 # ****************
-def test_generate_optimized_twelve_split_position_data() -> None:
+def test_position_data_spot_mesh() -> None:
     """
+    Tests corner_data and midpoint_data of TwelveSplitSpline.
+
     Dependencies:
     * build_twelve_split_spline_energy_system
     """
@@ -115,7 +97,8 @@ def test_generate_optimized_twelve_split_position_data() -> None:
                                                                         affine_manifold,
                                                                         optimization_params)
 
-    # NOTE: corner_data.csv is set up such that it represents the below: (either that or... just combine it all smoothly...)
+    # NOTE: corner_data.csv is set up such that it represents the below:
+    # (either that or... just combine it all smoothly...)
     # CORNER 1
     # 0, 1, 2 function_value
     # 0, 1, 2 first_edge_derivative
@@ -131,8 +114,8 @@ def test_generate_optimized_twelve_split_position_data() -> None:
     # ...
     # Nvm... just bash it all together into 1 big chunk..
 
-    corner_data_ref = spline_surface.corner_data
-    midpoint_data_ref = spline_surface.midpoint_data
+    corner_data_ref: dict[int, dict[int, TriangleCornerData]] = spline_surface.corner_data
+    midpoint_data_ref: dict[int, dict[int, TriangleMidpointData]] = spline_surface.midpoint_data
 
     corner_data_test: list[np.ndarray] = []
     for outer_key in sorted(corner_data_ref):
@@ -142,8 +125,7 @@ def test_generate_optimized_twelve_split_position_data() -> None:
             corner_data_test.append(triangle_corner_data.first_edge_derivative.flatten())
             corner_data_test.append(triangle_corner_data.second_edge_derivative.flatten())
     compare_eigen_numpy_matrix("spot_control\\12_split_spline\\corner_data.csv",
-                               np.array(corner_data_test),
-                               atol=1e-6)
+                               np.array(corner_data_test))
 
     midpoint_data_test: list[np.ndarray] = []
     for outer_key in sorted(midpoint_data_ref):
@@ -154,7 +136,7 @@ def test_generate_optimized_twelve_split_position_data() -> None:
                                np.array(midpoint_data_test))
 
 
-def test_init_twelve_split_patches_from_spot_mesh() -> None:
+def test_face_patch_indices_spot_mesh() -> None:
     """
     Tests init_twelve_split_patches using spot_control mesh.
     NOTE: relies on generate_twelve_split_spline_patch_patch_boundaries,
@@ -166,39 +148,75 @@ def test_init_twelve_split_patches_from_spot_mesh() -> None:
     Relies on AffineManifold compute_cone_corners() on working.
     """
     # Get input mesh
-    spline_surface: TwelveSplitSplineSurface
-    affine_manifold: AffineManifold
-    V: MatrixXf = np.ndarray(shape=(0, 0), dtype=np.float64)
-    spline_surface, affine_manifold, V = initialize_twelve_split_spline_from_spot_mesh()
+    V, uv, F, FT = initialize_spot_control_mesh()
+    affine_manifold: AffineManifold = AffineManifold(F, uv, FT)
+    optimization_params: OptimizationParameters = OptimizationParameters()
 
-    # corner_data: dict[int, dict[int, TriangleCornerData]] = defaultdict(dict)
-    # midpoint_data: dict[int, dict[int, TriangleMidpointData]] = defaultdict(dict)
-    # face_to_patch_indices: list[list[int]]
-    # patch_to_face_indices: list[int]
+    optimization_params: OptimizationParameters = OptimizationParameters()
+    corner_data: dict[int, dict[int, TriangleCornerData]] = defaultdict(dict)
+    midpoint_data: dict[int, dict[int, TriangleMidpointData]] = defaultdict(dict)
+    face_to_patch_indices: list[list[int]]
+    patch_to_face_indices: list[int]
+
+    # Generate normals
+    N: MatrixNx3f = TwelveSplitSplineSurface.generate_face_normals(V, affine_manifold)
+
+    # Generate fit matrix by setting the parametrized quadratic surface mapping factor to zero
+    fit_matrix: coo_matrix
+    # Make a deep since we don't want the same parameters between Fit vs Non-fit 12-split-splines
+    optimization_params_fit: OptimizationParameters = copy.deepcopy(optimization_params)
+    optimization_params_fit.parametrized_quadratic_surface_mapping_factor = 0.0
+    _, _, fit_matrix, _ = build_twelve_split_spline_energy_system(V,
+                                                                  N,
+                                                                  affine_manifold,
+                                                                  optimization_params_fit)
+
+    # Build full energy hessian system
+    energy_hessian_inverse: CholeskySolverD
+    _, _, _, energy_hessian_inverse = build_twelve_split_spline_energy_system(V,
+                                                                              N,
+                                                                              affine_manifold,
+                                                                              optimization_params)
+
+    # Build optimized corner and midpoint data.
+    # As in, initializes self.__corner_data and self.__midpoint_data
+    # XXX: Below changes __corner_data and __midpoint_data by reference.
+    generate_optimized_twelve_split_position_data(V,
+                                                  affine_manifold,
+                                                  fit_matrix,
+                                                  energy_hessian_inverse,
+                                                  corner_data,
+                                                  midpoint_data)
+
+    # Get cone corners
     is_cone_corner: list[list[bool]] = affine_manifold.compute_cone_corners()
+    split_spline = TwelveSplitSplineSurface
+    # Initialize position data and patches.
+    face_to_patch_indices, patch_to_face_indices, _ = split_spline.build_twelve_split_patches(
+        corner_data,
+        midpoint_data,
+        is_cone_corner)
 
-    # spline_surface.__init_twelve_split_patches(spline_surface.corner_data,
-    #                                            spline_surface.midpoint_data,
-    #                                            is_cone_corner)
-
-    compare_eigen_numpy_matrix("spot_control\\12_split_spline\\init_twelve_split_patches\\face_to_patch_indices.csv",
-                               np.array(spline_surface.face_to_patch_indices))
-    compare_eigen_numpy_matrix("spot_control\\12_split_spline\\init_twelve_split_patches\\patch_to_face_indices.csv",
-                               np.array(spline_surface.patch_to_face_indices))
+    folder_path: str = "spot_control\\12_split_spline\\init_twelve_split_patches\\"
+    compare_eigen_numpy_matrix(f"{folder_path}face_to_patch_indices.csv",
+                               np.array(face_to_patch_indices))
+    compare_eigen_numpy_matrix(f"{folder_path}patch_to_face_indices.csv",
+                               np.array(patch_to_face_indices))
 
 
-def test_generate_twelve_split_spline_patch_patch_to_corner_map_from_spot_mesh() -> None:
+def test_patch_to_corner_map_spot_mesh() -> None:
     """
     Tests generate_twelve_split_spline_patch_patch_to_corner_map().
     """
     patch_to_corner_map: list[tuple[int, int]]  # list of length 12
     patch_to_corner_map = generate_twelve_split_spline_patch_patch_to_corner_map()
     assert len(patch_to_corner_map) == 12
-    compare_eigen_numpy_matrix("spot_control\\12_split_spline\\init_twelve_split_patches\\patch_to_corner_map.csv",
+    filepath: str = "spot_control\\12_split_spline\\init_twelve_split_patches\\patch_to_corner_map.csv"
+    compare_eigen_numpy_matrix(filepath,
                                np.array(patch_to_corner_map))
 
 
-def test_generate_twelve_split_spline_patch_patch_boundaries_from_spot_mesh() -> None:
+def test_patch_boundaries_spot_mesh() -> None:
     """
     Tests generate_twelve_split_spline_patch_patch_boundaries().
     """
@@ -206,28 +224,29 @@ def test_generate_twelve_split_spline_patch_patch_boundaries_from_spot_mesh() ->
     assert len(patch_boundaries) == 12
     assert len(patch_boundaries[0]) == 3
     assert patch_boundaries[0][0].shape == (3, 1)
-    compare_eigen_numpy_matrix("spot_control\\12_split_spline\\init_twelve_split_patches\\patch_boundaries.csv",
-                               np.array(patch_boundaries).squeeze(), make_3d=True)
+    filepath: str = "spot_control\\12_split_spline\\init_twelve_split_patches\\patch_boundaries.csv"
+    compare_eigen_numpy_matrix(filepath,
+                               np.array(patch_boundaries).squeeze(),
+                               make_3d=True)
 
 
-def test_generate_face_normals_from_spot_mesh() -> None:
+def test_generate_face_normals_spot_mesh() -> None:
     """
     This tests generate_face_normals
     """
     # Get input mesh
-    spline_surface: TwelveSplitSplineSurface
-    affine_manifold: AffineManifold
-    V: MatrixXf = np.ndarray(shape=(0, 0), dtype=np.float64)
-    spline_surface, affine_manifold, V = initialize_twelve_split_spline_from_spot_mesh()
-    compare_eigen_numpy_matrix("spot_control\\12_split_spline\\generate_face_normals\\V.csv", V)
-    # compare_eigen_numpy_matrix("spot_control\\12_split_spline\\generate_face_normals\\F.csv", F)
+    V, uv, F, FT = initialize_spot_control_mesh()
+    affine_manifold: AffineManifold = AffineManifold(F, uv, FT)
+    N_test: MatrixXf = TwelveSplitSplineSurface.generate_face_normals(V, affine_manifold)
+    folder_path = "spot_control\\12_split_spline\\generate_face_normals\\"
 
-    N_test: MatrixXf = spline_surface.generate_face_normals(V, affine_manifold)
+    compare_eigen_numpy_matrix(f"{folder_path}V.csv", V)
+    compare_eigen_numpy_matrix(f"{folder_path}F.csv", F)
     # XXX: N was fixed since there was a typo with angle_from_positions() in common.py
-    compare_eigen_numpy_matrix("spot_control\\12_split_spline\\generate_face_normals\\N.csv", N_test)
+    compare_eigen_numpy_matrix(f"{folder_path}N.csv", N_test)
 
 
-def test_twelve_split_spline_from_spot_model() -> None:
+def test_view_spot_mesh() -> None:
     """
     This is used to test and view the spot model.
     """
@@ -235,33 +254,23 @@ def test_twelve_split_spline_from_spot_model() -> None:
     color: tuple[float, float, float] = SKY_BLUE
     num_subdivisions: int = DISCRETIZATION_LEVEL
     optimization_params: OptimizationParameters = OptimizationParameters()
-
     # Set logger level
     logger.setLevel(log_level)
 
     # Get input mesh
-    V: MatrixXf = np.ndarray(shape=(0, 0), dtype=np.float64)
-    uv: MatrixXf = np.ndarray(shape=(0, 0), dtype=np.float64)
-    N: MatrixXf = np.ndarray(shape=(0, 0), dtype=np.float64)
-    F: MatrixXi = np.ndarray(shape=(0, 0), dtype=np.int64)
-    FT: MatrixXi = np.ndarray(shape=(0, 0), dtype=np.int64)
-    FN: MatrixXi = np.ndarray(shape=(0, 0), dtype=np.int64)
-
-    filename: str = "spot_control_mesh-cleaned_conf_simplified_with_uv.obj"
-    filepath: str = os.path.abspath(f"src\\tests\\spot_control\\{filename}")
-    V, uv, N, F, FT, FN = igl.readOBJ(filepath)
+    V, uv, F, FT = initialize_spot_control_mesh()
 
     # Generate quadratic spline
-    logger.info("Computing spline surface")
-    # NOTE: must input a mesh that is already UV unwrapped....
+    # NOTE: must input a mesh that is already UV unwrapped.
     affine_manifold: AffineManifold = AffineManifold(F, uv, FT)
-    spline_surface: TwelveSplitSplineSurface = TwelveSplitSplineSurface(V, affine_manifold,  optimization_params)
-
+    spline_surface: TwelveSplitSplineSurface = TwelveSplitSplineSurface(V,
+                                                                        affine_manifold,
+                                                                        optimization_params)
     # View the mesh
     spline_surface.view(color, num_subdivisions)
 
 
-def test_twelve_split_spline_patches_with_spot_control() -> None:
+def test_patches_spot_mesh() -> None:
     """
     Testing to see if parent class QuadraticSplineSurface is 
     utilized properly by TwelveSplitSpline.
@@ -298,7 +307,7 @@ def test_twelve_split_spline_patches_with_spot_control() -> None:
     filepath_control: str = os.path.abspath(f"src\\tests\\spot_control\\{filename_control}")
 
     # NOTE: need the placeholder to utilize its deserialize() method
-    spline_surface_placeholder = QuadraticSplineSurface.from_file(filepath=filepath_control)
+    spline_surface_placeholder: QuadraticSplineSurface = QuadraticSplineSurface.from_file(filepath_control)
     with open(filepath_control, "r", encoding="utf-8") as file_control:
         control_patches: list[QuadraticSplineSurfacePatch] = spline_surface_placeholder.deserialize(file_control)
         file_control.close()
@@ -319,11 +328,11 @@ def test_twelve_split_spline_patches_with_spot_control() -> None:
         vertices_test: Matrix3x2f = domain_test.get_vertices  # p1, p2, p3
 
         # lower precision because serialization loses precision
-        npt.assert_allclose(vertices_control, vertices_test, atol=1e-5)
-        npt.assert_allclose(surface_mapping_coeffs_control, surface_mapping_coeffs_test, atol=1e-3)
+        npt.assert_allclose(vertices_control, vertices_test)
+        npt.assert_allclose(surface_mapping_coeffs_control, surface_mapping_coeffs_test)
 
     # View the mesh
-    spline_surface.view(color, num_subdivisions)
+    # spline_surface.view(color, num_subdivisions)
 
 
 # *******************
@@ -383,6 +392,10 @@ def twelve_split_quadratic_reproduction(
 
     return True
 
+
+# *********************
+# Original Test Cases
+# *********************
 
 def test_twelve_split_spline_constant_surface():
     # Build constant function triangle data

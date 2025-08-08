@@ -5,46 +5,33 @@ coefficients
 """
 import copy
 from collections import defaultdict
-import numpy as np
+
 import igl
+import numpy as np
 import polyscope as ps
 from cholespy import CholeskySolverD
 from scipy.sparse import coo_matrix
 
-from src.core.common import (
-    ROWS, COLS, DISCRETIZATION_LEVEL, SKY_BLUE,
-    unimplemented,
-    logger,
-    Index,
-    Vector1D, PlanarPoint,
-    MatrixXi, MatrixXf,
-    Matrix3x1r,
-    Matrix6x3f, Matrix6x12f,
-    Matrix12x3f,
-    MatrixNx3f,
-    compare_eigen_numpy_matrix
-)
 from src.core.affine_manifold import AffineManifold, VertexManifoldChart
+from src.core.common import (COLS, DISCRETIZATION_LEVEL, ROWS, SKY_BLUE, Index,
+                             Matrix3x1r, Matrix6x3f, Matrix6x12f, Matrix12x3f,
+                             MatrixNx3f, MatrixXf, MatrixXi, PlanarPoint,
+                             Vector1D, logger, unimplemented)
 from src.core.compute_boundaries import compute_face_boundary_edges
 from src.core.convex_polygon import ConvexPolygon
-from src.quadratic_spline_surface.PS12_patch_coeffs import PS12_patch_coeffs
-from src.quadratic_spline_surface.PS12tri_bounds_coeffs import PS12tri_bounds_coeffs
 from src.quadratic_spline_surface.optimize_spline_surface import (
-    build_twelve_split_spline_energy_system,
-    generate_optimized_twelve_split_position_data,
-    OptimizationParameters,
-
-)
+    OptimizationParameters, build_twelve_split_spline_energy_system,
+    generate_optimized_twelve_split_position_data)
 from src.quadratic_spline_surface.position_data import (
-    generate_corner_data_matrices, generate_midpoint_data_matrices,
-    TriangleCornerData, TriangleMidpointData,
-)
-from src.quadratic_spline_surface.quadratic_spline_surface import (
+    TriangleCornerData, TriangleMidpointData, generate_corner_data_matrices,
+    generate_midpoint_data_matrices)
+from src.quadratic_spline_surface.PS12_patch_coeffs import PS12_patch_coeffs
+from src.quadratic_spline_surface.PS12tri_bounds_coeffs import \
+    PS12tri_bounds_coeffs
+from src.quadratic_spline_surface.quadratic_spline_surface import \
     QuadraticSplineSurface
-)
-from src.quadratic_spline_surface.quadratic_spline_surface_patch import (
+from src.quadratic_spline_surface.quadratic_spline_surface_patch import \
     QuadraticSplineSurfacePatch
-)
 
 
 class TwelveSplitSplineSurface(QuadraticSplineSurface):
@@ -54,6 +41,15 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
     Supports:
     - quadratic spline surface operations
     - vertex position updates
+
+    :ivar affine_manifold: 
+    :ivar face_to_patch_indices:  map from mesh faces to lists of corresponding patches
+    :ivar patch_to_face_indices: map from patches to the corresponding mesh face
+    :ivar corner_data: quadratic vertex position and derivative data
+    :ivar midpoint_data: quadratic edge midpoint derivative data
+    :ivar fit_matrix: fit matrix for the energy
+    :ivar energy_hessian: hessian for the energy computation
+    :ivar energy_hessian_inverse: inverse of the hessian for the energy computation
     """
 
     def __init__(self,
@@ -65,23 +61,14 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
         Maps from the input mesh faces to the patches and from patches to the faces are also generated.
         Constructor for VF representation with uv coordinates and with additional data for the spline inferred as determined by the parameters.
 
+        Also calls the parent QuadraticSplineSurface class to initialize 
+        the following member variables:
+         * _patches
+         * _hash_table
+
         @param[in] V: mesh vertex positions
         @param[in] affine_manifold: affine manifold structure
         @param[in] optimization_params: parameters for the spline optimization
-
-        NOTE: the below two parameters are used for the contour_network calculation...
-        @param[out] face_to_patch_indices: map from mesh faces to lists of
-        corresponding patches
-        @param[out] patch_to_face_indices: map from patches to the corresponding
-        mesh face
-        @param[out] fit_matrix: fit matrix for the energy
-        @param[out] energy_hessian: hessian for the energy computation
-        @param[out] energy_hessian_inverse: inverse of the hessian for the energy
-        computation
-
-        TODO: deal with the case with the other constructor from corner_data and midpoint_data.
-        @param[in] corner_data: quadratic vertex position and derivative data
-        @param[in] midpoint_data: quadratic edge midpoint derivative data
         """
         self.__affine_manifold: AffineManifold = affine_manifold
         self.__corner_data: dict[int, dict[int, TriangleCornerData]] = defaultdict(dict)
@@ -115,6 +102,7 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
 
         # Build optimized corner and midpoint data.
         # As in, initializes self.__corner_data and self.__midpoint_data
+        # XXX: Below changes __corner_data and __midpoint_data by reference.
         generate_optimized_twelve_split_position_data(V,
                                                       affine_manifold,
                                                       fit_matrix,
@@ -126,17 +114,24 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
         is_cone_corner: list[list[bool]] = affine_manifold.compute_cone_corners()  # list[bool] of length 3
 
         # Initialize position data and patches.
-        self.__face_to_patch_indices: list[list[int]]
-        self.__patch_to_face_indices: list[int]
+        face_to_patch_indices: list[list[int]]
+        patch_to_face_indices: list[int]
+        patches: list[QuadraticSplineSurfacePatch]
+        face_to_patch_indices, patch_to_face_indices, patches = self.build_twelve_split_patches(
+            self.__corner_data,
+            self.__midpoint_data,
+            is_cone_corner)
 
-        # NOTE: do not redefine the below for they are part of the parent class...
-        # self._patches: list[QuadraticSplineSurfacePatch]
-        # self._hash_table: list[list[list[int]]]
-        self.__init_twelve_split_patches(self.__corner_data,
-                                         self.__midpoint_data,
-                                         is_cone_corner)
+        # This initializes the following:
+        # TODO: debug through and see if these local variables are changed after calling super()
+        # This shows that Python's super class and subclass behavior of inheritance.
+        self._patches: list[QuadraticSplineSurfacePatch]
+        self._hash_table: list[list[list[int]]]
+        super().__init__(patches)
 
         # Saving everything into the class
+        self.__face_to_patch_indices: list[list[int]] = face_to_patch_indices
+        self.__patch_to_face_indices: list[int] = patch_to_face_indices
         self.fit_matrix: coo_matrix = fit_matrix
         self.energy_hessian: coo_matrix = energy_hessian
         self.energy_hessian_inverse: CholeskySolverD = energy_hessian_inverse
@@ -204,16 +199,17 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
                          ) -> None:
         """
         Update the spline surface vertex positions for the fit.
-        # TODO: fix this according the changes made in the past couple of days
 
-        NOTE: keeping fit_matrix and energy_hessian_inverse modified by refernece for efficiency.
+        TODO: check if the below are returned or not.
         @param[in] V: mesh vertex positions
-        @param[out] fit_matrix: fit matrix for the energy
-        @param[out] energy_hessian_inverse: inverse of the hessian for the energy
+        :param[out] fit_matrix: fit matrix for the energy
+        :param[out] energy_hessian_inverse: inverse of the hessian for the energy
         computation
 
-        # TODO: add face_to_patch_indices, patch_to_face_indices, _patches, and _hash_table a
-        param out as well since these are initialized in init_twelve_split_patches()
+        :ivar face_to_patch_indices:
+        :ivar patch_to_face_indices:
+        :ivar patches:
+        :ivar hash_table:
         """
 
         affine_manifold: AffineManifold = self.affine_manifold
@@ -232,16 +228,27 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
             self.__midpoint_data)
 
         # Get cone corners
-        is_cone_corner: list[list[bool]] = affine_manifold.compute_cone_corners()  # list[bool] length 3
-        assert len(is_cone_corner[0]) == 3
+        # list[bool] length 3
+        is_cone_corner: list[list[bool]] = affine_manifold.compute_cone_corners()
+        assert len(is_cone_corner[0]) == 3  # lazy length checking
 
-        # Initialize position data and patches
-        self.__init_twelve_split_patches(self.__corner_data,
-                                         self.__midpoint_data,
-                                         is_cone_corner)
+        # Initialize position data and patches.
+        face_to_patch_indices: list[list[int]]
+        patch_to_face_indices: list[int]
+        patches: list[QuadraticSplineSurfacePatch]
+        face_to_patch_indices, patch_to_face_indices, patches = self.build_twelve_split_patches(
+            self.__corner_data,
+            self.__midpoint_data,
+            is_cone_corner)
 
-        # TODO: add a return value or not?
-        # return fit_matrix, energy_hessian_inverse
+        # Initialize hash tables
+        hash_table: list[list[list[int]]] = self.compute_patch_hash_tables(patches)
+
+        # Store the values into the class
+        self._patches = patches
+        self._hash_table = hash_table
+        self.__face_to_patch_indices = face_to_patch_indices
+        self.__patch_to_face_indices = patch_to_face_indices
 
     def add_position_data_to_viewer(self) -> None:
         """
@@ -292,36 +299,26 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
     # *********************************************
     # Private methods for TwelveSplitSpline class
     # *********************************************
-
-    def __init_twelve_split_patches(self,
-                                    corner_data_ref: dict[int, dict[int, TriangleCornerData]],
-                                    midpoint_data_ref: dict[int, dict[int, TriangleMidpointData]],
-                                    is_cone_corner: list[list[bool]]
-                                    ) -> None:
+    @staticmethod
+    def build_twelve_split_patches(corner_data_ref: dict[int, dict[int, TriangleCornerData]],
+                                   midpoint_data_ref: dict[int, dict[int, TriangleMidpointData]],
+                                   is_cone_corner_ref: list[list[bool]]
+                                   ) -> tuple[list[list[int]], list[int], list[QuadraticSplineSurfacePatch]]:
         """
-        Helper function used by TwelveSplitSplineSurface constructors.
-        Initializes the following member variables:
-         * __face_to_patch_indices
-         * __patch_to_face_indices
-
-        Also calls the parent QuadraticSplineSurface class to initialize 
-        the  following member variables:
-         * _patches
-         * _hash_table
+        NOTE: this method is renamed from init_twelve_split_patches to build_twelve_split_patches
+        to better represent what it is doing.
 
         corner_data of length 3
         midpoint_data of length 3
         is_cone_corner with elements of list of length 3
 
-        :param __face_to_patch_indices: [out] 
-        :type __face_to_patch_indices: list[list[int]]
-        :param __patch_to_face_indices: [out]
-        :type __patch_to_face_indices: list[int]
+        :return face_to_patch_indices: [out] 
+        :rtype face_to_patch_indices: list[list[int]]
+        :return patch_to_face_indices: [out]
+        :rtype patch_to_face_indices: list[int]
+        :return patches: [out]
+        :rtype patches: list[QuadraticSplineSurfacePatch]
 
-        :param _patches: [out]
-        :type _patches: list[QuadraticSplineSurfacePatch]
-        :param: _hash_table: [out]
-        :type _hash_table: list[list[list[int]]]
         """
 
         num_faces: int = len(corner_data_ref)
@@ -370,7 +367,7 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
 
                 # Mark cones
                 corner_index: int = patch_to_corner_map[j][0]
-                if (corner_index >= 0) and (is_cone_corner[face_index][corner_index]):
+                if (corner_index >= 0) and (is_cone_corner_ref[face_index][corner_index]):
                     patch_cone_index: int = patch_to_corner_map[j][1]
                     patches[-1].mark_cone(patch_cone_index)
 
@@ -381,51 +378,37 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
                 assert patch_to_face_indices[face_to_patch_indices[face_index][-1]] == face_index
                 assert face_to_patch_indices[patch_to_face_indices[-1]][-1] == new_patch_index
 
-        # Below initializes self._patches and self._hash_table of the parent
-        # QuadraticSplineSurface class.
+        assert len(patches) == num_patches
+        return face_to_patch_indices, patch_to_face_indices, patches
 
-        # TODO: calling this parent constructor over and over again in this loop that called init_twelve_slit_patches seems
-        # very confusing.
-        # So, switch out of it.
-        # As in, change this function to return the patches and recalculates the hash table...
-        super().__init__(patches)
-        self.__face_to_patch_indices = face_to_patch_indices
-        self.__patch_to_face_indices = patch_to_face_indices
-
-        assert len(self._patches) == num_patches
-        compare_eigen_numpy_matrix("spot_control\\12_split_spline\\init_twelve_split_patches\\face_to_patch_indices.csv",
-                                   np.array(face_to_patch_indices))
-        compare_eigen_numpy_matrix("spot_control\\12_split_spline\\init_twelve_split_patches\\patch_to_face_indices.csv",
-                                   np.array(patch_to_face_indices))
-
-    def generate_face_normals(self,
-                              V: MatrixXf,
+    @staticmethod
+    def generate_face_normals(V: MatrixXf,
                               affine_manifold: AffineManifold) -> MatrixXf:
         """
         Helper function used by TwelveSplitSplineSurface constructor 
         and update_positions() method.
+
+        NOTE: method made static for testing
         """
-        F: MatrixXi = affine_manifold.get_faces
+        F: MatrixXi = affine_manifold.faces
 
         # Compute the cones of the affine manifold
         cones: list[Index] = affine_manifold.compute_cones()
 
         # Get vertex normals
-        # TODO: does the below do what I want? since per_vertex_normals returns ArrayLike
-        N_vertices: MatrixXf = np.asarray(igl.per_vertex_normals(V, F))  # V by 3 matrix
+        N_vertices: MatrixNx3f = np.asarray(igl.per_vertex_normals(V, F),
+                                            dtype=np.float64)
 
         # Set the face one ring normals of the cone vertices to the cone vertex
         # normal
         N: np.ndarray = np.zeros(shape=(F.shape[ROWS], 3))
 
-        for i, ci in enumerate(cones):
+        for _, ci in enumerate(cones):
             chart: VertexManifoldChart = affine_manifold.get_vertex_chart(ci)
-            for j, fj in enumerate(chart.face_one_ring):
-                # TODO: shape broadcasting might go wrong here...
+            for _, fj in enumerate(chart.face_one_ring):
                 N[fj, :] = N_vertices[ci, :]
 
         assert N.shape[COLS] == 3
-
         return N
 
 
@@ -439,10 +422,10 @@ def compute_twelve_split_spline_patch_boundary_edges(F: MatrixXi,
     """
     Used in generation of figures, animation, and algebraic contours.
 
-    @param[in] F: mesh faces
-    @param[in] face_to_patch_indices: map from triangle mesh faces to the
+    :param[in] F: mesh faces
+    :param[in] face_to_patch_indices: map from triangle mesh faces to the
     patches arising from it
-    @param[out] patch_boundary_edges: edges of the patch triangle domains that
+    :param[out] patch_boundary_edges: edges of the patch triangle domains that
     are boundaries
     """
     logger.info("Computing patch boundary edges for mesh with %s faces", F.shape[ROWS])  # rows
@@ -462,7 +445,7 @@ def compute_twelve_split_spline_patch_boundary_edges(F: MatrixXi,
         # WARNING: There are some magic numbers here from the construction
         # of the twelve split
         # FIXME Double check these numbers
-        face_index: int = face_boundary_edges[i][0]  # TODO: add first and second man
+        face_index: int = face_boundary_edges[i][0]
         face_vertex_index: int = (face_boundary_edges[i][1] + 1) % 3
 
         first_patch_index: int = face_to_patch_indices[face_index][6 + (2 * face_vertex_index)]
@@ -485,15 +468,15 @@ def compute_twelve_split_spline_patch_boundary_edges(F: MatrixXi,
 # Publicly Accessible Helpers for init_twelve_split_patches
 # ******************************************************
 
-def generate_twelve_split_domain_areas(v0: PlanarPoint, v1: PlanarPoint, v2: PlanarPoint) -> None:
+def generate_twelve_split_domain_areas() -> None:
     """
     Generate areas for the twelve split patches in the same order as the
     patch surface mappings for a given domain triangle.
 
-    @param[in] v0: first vertex position of the domain triangle
-    @param[in] v1: second vertex position of the domain triangle
-    @param[in] v2: third vertex position of the domain triangle
-    @param[out] patch_areas: twelve patch domain areas
+    :param[in] v0: first vertex position of the domain triangle
+    :param[in] v1: second vertex position of the domain triangle
+    :param[in] v2: third vertex position of the domain triangle
+    :param[out] patch_areas: twelve patch domain areas
     """
     unimplemented("Only used in test_assemble_matrix.cpp in original ASOC code.")
 
@@ -502,8 +485,6 @@ def generate_twelve_split_spline_patch_patch_boundaries() -> list[list[Matrix3x1
     """
     Generate patch boundary equations for the twelve split patches in the same
     order as the patch surface mappings
-
-    NOTE: helper for init_twelve_split_patches()
 
     :return: [out] patch_boundaries: twelve patch domain boundary coefficients. 
     list of length 12 with list[Matrix3x1r] of length 3.
@@ -521,7 +502,7 @@ def generate_twelve_split_spline_patch_patch_boundaries() -> list[list[Matrix3x1
     ]
     assert len(patch_boundaries) == 12
     assert len(patch_boundaries[0]) == 3
-    assert patch_boundaries[0][0].shape == (3, 1)
+    assert patch_boundaries[0][0].shape == (3, 1)  # lazy shape checking.
 
     # Get boundary coefficients
     bound_coeffs: np.ndarray = PS12tri_bounds_coeffs()
@@ -628,7 +609,8 @@ def generate_twelve_split_data_matrix(corner_data: dict[int, TriangleCornerData]
 
 
 def generate_twelve_split_spline_patch_surface_mapping(corner_data: dict[int, TriangleCornerData],
-                                                       midpoint_data: dict[int, TriangleMidpointData]) -> list[Matrix6x3f]:
+                                                       midpoint_data: dict[int, TriangleMidpointData]
+                                                       ) -> list[Matrix6x3f]:
     """
     Generate twelve spline surface patch mapping coefficient matrix from corner
     and midpoint data according to the twelve-split Powell-Sabin formula.

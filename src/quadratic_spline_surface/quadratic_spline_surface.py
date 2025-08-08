@@ -89,7 +89,8 @@ class QuadraticSplineSurface:
     def from_file(cls, filepath: str) -> "QuadraticSplineSurface":
         """
         Read a surface serialization from file.\n
-        NOTE: method used for testing with ASOC code and to make sure that implementation is correct.
+        NOTE: method used for testing with ASOC code and to make sure that
+        implementation is correct.
 
         :param filepath: [in] file path for the serialized surface
         :return: patches to save to.
@@ -99,7 +100,7 @@ class QuadraticSplineSurface:
         patches: list[QuadraticSplineSurfacePatch] = []
 
         if not os.path.isfile(filepath):
-            raise OSError("File does not exist at %s. Choose a file to read spline from.", filepath)
+            raise OSError("File does not exist at %s. Choose a file to read spline.", filepath)
 
         with open(filepath, 'r', encoding='utf-8') as input_file:
             patches = cls.deserialize(input_file)
@@ -204,14 +205,16 @@ class QuadraticSplineSurface:
 
         return V, F, N
 
-    def discretize(self, surface_disc_params: SurfaceDiscretizationParameters
+    def discretize(self,
+                   surface_disc_params: SurfaceDiscretizationParameters
                    ) -> tuple[MatrixNx3f, MatrixNx3i, MatrixNx3f]:
         """
         Triangulate the surface.
 
         :param surface_disc_params: discretization parameters
         :type surface_disc_params: SurfaceDiscretizationParameters
-        :return: vertices of the triangulation (V_tri), faces of the triangulation(F_tri), and vertex normals (N_tri)
+        :return: vertices of the triangulation (V_tri), faces of the triangulation(F_tri),
+        and vertex normals (N_tri)
         :rtype: tuple[MatrixNx3f, MatrixNx3i, MatrixNx3f]
         """
         num_subdivisions: int = surface_disc_params.num_subdivisions

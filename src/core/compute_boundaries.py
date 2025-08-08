@@ -2,10 +2,11 @@
 Methods to compute the boundaries of a mesh
 """
 
-from src.core.common import *
-from src.core.halfedge import *
 # from ..core.quadratic_spline_surface import *
 import numpy as np
+
+from src.core.common import *
+from src.core.halfedge import *
 
 
 def compute_face_boundary_edges(F: np.ndarray) -> list[tuple[int, int]]:
@@ -25,8 +26,8 @@ def compute_face_boundary_edges(F: np.ndarray) -> list[tuple[int, int]]:
     corner_to_he: list[list[Index]]
     he_to_corner: list[tuple[Index, Index]]
     halfedge = Halfedge(F)
-    corner_to_he = halfedge.get_corner_to_he
-    he_to_corner = halfedge.get_he_to_corner
+    corner_to_he = halfedge.corner_to_he
+    he_to_corner = halfedge.he_to_corner
 
     # Get boundary halfedges
     boundary_halfedges: list[Index] = halfedge.build_boundary_halfedge_list

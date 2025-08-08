@@ -68,24 +68,6 @@ class Halfedge:
         :param F: faces to build halfedge mesh from
         :type F: MatrixNx3i
         """
-        # *******
-        # PRIVATE
-        # *******
-        m_next: list[Index]
-        m_opp:  list[Index]
-        m_he2e: list[Index]
-        m_e2he: list[tuple[Index, Index]]
-        m_to:   list[Index]
-        m_from: list[Index]
-        m_face: list[Index]
-        m_out:  list[Index]
-        m_f2he: list[Index]
-        m_F: np.ndarray
-        m_num_vertices: int
-        m_num_faces: int
-        m_num_halfedges: int
-        m_num_edges: int
-
         # **************************
         # Invalid index constructors (used across all Halfedge objects)
         # **************************
@@ -100,7 +82,7 @@ class Halfedge:
         assert F.ndim > 1
 
         # TODO: store F into m_F
-        self.m_F = F
+        self.__F = F
         num_faces: int = F.shape[0]
         num_vertices: int = F.max() + 1
         num_halfedges: int = 3 * num_faces
@@ -112,35 +94,35 @@ class Halfedge:
                 return
 
         # Build maps between corners and halfedges
-        self.corner_to_he: list[list[Index]]
-        self.he_to_corner: list[tuple[int, int]]
-        self.corner_to_he, self.he_to_corner = self.build_corner_to_he_maps(num_faces)
+        self.__corner_to_he: list[list[Index]]
+        self.__he_to_corner: list[tuple[int, int]]
+        self.__corner_to_he, self.__he_to_corner = self.build_corner_to_he_maps(num_faces)
 
         # Iterate over faces to build next, face, and to arrays
-        self.m_next = [self.INVALID_HALFEDGE_INDEX] * num_halfedges
-        self.m_face = [self.INVALID_FACE_INDEX] * num_halfedges
-        self.m_to = [self.INVALID_VERTEX_INDEX] * num_halfedges
-        self.m_from = [self.INVALID_VERTEX_INDEX] * num_halfedges
+        self.__next: list[int] = [self.INVALID_HALFEDGE_INDEX] * num_halfedges
+        self.__face: list[int] = [self.INVALID_FACE_INDEX] * num_halfedges
+        self.__to: list[int] = [self.INVALID_VERTEX_INDEX] * num_halfedges
+        self.__from: list[int] = [self.INVALID_VERTEX_INDEX] * num_halfedges
         for face_index in range(num_faces):
             for i in range(3):
-                current_he: Index = self.corner_to_he[face_index][i]
-                next_he: Index = self.corner_to_he[face_index][(i + 1) % 3]
-                self.m_next[current_he] = next_he
-                self.m_face[current_he] = face_index
-                self.m_to[current_he] = F[face_index, (i + 2) % 3]
-                self.m_from[current_he] = F[face_index, (i + 1) % 3]
+                current_he: Index = self.__corner_to_he[face_index][i]
+                next_he: Index = self.__corner_to_he[face_index][(i + 1) % 3]
+                self.__next[current_he] = next_he
+                self.__face[current_he] = face_index
+                self.__to[current_he] = F[face_index, (i + 2) % 3]
+                self.__from[current_he] = F[face_index, (i + 1) % 3]
 
         # Build out and f2he arrays
-        self.m_out = [-1] * num_vertices
-        self.m_f2he = [-1] * num_faces
+        self.__out: list[int] = [-1] * num_vertices
+        self.__f2he: list[int] = [-1] * num_faces
         for he_index in range(num_halfedges):
-            self.m_out[self.m_to[he_index]] = self.m_next[he_index]
-            self.m_f2he[self.m_face[he_index]] = he_index
+            self.__out[self.__to[he_index]] = self.__next[he_index]
+            self.__f2he[self.__face[he_index]] = he_index
 
         # Iterate over vertices to build opp using a vertex circulator
         # Note that this is the main difficulty in constructing halfedge from VF
-        vertex_circulator = VertexCirculator(F)  # TODO: check if all values made are all good
-        self.m_opp = [-1] * (3 * num_faces)
+        vertex_circulator = VertexCirculator(F)
+        self.__opp: list[int] = [-1] * (3 * num_faces)
         for vertex_index in range(num_vertices):
             # Get vertex one ring
             vertex_one_ring: list[int]
@@ -162,24 +144,26 @@ class Halfedge:
                 fi: Index = face_one_ring[i]
                 # TODO: confirm I'm doing correct slicing like Eigen .row()
                 fi_vertex_index: Index = find_face_vertex_index(F[fi, :], vertex_index)
-                current_he: Index = self.corner_to_he[fi][(fi_vertex_index + 1) % 3]
+                current_he: Index = self.__corner_to_he[fi][(fi_vertex_index + 1) % 3]
 
                 # Get next (ccw) face next (ccw) halfedge from the vertex
                 fj: Index = face_one_ring[(i + 1) % num_adjacent_faces]
                 fj_vertex_index: Index = find_face_vertex_index(F[fj, :], vertex_index)
-                opposite_he: Index = self.corner_to_he[fj][(fj_vertex_index + 2) % 3]
+                opposite_he: Index = self.__corner_to_he[fj][(fj_vertex_index + 2) % 3]
 
                 # Assign opposite halfedge
-                self.m_opp[current_he] = opposite_he
+                self.__opp[current_he] = opposite_he
 
         # Build maps between edges and halfedges
-        self.m_he2e, self.m_e2he = build_halfedge_to_edge_maps(self.m_opp)
+        self.__he2e: list[Index]
+        self.__e2he: list[tuple[Index, Index]]
+        self.__he2e, self.__e2he = build_halfedge_to_edge_maps(self.__opp)
 
         # Set sizes
-        self.m_num_halfedges = num_halfedges
-        self.m_num_faces = num_faces
-        self.m_num_vertices = num_vertices
-        self.m_num_edges = len(self.m_e2he)
+        self.__num_halfedges: int = num_halfedges
+        self.__num_faces: int = num_faces
+        self.__num_vertices: int = num_vertices
+        self.__num_edges: int = len(self.__e2he)
 
         #  Check validity
         if logger.getEffectiveLevel() == logging.DEBUG:
@@ -195,25 +179,22 @@ class Halfedge:
     @property
     def num_halfedges(self) -> Index:
         """Retrieves num_halfedges."""
-        return self.m_num_halfedges
+        return self.__num_halfedges
 
     @property
     def num_faces(self) -> Index:
         """Retrieves num_faces."""
-
-        return self.m_num_faces
+        return self.__num_faces
 
     @property
     def num_vertices(self) -> Index:
         """Retrieves num_vertices."""
-
-        return self.m_num_vertices
+        return self.__num_vertices
 
     @property
     def num_edges(self) -> Index:
         """Retrieves num_edges."""
-
-        return self.m_num_edges
+        return self.__num_edges
 
     # *********
     # Adjacency
@@ -226,27 +207,27 @@ class Halfedge:
         """
         if not self.is_valid_halfedge_index(he):
             return self.INVALID_HALFEDGE_INDEX
-        return self.m_next[he]
+        return self.__next[he]
 
     def opposite_halfedge(self, he: Index) -> Index:
         if not self.is_valid_halfedge_index(he):
             return self.INVALID_HALFEDGE_INDEX
-        return self.m_opp[he]
+        return self.__opp[he]
 
     def halfedge_to_face(self, he: Index) -> Index:
         if not self.is_valid_halfedge_index(he):
             return self.INVALID_FACE_INDEX
-        return self.m_face[he]
+        return self.__face[he]
 
     def halfedge_to_head_vertex(self, he: Index) -> Index:
         if not self.is_valid_halfedge_index(he):
             return self.INVALID_VERTEX_INDEX
-        return self.m_to[he]
+        return self.__to[he]
 
     def halfedge_to_tail_vertex(self, he: Index) -> Index:
         if not self.is_valid_halfedge_index(he):
             return self.INVALID_VERTEX_INDEX
-        return self.m_from[he]
+        return self.__from[he]
 
     # ********************
     # Edge Representations
@@ -255,30 +236,70 @@ class Halfedge:
     def halfedge_to_edge(self, he: Index) -> Index:
         if not self.is_valid_halfedge_index(he):
             return self.INVALID_EDGE_INDEX
-        return self.m_he2e[he]
+        return self.__he2e[he]
 
     def edge_to_halfedge(self, e: Index) -> tuple[Index, Index]:
-        return self.m_e2he[e]
+        return self.__e2he[e]
 
     def edge_to_first_halfedge(self, e: Index) -> Index:
         # NOTE: equivalent to C++ pair .first
-        return self.m_e2he[e][0]
+        return self.__e2he[e][0]
 
     def edge_to_second_halfedge(self, e: Index) -> Index:
         # NOTE: equivalent to C++ pair .second
-        return self.m_e2he[e][1]
+        return self.__e2he[e][1]
 
     @property
-    def get_halfedge_to_edge_map(self) -> list[Index]:
-        return self.m_he2e
+    def halfedge_to_edge_map(self) -> list[Index]:
+        """
+        Gets he2e
+        :returns: h2e2
+        """
+        return self.__he2e
 
     @property
-    def get_edge_to_halfedge_map(self) -> list[tuple[Index, Index]]:
-        return self.m_e2he
+    def edge_to_halfedge_map(self) -> list[tuple[Index, Index]]:
+        """
+        Gets e2he
+        :returns: e2he
+        """
+        return self.__e2he
+
+    # **********************
+    # Attributes for Testing
+    # **********************
+    @property
+    def f2he(self):
+        return self.__f2he
+
+    @property
+    def face(self):
+        return self.__face
+
+    @property
+    def _from(self):
+        return self.__from
+
+    @property
+    def next(self):
+        return self.__next
+
+    @property
+    def opp(self):
+        return self.__opp
+
+    @property
+    def out(self):
+        return self.__out
+
+    @property
+    def to(self):
+        return self.__to
 
     # ******************
     # Element predicates
     # ******************
+
     def is_boundary_edge(self, e: Index) -> bool:
         if (not self.is_valid_halfedge_index(self.edge_to_first_halfedge(e))):
             return True
@@ -289,7 +310,6 @@ class Halfedge:
     def is_boundary_halfedge(self, he: Index) -> bool:
         return self.is_boundary_edge(self.halfedge_to_edge(he))
 
-    @property
     def build_boundary_edge_list(self) -> list[Index]:
         """
             Args:
@@ -299,13 +319,12 @@ class Halfedge:
         """
         boundary_edges: list[Index] = []
 
-        for ei in range(self.m_num_edges):
+        for ei in range(self.__num_edges):
             if (self.is_boundary_edge(ei)):
                 boundary_edges.append(ei)
 
         return boundary_edges
 
-    @property
     def build_boundary_halfedge_list(self) -> list[Index]:
         """
             Args:
@@ -315,31 +334,39 @@ class Halfedge:
         """
         boundary_halfedges: list[Index] = []
 
-        for hi in range(self.m_num_halfedges):
+        for hi in range(self.__num_halfedges):
             if (self.is_boundary_halfedge(hi)):
                 boundary_halfedges.append(hi)
 
         return boundary_halfedges
 
     @property
-    def get_corner_to_he(self) -> list[list[int]]:
-        return self.corner_to_he
+    def corner_to_he(self) -> list[list[int]]:
+        """
+        Gets corner to halfedge map
+        :return: corner_to_he
+        """
+        return self.__corner_to_he
 
     @property
-    def get_he_to_corner(self) -> list[tuple[int, int]]:
-        return self.he_to_corner
+    def he_to_corner(self) -> list[tuple[int, int]]:
+        """
+        Gets halfedge to corner map
+        :return: he_to_corner
+        """
+        return self.__he_to_corner
 
     def clear(self) -> None:
-        self.m_next.clear()
-        self.m_opp.clear()
-        self.m_he2e.clear()
-        self.m_e2he.clear()
-        self.m_to.clear()
-        self.m_from.clear()
-        self.m_face.clear()
-        self.m_out.clear()
-        self.m_f2he.clear()
-        self.m_F.resize(0, 0)
+        self.__next.clear()
+        self.__opp.clear()
+        self.__he2e.clear()
+        self.__e2he.clear()
+        self.__to.clear()
+        self.__from.clear()
+        self.__face.clear()
+        self.__out.clear()
+        self.__f2he.clear()
+        self.__F.resize(0, 0)
 
     def build_corner_to_he_maps(self, num_faces: Index) -> tuple[list[list[Index]], list[tuple[Index, Index]]]:
         """
@@ -347,7 +374,6 @@ class Halfedge:
 
         Args:
             num_faces: in.
-
             # TODO: write this whole docstring in markdown notation or whatnot
         Returns:
             corner_to_he (list[list[Index]]): output.
@@ -406,34 +432,34 @@ class Halfedge:
         return True
 
     def is_valid(self) -> bool:
-        if len(self.m_next) != self.num_halfedges:
+        if len(self.__next) != self.num_halfedges:
             logger.error("next domain not in bijection with halfedges")
             return False
-        if len(self.m_opp) != self.num_halfedges:
+        if len(self.__opp) != self.num_halfedges:
             logger.error("opp domain not in bijection with halfedges")
             return False
-        if len(self.m_he2e) != self.num_halfedges:
+        if len(self.__he2e) != self.num_halfedges:
             logger.error("he2e domain not in bijection with halfedges")
             return False
-        if len(self.m_to) != self.num_halfedges:
+        if len(self.__to) != self.num_halfedges:
             logger.error("to domain not in bijection with halfedges")
             return False
-        if len(self.m_from) != self.num_halfedges:
+        if len(self.__from) != self.num_halfedges:
             logger.error("from domain not in bijection with halfedges")
             return False
-        if len(self.m_face) != self.num_halfedges:
+        if len(self.__face) != self.num_halfedges:
             logger.error("face domain not in bijection with halfedges")
             return False
-        if len(self.m_e2he) != self.num_edges:
+        if len(self.__e2he) != self.num_edges:
             logger.error("e2he domain not in bijection with edges")
             return False
-        if len(self.m_out) != self.num_vertices:
+        if len(self.__out) != self.num_vertices:
             logger.error("out domain not in bijection with vertices")
             return False
-        if len(self.m_f2he) != self.num_faces:
+        if len(self.__f2he) != self.num_faces:
             logger.error("f2he domain not in bijection with faces")
             return False
-        if self.m_F.shape[0] != self.num_faces:
+        if self.__F.shape[0] != self.num_faces:
             logger.error("F rows not in bijection with faces")
             return False
 

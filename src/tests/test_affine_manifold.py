@@ -1,32 +1,19 @@
+import os
+
+import igl
 import numpy as np
 import numpy.testing as npt
 import pytest
-import os
-import igl
 
-
-from src.core.common import (
-    float_equal,
-    vector_equal,
-    compare_eigen_numpy_matrix,
-    initialize_spot_control_mesh,
-    load_json,
-    Vector1D,
-    PlanarPoint,
-    Matrix2x2r,
-    MatrixXi,
-    MatrixXf,
-    Index,
-    FLOAT_EQUAL_PRECISION,
-)
-
-from src.core.affine_manifold import (
-    AffineManifold,
-    ParametricAffineManifold,
-    VertexManifoldChart,
-    EdgeManifoldChart,
-    FaceManifoldChart,
-)
+from src.core.affine_manifold import (AffineManifold, EdgeManifoldChart,
+                                      FaceManifoldChart,
+                                      ParametricAffineManifold,
+                                      VertexManifoldChart)
+from src.core.common import (FLOAT_EQUAL_PRECISION, Index, Matrix2x2r,
+                             MatrixXf, MatrixXi, PlanarPoint, Vector1D,
+                             compare_eigen_numpy_matrix, float_equal,
+                             initialize_spot_control_mesh, load_json,
+                             vector_equal)
 
 # ********************
 # Helper Methods
@@ -190,33 +177,33 @@ def test_affine_manifold_from_spot_control() -> None:
     affine_manifold_filepath: str = "spot_control\\affine_manifold\\"
 
     compare_eigen_numpy_matrix(f"{affine_manifold_filepath}l.csv",
-                               np.array(affine_manifold.m_l))
+                               np.array(affine_manifold.l))
     compare_eigen_numpy_matrix(f"{affine_manifold_filepath}corner_to_edge.csv",
-                               np.array(affine_manifold.m_corner_to_edge))
+                               np.array(affine_manifold.corner_to_edge))
     compare_eigen_numpy_matrix(f"{affine_manifold_filepath}corner_to_he.csv",
-                               np.array(affine_manifold.m_corner_to_he))
+                               np.array(affine_manifold.corner_to_he))
     compare_eigen_numpy_matrix(f"{affine_manifold_filepath}F.csv",
-                               affine_manifold.m_F)
+                               affine_manifold.faces)
     compare_eigen_numpy_matrix(f"{affine_manifold_filepath}F_uv.csv",
-                               affine_manifold.m_F_uv)
+                               affine_manifold.F_uv)
     compare_eigen_numpy_matrix(f"{affine_manifold_filepath}global_uv.csv",
-                               affine_manifold.m_global_uv)
+                               affine_manifold.global_uv)
     compare_eigen_numpy_matrix(f"{affine_manifold_filepath}he_to_corner.csv",
-                               np.array(affine_manifold.m_he_to_corner))
+                               np.array(affine_manifold.he_to_corner))
     # TODO: find a way to test he_to_edge
     # compare_eigen_numpy_matrix(
     #     f"{filepath}he_to_edge.csv", np.array(affine_manifold.he_to_edge))
     vertex_charts_control: list[dict] = load_json(
         f"{affine_manifold_filepath}vertex_charts_aligned.json")
-    compare_vertex_charts(vertex_charts_control, affine_manifold.m_vertex_charts)
+    compare_vertex_charts(vertex_charts_control, affine_manifold.vertex_charts)
 
     edge_charts_control: list[dict] = load_json(
         f"{affine_manifold_filepath}edge_charts_aligned.json")
-    compare_edge_charts(edge_charts_control, affine_manifold.m_edge_charts)
+    compare_edge_charts(edge_charts_control, affine_manifold.edge_charts)
 
     face_charts_control: list[dict] = load_json(
         f"{affine_manifold_filepath}face_charts_aligned.json")
-    compare_face_charts(face_charts_control, affine_manifold.m_face_charts)
+    compare_face_charts(face_charts_control, affine_manifold.face_charts)
 
 
 def test_affine_manifold_from_global_uvs() -> None:

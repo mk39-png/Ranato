@@ -1,7 +1,8 @@
-from src.core.common import *
 from src.core.affine_manifold import *
+from src.core.common import *
+from src.quadratic_spline_surface.optimize_spline_surface import (
+    TriangleCornerData, TriangleMidpointData)
 from src.utils.generate_shapes import *
-from src.quadratic_spline_surface.optimize_spline_surface import TriangleCornerData, TriangleMidpointData
 
 # ***************************
 # Parametric surface functors
@@ -130,7 +131,7 @@ def generate_parametric_affine_manifold_corner_data(position_func: QuadraticPosi
 
     for face_index in range(num_faces):
         # Get face vertex indices
-        F: np.ndarray = parametric_affine_manifold.get_faces  # dtype == int...
+        F: np.ndarray = parametric_affine_manifold.faces  # dtype == int...
         i: int = F[face_index, 0]
         j: int = F[face_index, 1]
         k: int = F[face_index, 2]
@@ -189,7 +190,7 @@ def generate_parametric_affine_manifold_midpoint_data(gradient_func: QuadraticGr
 
     for face_index in range(num_faces):
         # Get face vertex indices
-        F: np.ndarray = parametric_affine_manifold.get_faces
+        F: np.ndarray = parametric_affine_manifold.faces
         i: int = F[face_index, 0]
         j: int = F[face_index, 1]
         k: int = F[face_index, 2]

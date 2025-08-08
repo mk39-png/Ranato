@@ -61,6 +61,7 @@ MatrixNx3 = np.ndarray[tuple[int, int], np.dtype[np.float64]]
 Matrix3x6r = np.ndarray
 Matrix2x2r = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (2, 2)
 Matrix2x3r = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (2, 3)
+Matrix2x3f = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (2, 3)
 Matrix3x1r = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (3, 1)
 Matrix3x2r = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (3, 2)
 Matrix3x2f = np.ndarray[tuple[int, int], np.dtype[np.float64]]
@@ -95,7 +96,7 @@ PLACEHOLDER_BOOL = False
 # Debug/Helper Methods (keep here for now, especially when comparing later contours code)
 # **********************
 
-def initialize_spot_control_mesh():
+def initialize_spot_control_mesh() -> tuple[npty.ArrayLike, npty.ArrayLike, npty.ArrayLike, npty.ArrayLike]:
     """ 
     Used for testing spot_control mesh in generating 
     the TwelveSplitSplineSurface.
@@ -105,32 +106,36 @@ def initialize_spot_control_mesh():
     :rtype: tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]
     """
     # Get input mesh
-    V: MatrixXf = np.ndarray(shape=(0, 0), dtype=np.float64)
-    uv: MatrixXf = np.ndarray(shape=(0, 0), dtype=np.float64)
-    N: MatrixXf = np.ndarray(shape=(0, 0), dtype=np.float64)
-    F: MatrixXi = np.ndarray(shape=(0, 0), dtype=np.int64)
-    FT: MatrixXi = np.ndarray(shape=(0, 0), dtype=np.int64)
-    FN: MatrixXi = np.ndarray(shape=(0, 0), dtype=np.int64)
-
     filename: str = "spot_control_mesh-cleaned_conf_simplified_with_uv.obj"
     filepath: str = os.path.abspath(f"src\\tests\\spot_control\\{filename}")
+
+    V: npty.ArrayLike
+    uv: npty.ArrayLike
+    N: npty.ArrayLike
+    F: npty.ArrayLike  # int
+    FT: npty.ArrayLike  # int
+    FN: npty.ArrayLike  # int
     V, uv, N, F, FT, FN = igl.readOBJ(filepath)
 
     return V, uv, F, FT
 
 
-# TODO: move to affine_manifold test.
 def load_json(filename: str) -> list[dict]:
     """
     Used by affine_manifold tests.
-
+    Parses a list of dataclasses.
     """
+    obj: list[dict] | None = None
+
     filepath: str = os.path.abspath(f"src\\tests\\{filename}")
-    with open(filepath, 'r') as file:
+    with open(filepath, 'r', encoding='utf-8') as file:
         try:
             obj = json.load(file)
-        except:
-            print("Error with json parsing")
+        except Exception as e:
+            raise OSError(f"Error in JSON parsing at {filepath}") from e
+
+    if obj is None:
+        raise ValueError(f"Failure to read obj at file {filepath}")
 
     return obj
 
@@ -148,7 +153,7 @@ def compare_list_list_varying_lengths(filename: str, rows_test: list[list[int]])
     filepath: str = os.path.abspath(f"src\\tests\\{filename}")
     rows_control: list[list[int]] = []
 
-    with open(filepath, 'r') as file:
+    with open(filepath, 'r', encoding='utf-8') as file:
         reader = csv.reader(file)
         for row in reader:
             parsed: list[int] = [int(x) for x in row if x.strip() != '']
@@ -162,13 +167,15 @@ def compare_list_list_varying_lengths(filename: str, rows_test: list[list[int]])
                                np.array(rows_control[i]))
 
 
-def compare_eigen_numpy_matrix(filename: str, numpy_array: np.ndarray, make_3d: bool = False, atol=FLOAT_EQUAL_PRECISION) -> None:
+def compare_eigen_numpy_matrix(filename: str,
+                               numpy_array: np.ndarray,
+                               make_3d: bool = False) -> None:
     """ 
     Standardized function for comparing matrices for testing.
     Takes a filename and creates an absolute filepath to src/tests/
     """
     eigen_array: np.ndarray = deserialize_eigen_matrix_csv_to_numpy(filename, make_3d)
-    npt.assert_allclose(numpy_array, eigen_array, atol=atol)
+    npt.assert_allclose(numpy_array, eigen_array)
 
 
 def deserialize_eigen_matrix_csv_to_numpy(filename: str, make_3d: bool = False) -> np.ndarray:
@@ -176,14 +183,15 @@ def deserialize_eigen_matrix_csv_to_numpy(filename: str, make_3d: bool = False) 
     Turns Eigen matrix .csv into NumPy array
     Used for testing.
 
-    :param make_3d: parses a 3D csv into a 3D nnumpy array. usually equivalent structure is a list of matrices.
+    :param make_3d: parses a 3D csv into a 3D nnumpy array. 
+    usually equivalent structure is a list of matrices.
     """
     filepath: str = os.path.abspath(f"src\\tests\\{filename}")
 
     arr: np.ndarray
 
     if make_3d:
-        with open(filepath, "r") as file:
+        with open(filepath, 'r', encoding='utf-8') as file:
             file_lines_raw: str = file.read()
             file_lines: list[str] = file_lines_raw.split("\n\n")
 
@@ -264,8 +272,6 @@ def float_equal_zero(x: float, eps=FLOAT_EQUAL_PRECISION) -> bool:
     return math.isclose(x, 0.0, abs_tol=eps)
 
 
-# TODO: just use the Math library for this?
-
 def float_equal(x: float, y: float, eps=FLOAT_EQUAL_PRECISION) -> bool:
     """
     @brief Check if two floating point values are numerically equal
@@ -280,7 +286,7 @@ def float_equal(x: float, y: float, eps=FLOAT_EQUAL_PRECISION) -> bool:
     return math.isclose(x, y, abs_tol=eps)
 
 
-def vector_equal(v: np.ndarray, w: np.ndarray, eps: float = FLOAT_EQUAL_PRECISION):
+def vector_equal(v: np.ndarray, w: np.ndarray, eps: float = FLOAT_EQUAL_PRECISION) -> bool:
     """
     @brief Check if two row vectors of floating point values are numerically
     equal
@@ -290,29 +296,38 @@ def vector_equal(v: np.ndarray, w: np.ndarray, eps: float = FLOAT_EQUAL_PRECISIO
     @param[in] eps: threshold for equality
     @return true iff v - w is numerically the zero vector
     """
-
-    # Just using numpy comparison.
-    # TODO :compare with ASOC code and if atol is the way to go.
     return np.allclose(v, w, atol=eps)
 
 
-def column_vector_equal():
-    todo()
+def column_vector_equal() -> None:
+    """
+    Method no longer in use.
+    """
+    deprecated()
 
 
-def matrix_equal():
-    todo()
+def matrix_equal() -> None:
+    """
+    Method no longer in use.
+    """
+    deprecated()
 
 
-def view_mesh():
-    todo()
+def view_mesh() -> None:
+    """
+    Method no longer in use.
+    """
+    deprecated()
 
 
-def view_parameterized_mesh():
-    todo()
+def view_parameterized_mesh() -> None:
+    """
+    Method no longer in use.
+    """
+    deprecated()
 
 
-def screenshot_mesh():
+def screenshot_mesh() -> None:
     todo()
 
 # ****************
@@ -320,19 +335,19 @@ def screenshot_mesh():
 # ****************
 
 
-def sgn():
+def sgn() -> None:
     todo()
 
 
-def power():
+def power() -> None:
     todo()
 
 
-def compute_discriminant():
+def compute_discriminant() -> None:
     todo()
 
 
-def dot_product():
+def dot_product() -> None:
     todo()
 
 
@@ -460,8 +475,6 @@ def index_vector_complement(index_vector: list[int], num_indices: int) -> list[i
     :return: complement_vector
     :rtype: list[int]
     """
-    # TODO: test this function to see if it's working correctly
-
     # Build index boolean array
     boolean_array: list[bool] = convert_index_vector_to_boolean_array(
         index_vector, num_indices)
@@ -475,13 +488,18 @@ def index_vector_complement(index_vector: list[int], num_indices: int) -> list[i
     return complement_vector
 
 
-def convert_signed_vector_to_unsigned():
-    todo()
+def convert_signed_vector_to_unsigned() -> None:
+    """
+    Method no longer in use.
+    """
+    deprecated()
 
 
-def convert_unsigned_vector_to_signed(unsigned_vector: list[int]):
-    # Pretty sure we don't need this function
-    todo()
+def convert_unsigned_vector_to_signed() -> None:
+    """
+    Method no longer in use.
+    """
+    deprecated()
 
 
 def remove_vector_values(indices_to_remove: list[Index], vec: list) -> list:
@@ -664,14 +682,14 @@ def is_manifold(F: MatrixXi) -> bool:
 
     # Check vertex manifold condition
 
-    invalid_vertices: np.ndarray = igl.is_vertex_manifold(F)  # array of bool values
+    invalid_vertices: np.ndarray = np.asarray(igl.is_vertex_manifold(F), dtype=np.bool)
     if not invalid_vertices.any():
         logger.error("Mesh is not vertex manifold")
         return False
 
     # Check single component
     # TODO: check datatype on component_ids and if it's a numpy array
-    component_ids: np.ndarray = igl.vertex_components(F)
+    component_ids: np.ndarray = np.asarray(igl.vertex_components(F), dtype=np.int64)
 
     if (component_ids.max() - component_ids.min()) > 0:
         logger.error("Mesh has multiple components")
@@ -700,7 +718,7 @@ def area_from_length(l0: float, l1: float, l2: float) -> float:
     return area
 
 
-def area_from_positions(p0: PlanarPoint, p1: PlanarPoint, p2: PlanarPoint) -> float:
+def area_from_positions() -> None:
     """
     Compute the area of a triangle from the vertex positions
 
@@ -709,6 +727,7 @@ def area_from_positions(p0: PlanarPoint, p1: PlanarPoint, p2: PlanarPoint) -> fl
     :param p2: [in] third vertex position
     :return: triangle area
     """
+    # p0: PlanarPoint, p1: PlanarPoint, p2: PlanarPoint) -> float:
     deprecated("Method only used in generate_twelve_split_domain_areas, which is no longer in use.")
 
     # assert p0.shape == (1, 2)
@@ -718,7 +737,7 @@ def area_from_positions(p0: PlanarPoint, p1: PlanarPoint, p2: PlanarPoint) -> fl
     # assert p0.shape == p1.shape
     # assert p1.shape == p2.shape
 
-    # # TODO: double check that numpy norm is doing what we want
+    # TODO: double check that numpy norm is doing what we want
     # l0: float = LA.norm(p2 - p1)
     # l1: float = LA.norm(p0 - p2)
     # l2: float = LA.norm(p1 - p0)
@@ -859,9 +878,11 @@ def remove_mesh_faces(V: MatrixNx3f,
 
 def remove_mesh_vertices(V: MatrixNx3f,
                          F: MatrixNx3i,
-                         vertices_to_remove: list[VertexIndex]) -> tuple[np.ndarray, np.ndarray, list[FaceIndex]]:
+                         vertices_to_remove: list[VertexIndex]
+                         ) -> tuple[np.ndarray, np.ndarray, list[FaceIndex]]:
     """
-    Removes mesh vertices from V based on the indices inside vertices_to_remove and updates F accordingly.
+    Removes mesh vertices from V based on the indices inside vertices_to_remove 
+    and updates F accordingly.
 
     :param V: vertices matrix of floats
     :type V: np.ndarray
@@ -870,7 +891,8 @@ def remove_mesh_vertices(V: MatrixNx3f,
     :param vertices_to_remove: list of indices of vertices to remove
     :type vertices_to_remove: list[int]
 
-    :return: tuple of vertex matrix with vertices removed, updated faces, and list of face indices that were removed
+    :return: tuple of vertex matrix with vertices removed, updated faces, and list 
+    of face indices that were removed
     :rtype: tuple[np.ndarray, np.ndarray, list[FaceIndex]]
     """
     logger.info("Removing %s vertices from mesh with %s faces and %s vertices",

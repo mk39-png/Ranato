@@ -7,15 +7,15 @@ degrees of freedom
 NOTE: a lot of the methods in this file modify by reference.
 """
 
+import numpy as np
+from polyscope import polyscope, surface_mesh
+
 from src.core.affine_manifold import *
 from src.core.common import *
 from src.core.line_segment import *
 from src.core.polynomial_function import *
-from polyscope import polyscope, surface_mesh
 from src.core.rational_function import *
 from src.core.vertex_circulator import *
-
-import numpy as np
 
 
 @dataclass
@@ -174,7 +174,7 @@ def generate_affine_manifold_corner_data(V: np.ndarray,
     for i in range(V.shape[ROWS]):  # equivalent to Eigen V.rows()
         generate_affine_manifold_chart_corner_data(
             V,
-            affine_manifold.get_faces,
+            affine_manifold.faces,
             affine_manifold.get_vertex_chart(i),
             gradients[i],
             corner_data_ref)
@@ -183,7 +183,7 @@ def generate_affine_manifold_corner_data(V: np.ndarray,
 
 
 def generate_affine_manifold_midpoint_data(affine_manifold: AffineManifold,
-                                           edge_gradients: list[list[Matrix2x3r]],
+                                           edge_gradients: dict[int, dict[int, Matrix2x3r]],
                                            midpoint_data_ref: dict[int, dict[int, TriangleMidpointData]]) -> None:
     """
     Generate midpoint position data for a mesh with an affine manifold structure and
@@ -201,7 +201,7 @@ def generate_affine_manifold_midpoint_data(affine_manifold: AffineManifold,
     :return: quadratic edge midpoint derivative data with list[TriangleMidpointData] of length 3
     :rtype: list[list[TriangleMidpointData]]
     """
-    F: np.ndarray = affine_manifold.get_faces
+    F: np.ndarray = affine_manifold.faces
 
     # Set midpoint data per face corner
     # list_resize(midpoint_data_ref, affine_manifold.num_faces, [

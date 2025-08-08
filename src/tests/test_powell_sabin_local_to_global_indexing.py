@@ -1,30 +1,117 @@
+import numpy as np
 import pytest
-from src.quadratic_spline_surface.powell_sabin_local_to_global_indexing import *
+
+from src.core.affine_manifold import AffineManifold
+from src.core.common import (ROWS, Index, Matrix2x3r, SpatialVector, Vector1D,
+                             compare_eigen_numpy_matrix, float_equal,
+                             index_vector_complement,
+                             initialize_spot_control_mesh)
+from src.core.halfedge import Halfedge
+from src.quadratic_spline_surface.optimize_spline_surface import (
+    generate_zero_edge_gradients, generate_zero_vertex_gradients)
+from src.quadratic_spline_surface.powell_sabin_local_to_global_indexing import (
+    build_variable_edge_indices_map, build_variable_vertex_indices_map,
+    generate_twelve_split_variable_value_vector)
+from src.tests.test_affine_manifold import \
+    initialize_affine_manifold_from_spot_control
 
 
-def test_build_variable_edge_indices_map() -> None:
-    # Making sure that the global_edge_indices intialization is of the correct size and elements.
-    num_faces: int = 4
-    PLACEHOLDER_INT = -1
-    global_edge_indices: list[list[int]] = [[PLACEHOLDER_INT, PLACEHOLDER_INT, PLACEHOLDER_INT]
-                                            for _ in range(num_faces)]
-
-    assert len(global_edge_indices) == 4
-    assert len(global_edge_indices[0]) == 3
-    assert len(global_edge_indices[1]) == 3
-    assert len(global_edge_indices[2]) == 3
-    assert len(global_edge_indices[3]) == 3
-
-    for _, index in enumerate(global_edge_indices[0]):
-        assert index == -1
-
-
-def test_generate_twelve_split_local_to_global_map():
+def test_generate_twelve_split_variable_value_vector_spot_mesh():
     """
-    Testing to see that the list resizing works as intended
+    Tests generate_twelve_split_variable_value_vector from spot_control
+    to make initial_variable_values inside optimize_twelve_split_spline_surface()
     """
-    six_split_local_to_global_map: list[int] = [-1 for _ in range(27)]
-    local_to_global_map: list[int] = [39 for _ in range(36)]
-    local_to_global_map[0:len(six_split_local_to_global_map)] = six_split_local_to_global_map
+    initial_V, uv, F, FT = initialize_spot_control_mesh()
+    affine_manifold = initialize_affine_manifold_from_spot_control()
+    num_vertices: int = initial_V.shape[ROWS]
+    num_faces: int = affine_manifold.num_faces
 
-    print(local_to_global_map)
+    # Build halfedge
+    he_to_corner: list[tuple[int, int]] = affine_manifold.he_to_corner
+    halfedge: Halfedge = affine_manifold.halfedge
+    num_edges: int = halfedge.num_edges
+
+    # Initialize variables to optimize
+    vertex_positions: list[SpatialVector] = []
+    initial_vertex_positions: list[SpatialVector] = []
+    for i in range(num_vertices):
+        assert initial_V[[i], :].shape == (1, 3)
+        vertex_positions.append(initial_V[[i], :])
+        initial_vertex_positions.append(initial_V[[i], :])
+    assert len(vertex_positions) == num_vertices
+    assert len(initial_vertex_positions) == num_vertices
+    vertex_gradients: list[Matrix2x3r] = generate_zero_vertex_gradients(num_vertices)
+    edge_gradients: list[list[SpatialVector]] = generate_zero_edge_gradients(num_faces)
+    assert len(edge_gradients[0]) == 3
+
+    # Assume all vertices and edges are variable
+    # TODO: index_vector_complement does not need list parameter.
+    fixed_vertices: list[int] = []
+    fixed_edges: list[int] = []
+    variable_vertices: list[int] = index_vector_complement(fixed_vertices, num_vertices)
+    variable_edges: list[int] = index_vector_complement(fixed_edges, num_edges)
+
+    initial_variable_values: Vector1D = generate_twelve_split_variable_value_vector(vertex_positions,
+                                                                                    vertex_gradients,
+                                                                                    edge_gradients,
+                                                                                    variable_vertices,
+                                                                                    variable_edges,
+                                                                                    halfedge,
+                                                                                    he_to_corner)
+
+    filepath = "spot_control\\optimize_spline_surface\\optimize_twelve_split_spline_surface\\"
+    compare_eigen_numpy_matrix(filepath+"initial_variable_values.csv", initial_variable_values)
+
+
+def test_build_variable_vertex_indices_map_spot_mesh() -> None:
+    """
+
+    """
+    initial_V, _, _, _ = initialize_spot_control_mesh()
+    num_vertices: int = initial_V.shape[ROWS]
+
+    # Assume all vertices and edges are variable
+    fixed_vertices: list[int] = []
+    fixed_edges: list[int] = []
+    variable_vertices: list[int] = index_vector_complement(fixed_vertices, num_vertices)
+    # variable_edges: list[int] = index_vector_complement(fixed_edges, num_edges)
+
+    global_vertex_indices: list[int] = build_variable_vertex_indices_map(num_vertices, variable_vertices)
+
+    compare_eigen_numpy_matrix(
+        "spot_control\\optimize_spline_surface\\build_twelve_split_spline_energy_system\\fit\\global_vertex_indices.csv",
+        np.array(global_vertex_indices))
+    compare_eigen_numpy_matrix(
+        "spot_control\\optimize_spline_surface\\build_twelve_split_spline_energy_system\\full\\global_vertex_indices.csv",
+        np.array(global_vertex_indices))
+
+
+def test_build_variable_edge_indices_map_spot_mesh() -> None:
+    initial_V, _, _, _ = initialize_spot_control_mesh()
+    affine_manifold = initialize_affine_manifold_from_spot_control()
+
+    num_vertices: int = initial_V.shape[ROWS]
+    num_faces: int = affine_manifold.num_faces
+
+    # Build halfedge
+    he_to_corner: list[tuple[Index, Index]] = affine_manifold.he_to_corner
+    halfedge: Halfedge = affine_manifold.halfedge
+    num_edges: int = halfedge.num_edges
+
+    # Assume all vertices and edges are variable
+    fixed_vertices: list[int] = []
+    fixed_edges: list[int] = []
+    variable_vertices: list[int] = index_vector_complement(fixed_vertices, num_vertices)
+    variable_edges: list[int] = index_vector_complement(fixed_edges, num_edges)
+
+    # Build edge variable indices
+    global_edge_indices: list[list[int]] = build_variable_edge_indices_map(
+        num_faces, variable_edges, halfedge, he_to_corner)
+
+    # TODO: move to different test case
+    compare_eigen_numpy_matrix(
+        "spot_control\\optimize_spline_surface\\build_twelve_split_spline_energy_system\\fit\\global_edge_indices.csv",
+        np.array(global_edge_indices))
+    compare_eigen_numpy_matrix(
+        "spot_control\\optimize_spline_surface\\build_twelve_split_spline_energy_system\\full\\global_edge_indices.csv",
+        np.array(global_edge_indices))
