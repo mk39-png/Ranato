@@ -12,7 +12,7 @@ from scipy.sparse import coo_matrix
 
 from src.core.affine_manifold import AffineManifold, EdgeManifoldChart
 from src.core.common import (COLS, ROWS, Index,  # Matrix2x3f,; MatrixNx3i,
-                             Matrix2x2r, Matrix2x3r, Matrix3x2r, Matrix12x12r,
+                             Matrix2x2f, Matrix2x3r, Matrix3x2r, Matrix12x12r,
                              MatrixNx3, MatrixNx3f, MatrixXf, MatrixXi,
                              PlanarPoint, SpatialVector, TwelveSplitGradient,
                              TwelveSplitHessian, Vector1D, Vector2D, VectorX,
@@ -109,7 +109,7 @@ class LocalHessianData:
     @classmethod
     def generate_local_hessian_data(cls,
                                     face_vertex_uv_positions: list[PlanarPoint],
-                                    corner_to_corner_uv_positions: list[Matrix2x2r],
+                                    corner_to_corner_uv_positions: list[Matrix2x2f],
                                     reverse_edge_orientations: list[bool],
                                     is_cone: list[bool],
                                     is_cone_adjacent: list[bool],
@@ -397,7 +397,7 @@ def shift_local_energy_quadratic_vertices(
         edge_gradients_T_ref: list[SpatialVector],
         initial_vertex_positions_T_ref: list[SpatialVector],
         face_vertex_uv_positions_ref: list[PlanarPoint],
-        corner_to_corner_uv_positions_ref: list[Matrix2x2r],
+        corner_to_corner_uv_positions_ref: list[Matrix2x2f],
         reverse_edge_orientations_ref: list[bool],
         is_cone_ref: list[bool],
         is_cone_adjacent_ref: list[bool],
@@ -499,7 +499,7 @@ def compute_twelve_split_energy_quadratic(
         # Since vertex gradients are defined in terms of these local vertex charts, we must
         # use these directions when computing edge direction gradients from the vertex uv
         # gradients.
-        corner_to_corner_uv_positions: list[Matrix2x2r] = copy.deepcopy(
+        corner_to_corner_uv_positions: list[Matrix2x2f] = copy.deepcopy(
             manifold.get_face_corner_charts(face_index))  # length 3
         assert len(corner_to_corner_uv_positions) == 3
 
@@ -706,7 +706,7 @@ def build_local_fit_hessian(is_cone: list[bool], is_cone_adjacent: list[bool], o
 
 
 def build_planar_constraint_hessian(uv: np.ndarray,
-                                    corner_to_corner_uv_positions: list[Matrix2x2r],
+                                    corner_to_corner_uv_positions: list[Matrix2x2f],
                                     reverse_edge_orientations: list[bool],
                                     normal: SpatialVector) -> np.ndarray:
     """

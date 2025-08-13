@@ -4,9 +4,9 @@ with degree 1 numerator and degree 0 denominator.
 TODO: how is the degree 0 denominator possible?
 """
 
+from src.core.bivariate_quadratic_function import *
 # TODO: address the whole : public Conic part of the C++ code
 from src.core.common import *
-from src.core.bivariate_quadratic_function import *
 from src.core.conic import *
 from src.core.polynomial_function import *
 from src.core.rational_function import *
@@ -41,7 +41,7 @@ class LineSegment(Conic):
         # Separate the individual polynomial coefficients from the rational
         # function
         # TODO: typedef Matrix2x2r
-        P_coeffs = self.get_numerators
+        P_coeffs = self.numerators
         u_coeffs = P_coeffs[:, 0]
         assert u_coeffs.shape == (3, 1)
         v_coeffs = P_coeffs[:, 1]

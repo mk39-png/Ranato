@@ -9,7 +9,7 @@ from src.core.affine_manifold import (AffineManifold, EdgeManifoldChart,
                                       FaceManifoldChart,
                                       ParametricAffineManifold,
                                       VertexManifoldChart)
-from src.core.common import (FLOAT_EQUAL_PRECISION, Index, Matrix2x2r,
+from src.core.common import (FLOAT_EQUAL_PRECISION, Index, Matrix2x2f,
                              MatrixXf, MatrixXi, PlanarPoint, Vector1D,
                              compare_eigen_numpy_matrix, float_equal,
                              initialize_spot_control_mesh, load_json,
@@ -233,7 +233,7 @@ def test_affine_manifold_from_global_uvs() -> None:
     assert float_equal(chart.one_ring_uv_positions[1, 1], 4.0)
 
     # Check face corner charts for face 0
-    corner_uv_positions: Matrix2x2r = affine_manifold.get_face_corner_charts(0)
+    corner_uv_positions: Matrix2x2f = affine_manifold.get_face_corner_charts(0)
 
     assert float_equal(corner_uv_positions[0][0, 0],  3.0)
     assert float_equal(corner_uv_positions[0][0, 1],  0.0)

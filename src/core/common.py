@@ -1,24 +1,16 @@
 # from typing import NewType
-import logging
-from typing import Annotated, Literal, TypeVar
-import mathutils
-import math
-import sys
-import os
-import json  # for testing
 import csv
+import json  # for testing
+import logging
+import math
+import os
 from io import StringIO  # used for testing
 
+import igl
 import numpy as np
 import numpy.linalg as LA
-import numpy.typing as npt
-import scipy as sp
-import igl
 import numpy.testing as npt
 import numpy.typing as npty
-from scipy.sparse import linalg as splinalg, csr_matrix
-# import scipy.sparse as s
-# from cvxopt import spmatrix
 
 logger: logging.Logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG)
@@ -45,35 +37,60 @@ HASH_TABLE_SIZE: int = 70
 # https://stackoverflow.com/questions/71109838/numpy-typing-with-specific-shape-and-datatype
 OneFormXr = np.ndarray  # TODO: what shape is this... I forget
 PlanarPoint = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (1, 2)
-PlanarPoint1d = np.ndarray[tuple[int], np.dtype[np.float64]]  # shape (2, )
+# PlanarPoint1d = np.ndarray[tuple[int], np.dtype[np.float64]]  # shape (2, )
+PlanarPoint1d = np.ndarray  # shape (2, )
 SpatialVector = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (1, 3)
 Index = int
 FaceIndex = int
 VertexIndex = int
 PatchIndex = int
 
+# Typedefs for readability.
+NodeIndex = int
+SegmentIndex = int
+
 # NOTE: Since NumPu does not have typing, it has been done so as below for readability reasons.
+Vector2f = np.ndarray
+Vector3f = np.ndarray
+Vector6f = np.ndarray
 VectorX = np.ndarray  # shape (n, )... sometimes. Oftentimes it's shape (n, 1) or (1, n)...
 # shape (1, n) (or sometimes shape (n, 1) as in the case of optimize_spline_surface)... might just be easier to flatten and use Vector1D... I don't see the point of having Vector2D if it will just be more confusing.
 Vector2D = np.ndarray
 Vector1D = np.ndarray  # shape (n, )
 MatrixNx3 = np.ndarray[tuple[int, int], np.dtype[np.float64]]
 Matrix3x6r = np.ndarray
-Matrix2x2r = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (2, 2)
-Matrix2x3r = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (2, 3)
-Matrix2x3f = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (2, 3)
-Matrix3x1r = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (3, 1)
-Matrix3x2r = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (3, 2)
-Matrix3x2f = np.ndarray[tuple[int, int], np.dtype[np.float64]]
-Matrix3x3r = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (3, 3)
-Matrix6x3r = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (6, 3)
-Matrix6x3f = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (6, 3)
-Matrix6x6r = np.ndarray[tuple[int, int], np.dtype[np.float64]]
-Matrix6x12f = np.ndarray[tuple[int, int], np.dtype[np.float64]]
-Matrix12x3f = np.ndarray[tuple[int, int], np.dtype[np.float64]]
-Matrix12x12r = np.ndarray[tuple[int, int], np.dtype[np.float64]]
-TwelveSplitGradient = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (36, 1)
-TwelveSplitHessian = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (36, 36)
+# Matrix2x2r = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (2, 2)
+# Matrix2x3r = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (2, 3)
+# Matrix2x3f = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (2, 3)
+# Matrix3x1r = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (3, 1)
+# Matrix3x2r = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (3, 2)
+# Matrix3x2f = np.ndarray[tuple[int, int], np.dtype[np.float64]]
+# Matrix3x3r = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (3, 3)
+# Matrix6x3r = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (6, 3)
+# Matrix6x3f = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (6, 3)
+# Matrix6x6r = np.ndarray[tuple[int, int], np.dtype[np.float64]]
+# Matrix6x12f = np.ndarray[tuple[int, int], np.dtype[np.float64]]
+# Matrix12x3f = np.ndarray[tuple[int, int], np.dtype[np.float64]]
+# Matrix12x12r = np.ndarray[tuple[int, int], np.dtype[np.float64]]
+# TwelveSplitGradient = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (36, 1)
+# TwelveSplitHessian = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (36, 36)
+Matrix2x2f = np.ndarray  # shape (2, 2)
+Matrix2x3r = np.ndarray  # shape (2, 3)
+Matrix2x3f = np.ndarray  # shape (2, 3)
+Matrix3x1r = np.ndarray  # shape (3, 1)
+Matrix3x2r = np.ndarray  # shape (3, 2)
+Matrix3x2f = np.ndarray
+Matrix3x3r = np.ndarray  # shape (3, 3)
+Matrix3x3f = np.ndarray
+Matrix6x3r = np.ndarray  # shape (6, 3)
+Matrix6x3f = np.ndarray  # shape (6, 3)
+Matrix6x6r = np.ndarray
+Matrix6x12f = np.ndarray
+Matrix12x3f = np.ndarray
+Matrix12x12r = np.ndarray
+TwelveSplitGradient = np.ndarray  # shape (36, 1)
+TwelveSplitHessian = np.ndarray  # shape (36, 36)
+
 
 MatrixXi = np.ndarray[tuple[int, int], np.dtype[np.int64]]
 MatrixXf = np.ndarray[tuple[int, int], np.dtype[np.float64]]
@@ -343,8 +360,16 @@ def power() -> None:
     todo()
 
 
-def compute_discriminant() -> None:
-    todo()
+def compute_discriminant(a: float, b: float, c: float) -> float:
+    """
+    Compute the discriminant of the quadratic ax^2 + bx + c.
+
+    :param a: [in] x^2 coefficient
+    :param b: [in] x coefficient
+    :param c: [in] constant coefficient
+    :return: discriminate b^2 - 4ac
+    """
+    return (b * b) - (4.0 * a * c)
 
 
 def dot_product() -> None:
@@ -539,7 +564,8 @@ def copy_to_spatial_vector():
 
 
 # TODO: don't think we need this since Python prints out vectors just fine.... maybe
-# Unless there's an extra fancy vector type in the C++ code like vector<RationalFunction> or something like that.
+# Unless there's an extra fancy vector type in the C++ code like vector<RationalFunction>
+#  or something like that.
 def formatted_vector(vec: list[np.float64], delim: str = "\n") -> str:
     # raise Exception(
     # "formatted_vector() is not implmemented. Print out object as-is instead.")
@@ -621,8 +647,14 @@ def generate_linspace(t_0: float, t_1: float, num_points: int) -> Vector1D:
     return np.linspace(t_0, t_1, num_points)
 
 
-def arrange():
-    todo()
+def arange(size: int) -> list:
+    """Equivalent to Python's range."""
+    arange_vec: list = []
+
+    for i in range(size):
+        arange_vec.append(i)
+
+    return arange_vec
 
 #  *******************
 #  Basic mesh topology
@@ -675,7 +707,8 @@ def is_manifold(F: MatrixXi) -> bool:
     """
 
     # Check edge manifold condition
-    # Checks the tuple of elements that are returned. first element tells us if all edges are manifold or not.
+    # Checks the tuple of elements that are returned.
+    # first element tells us if all edges are manifold or not.
     if not igl.is_edge_manifold(F)[0]:
         logger.error("Mesh is not edge manifold")
         return False
@@ -797,8 +830,31 @@ def angle_from_positions(angle_corner_position: np.ndarray,
     return angle_from_length(l0, l1, l2)
 
 
-def interval_lerp():
-    todo()
+def interval_lerp(t_min_0: float,
+                  t_max_0: float,
+                  t_min_1: float,
+                  t_max_1: float,
+                  t_0: float) -> float:
+    """"
+    Map [t_min_0, t_max_0] -> [t_min_1, t_max_1] with the unique linear
+    isomorphism
+
+    :param t_min_0: [in] minimum of the domain interval
+    :param t_max_0: [in] maximum of the domain interval
+    :param t_min_1: [in] minimum of the image interval
+    :param t_max_1: [in] maximum of the domain interval
+    :param t_0:     [in] point in the domain interval
+    :return mapped point in the iamge
+    """
+    # Return the midpoint of the image if the input domain is trivial
+    if float_equal(t_min_0, t_max_0):
+        return 0.5 * (t_min_1 + t_max_1)
+
+    # Perform the interpolation
+    r_0: float = t_max_0 - t_min_0
+    r_1: float = t_max_1 - t_min_1
+    t_1: float = t_min_1 + (r_1 / r_0) * (t_0 - t_min_0)
+    return t_1
 
 
 def compute_point_cloud_bounding_box(points: MatrixNx3f) -> tuple[SpatialVector, SpatialVector]:
@@ -857,7 +913,8 @@ def remove_mesh_faces(V: MatrixNx3f,
     """
     faces_to_keep: list[FaceIndex] = index_vector_complement(faces_to_remove, F.shape[ROWS])  # rows
 
-    # TODO: in the ASOC code, this F_unsimplified_submesh was initialized to shape (faces_to_keep.size(), F.cols()) and then immediately resized.
+    # TODO: in the ASOC code, this F_unsimplified_submesh was initialized to shape
+    # (faces_to_keep.size(), F.cols()) and then immediately resized.
     F_unsimplified_submesh: np.ndarray = np.ndarray(shape=(len(faces_to_keep), 3), dtype=int)
 
     for i, _ in enumerate(faces_to_keep):

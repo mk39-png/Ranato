@@ -1,22 +1,22 @@
 """
 Representation for quadratic surface patches with convex domains.
 """
+from typing import TextIO
+
+import polyscope as ps
+
+from src.core.bivariate_quadratic_function import *
 from src.core.common import *
 from src.core.convex_polygon import *
 from src.core.convex_polygon import ConvexPolygon
 from src.core.evaluate_surface_normal import *
 from src.core.polynomial_function import *
 from src.core.rational_function import *
-from src.core.bivariate_quadratic_function import *
-
-import polyscope as ps
-
-from typing import TextIO
-
 
 # **************************************
 # Quadratic Spline Surface Patch Helpers
 # **************************************
+
 
 def compute_normalized_surface_mapping(surface_mapping_coeffs: Matrix6x3r, domain: ConvexPolygon) -> Matrix6x3r:
     """
@@ -25,7 +25,7 @@ def compute_normalized_surface_mapping(surface_mapping_coeffs: Matrix6x3r, domai
     :return: normalized_surface_mapping_coeffs of shape (6, 3)
     """
     assert surface_mapping_coeffs.shape == (6, 3)
-    domain_vertices: Matrix3x2r = domain.get_vertices
+    domain_vertices: Matrix3x2r = domain.vertices
     v0: PlanarPoint = domain_vertices[[0], :]  # gets shape (1, 2)
     v1: PlanarPoint = domain_vertices[[1], :]
     v2: PlanarPoint = domain_vertices[[2], :]
@@ -130,17 +130,18 @@ class QuadraticSplineSurfacePatch:
         """
         return self.m_cone_index
 
-    def get_surface_mapping(self) -> Matrix6x3r:
+    @property
+    def surface_mapping(self) -> Matrix6x3f:
         """
         Get the surface mapping coefficients.
 
-        :return: reference to the surface mapping. shape==(6,3)
+        :return: reference to the surface mapping. shape == (6,3)
         :rtype: np.ndarray
         """
         return self.m_surface_mapping_coeffs
 
-    def get_normal_mapping(self) -> Matrix6x3r:
-        # TODO: change the names of all these getters into Python attribute equivalents
+    @property
+    def normal_mapping(self) -> Matrix6x3f:
         """
         Get the surface normal mapping coefficients.
 
@@ -238,7 +239,7 @@ class QuadraticSplineSurfacePatch:
         return self.m_max_point[0][1]
 
     @property
-    def get_domain(self) -> ConvexPolygon:
+    def domain(self) -> ConvexPolygon:
         """
         Get the convex domain of the patch.
 
@@ -255,24 +256,25 @@ class QuadraticSplineSurfacePatch:
         :rtype: list[RationalFunction]
         """
         # Get parametrized domain boundaries.
-        domain_boundaries: list[LineSegment] = self.get_domain.parametrize_patch_boundaries(
+        domain_boundaries: list[LineSegment] = self.domain.parametrize_patch_boundaries(
         )
         # Checking len == 3 since ASOC code has domain_boundarys as array of 3 LineSegment elements
         assert len(domain_boundaries) == 3
 
         # Lift the domain boundaries to the surface
-        __surface_mapping_coeffs_ref: Matrix6x3r = self.get_surface_mapping()
+        __surface_mapping_coeffs_ref: Matrix6x3r = self.surface_mapping
 
         patch_boundaries: list[RationalFunction] = []
 
-        # FIXME: Something might go wrong with the things below, especially since I'm unsure about surface_mapping_coeffs
+        # FIXME: Something might go wrong with the things below, especially since
+        # I'm unsure about surface_mapping_coeffs
         for i, domain_boundary in enumerate(domain_boundaries):
             patch_boundaries.append(domain_boundary.pullback_quadratic_function(
                 3, __surface_mapping_coeffs_ref))
 
         assert len(patch_boundaries) == 3
-        assert patch_boundaries[0].get_degree == 4
-        assert patch_boundaries[0].get_dimension == 3
+        assert patch_boundaries[0].degree == 4
+        assert patch_boundaries[0].dimension == 3
 
         return patch_boundaries
 
@@ -313,14 +315,14 @@ class QuadraticSplineSurfacePatch:
         # Replace with actual logic
         todo()
         # Get domain triangle vertices
-        __domain_ref: ConvexPolygon = self.get_domain
-        domain_vertices: Matrix3x2r = __domain_ref.get_vertices
+        __domain_ref: ConvexPolygon = self.domain
+        domain_vertices: Matrix3x2r = __domain_ref.vertices
         v0: PlanarPoint = domain_vertices[[0], :]
         v1: PlanarPoint = domain_vertices[[1], :]
         v2: PlanarPoint = domain_vertices[[2], :]
 
         # Generate affine transformation mapping the standard triangle to the domain triangle
-        linear_transformation: Matrix2x2r = np.array([[v1 - v0], [v2 - v0]], dtype=np.float64)
+        linear_transformation: Matrix2x2f = np.array([[v1 - v0], [v2 - v0]], dtype=np.float64)
         assert linear_transformation.shape == (2, 2)
         translation: PlanarPoint = v0
 
@@ -476,7 +478,7 @@ class QuadraticSplineSurfacePatch:
         output_file.write("\n")
 
         # Serialize domain boundary
-        vertices: Matrix3x2r = self.m_domain.get_vertices
+        vertices: Matrix3x2r = self.m_domain.vertices
         if (self.get_cone() == 0):
             output_file.write("cp1 ")
         else:

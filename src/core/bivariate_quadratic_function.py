@@ -2,6 +2,7 @@
 Methods to operate on bivariate quadratics represented by coefficient vectors.
 """
 from typing import NoReturn
+
 from src.core.common import *
 from src.core.polynomial_function import *
 
@@ -145,9 +146,9 @@ def evaluate_line(line_coeffs: Matrix3x1r, domain_point: PlanarPoint) -> float:
     """
     Evaluate a linear bivariate equation with scalar coefficients.
 
-    @param[in] line_coeffs: line coefficients in order [1, u, v]
-    @param[in] domain_point: uv coordinates to evaluate the line at
-    @return linear function evaluation
+    :param line_coeffs:  [in] line coefficients in order [1, u, v]
+    :param domain_point: [in] uv coordinates to evaluate the line at
+    :return: linear function evaluation
     """
     assert line_coeffs.shape == (3, 1)
 
@@ -312,11 +313,11 @@ def generate_monomial_to_bezier_matrix() -> Matrix6x6r:
 # FIXME: This is not fully general.
 def is_conic_standard_form(C_coeffs: Vector1D) -> bool:
     """
-    /// Return true iff the conic with quadratic coefficients C_coeffs is in
-    /// standard form with no mixed terms
-    ///
-    /// @param[in] C_coeffs: quadratic coefficients for the conic
-    /// @return: true iff C_coeffs is a conic in standard form
+    Return true iff the conic with quadratic coefficients C_coeffs is in
+    standard form with no mixed terms
+
+    :param C_coeffs: [in] quadratic coefficients for the conic
+    :return: true iff C_coeffs is a conic in standard form
     """
     assert C_coeffs.ndim == 1
 
@@ -370,7 +371,7 @@ def formatted_bivariate_linear_mapping(dimension: int, line_coeffs: np.ndarray, 
     return line_string
 
 
-def generate_quadratic_coordinate_affine_transformation_matrix(linear_transformation: Matrix2x2r,
+def generate_quadratic_coordinate_affine_transformation_matrix(linear_transformation: Matrix2x2f,
                                                                translation: PlanarPoint) -> Matrix6x6r:
     """
     Given an affine transformation [u, v]^T = A*[u', v']^T + b of R^2, generate
@@ -422,7 +423,7 @@ def generate_quadratic_coordinate_translation_matrix(du: float, dv: float) -> Ma
     # Build (inverse) translation and linear identity matrix
     translation: PlanarPoint = np.array([[-du, -dv]], dtype=np.float64)
     assert translation.shape == (1, 2)
-    identity: Matrix2x2r = np.identity(2, dtype=np.float64)
+    identity: Matrix2x2f = np.identity(2, dtype=np.float64)
     # TODO: redundant check below
     assert identity.shape == (2, 2)
 
@@ -458,7 +459,7 @@ def generate_quadratic_coordinate_barycentric_transformation_matrix(barycentric_
 
     # Build affine transformation from barycentric transformation with w = 1 - u - v
     # TODO: double check that the shape is made as expected. As per ASOC code, that is.
-    linear_transformation: Matrix2x2r = np.array(
+    linear_transformation: Matrix2x2f = np.array(
         [[a11 - a13, a21 - a23], [a12 - a13, a22 - a23]], dtype=np.float64)
     assert linear_transformation.shape == (2, 2)
     translation: PlanarPoint = np.array([[a13, a23]], dtype=np.float64)
@@ -492,7 +493,7 @@ def generate_quadratic_coordinate_domain_triangle_normalization_matrix(v0: Plana
 
     # Generate affine transformation mapping the standard triangle to the new
     # triangle
-    linear_transformation: Matrix2x2r = np.array(
+    linear_transformation: Matrix2x2f = np.array(
         [(v1 - v0).flatten(),
          (v2 - v0).flatten()],
         dtype=np.float64)

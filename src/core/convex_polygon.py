@@ -3,15 +3,16 @@ Convex polygons. Used in Quadratic Surface Patch files.
 Convex polygon formed by intersecting half planes.
 """
 
-from src.core.line_segment import LineSegment
-from src.core.common import *  # import float_equal, generate_linspace, PlanarPoint, Index
-from src.core.interval import *
 import numpy as np
 
+from src.core.common import *  # import float_equal, generate_linspace, PlanarPoint, Index
+from src.core.interval import *
+from src.core.line_segment import LineSegment
 
 # *******
 # Helpers
 # *******
+
 
 def compute_line_between_points(point_0: PlanarPoint, point_1: PlanarPoint) -> np.ndarray:
     """
@@ -51,7 +52,7 @@ def compute_parametric_line_between_points(point_0: PlanarPoint,
     :rtype: LineSegment
     """
     # Set numerator
-    numerators: Matrix2x2r = np.array([
+    numerators: Matrix2x2f = np.array([
         [point_0[0, 0], point_0[0, 1]],
         [point_1[0, 0] - point_0[0, 0], point_1[0, 1] - point_0[0, 1]]], dtype=np.float64)
 
@@ -256,12 +257,24 @@ class ConvexPolygon:
         return intersection
 
     @property
-    # TODO: change the name
-    def get_boundary_segments(self) -> list[np.ndarray]:
-        return self.m_boundary_segments_coeffs
+    def boundary_segments(self) -> list[Vector3f]:
+        """
+        Retrieves boundary segments coefficients of shape (3, )
+
+        :rtype: list[Vector3f]
+        """
+        # HACK: flattening this accessor to return list[Vector3f] rather than
+        # a list of (3, 1) matrices
+        boundary_segments_coeffs_flattened: list[Vector3f] = []
+        for boundary_segment_coeffs in self.m_boundary_segments_coeffs:
+            boundary_segments_coeffs_flattened.append(boundary_segment_coeffs.flatten())
+        assert (np.array(boundary_segments_coeffs_flattened).shape ==
+                np.array(self.m_boundary_segments_coeffs).squeeze().shape)
+
+        return boundary_segments_coeffs_flattened
 
     @property
-    def get_vertices(self) -> Matrix3x2r:
+    def vertices(self) -> Matrix3x2r:
         return self.m_vertices
 
     def parametrize_patch_boundaries(self) -> list[LineSegment]:

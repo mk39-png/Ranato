@@ -1,11 +1,11 @@
-from scipy.sparse import csr_matrix, coo_matrix
 import os
-import scipy as sp
-import igl
-import numpy as np
-import mathutils
-from cholespy import CholeskySolverD, MatrixType
 
+import igl
+import mathutils
+import numpy as np
+import scipy as sp
+from cholespy import CholeskySolverD, MatrixType
+from scipy.sparse import coo_matrix, csr_matrix
 
 # #
 # V_coeffs = np.array([[0, 1, 2], [3, 4, 5], [6, 7, 8]])
@@ -257,11 +257,11 @@ def main():
     # NOTE: b in this case would be hessian
     # Meanwhile x... well... that would be rhs!
 
-    solver = make_hessian_inverse()
+    # solver = make_hessian_inverse()
 
     # print(solver.solve(b, x))
-    print(b)
-    print(x)
+    # print(b)
+    # print(x)
 
     # print(reser)
 
@@ -277,6 +277,15 @@ def main():
     patch_index = 1
     # V[num_patch_vertices * patch_index: num_patch_vertices * (patch_index + 1),
     #   0: V.shape[1]]
+
+    num_patches = 10
+    patch_boundary_contour_map: list[list[int]] = [[-1, -1, -1] for _ in range(num_patches)]
+    patch_boundary_contour_map[0][0] = 39
+    print(patch_boundary_contour_map)
+
+    is_boundary_patch: list[bool] = [False] * num_patches
+    is_boundary_patch[0] = True
+    print(is_boundary_patch)
 
 
 if __name__ == "__main__":

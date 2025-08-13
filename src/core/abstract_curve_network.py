@@ -5,61 +5,7 @@ Used for contour_network.
 
 import logging
 
-from src.core.common import logger, vector_contains
-
-# Typedefs for readability.
-NodeIndex = int
-SegmentIndex = int
-
-
-def is_valid_curve_data(to_array: list[NodeIndex],
-                        out_array: list[SegmentIndex]) -> bool:
-    """
-    Check if input has valid indexing, meaning all to nodes are valid
-    Note that out may be invalid for some nodes if they are terminal
-    @param[in] to_array: array mapping segments to their endpoints
-    @param[in] out_array: array mapping nodes to their outgoing segment
-    @return true iff the curve data is valid
-    """
-    num_segments: int = len(to_array)
-    num_nodes: int = len(out_array)
-
-    for si in range(num_segments):
-        if (to_array[si] < 0) or to_array[si] >= num_nodes:
-            logger.error("Segment %s is invalid with to node %s", si, to_array[si])
-
-    return True
-
-
-def is_valid_minimal_curve_network_data(to_array: list[NodeIndex],
-                                        out_array: list[SegmentIndex],
-                                        intersection_array: list[NodeIndex]) -> bool:
-    """
-    Check if input describes a valid curve network
-    @param[in] to_array: array mapping segments to their endpoints
-    @param[in] out_array: array mapping nodes to their outgoing segment
-    @param[in] intersection_array: list of intersection nodes
-    @return true iff the curve network data is valid
-    """
-    num_segments: int = len(to_array)
-    num_nodes: int = len(out_array)
-
-    if len(to_array) != num_segments:
-        logger.error("to domain not in bijection with number of segments")
-        return False
-    if len(out_array) != num_nodes:
-        logger.error("out domain not in bijection with number of nodes")
-        return False
-    if len(intersection_array) != num_nodes:
-        logger.error("out domain not in bijection with number of nodes")
-        return False
-
-    # Check all out nodes are valid (to and intersection array can have invalid
-    # nodes)
-    if not is_valid_curve_data(to_array, out_array):
-        return False
-
-    return True
+from src.core.common import NodeIndex, SegmentIndex, logger, vector_contains
 
 
 class AbstractCurveNetwork():
@@ -85,14 +31,25 @@ class AbstractCurveNetwork():
         self.__intersection_array: list[NodeIndex] = intersection_array
 
         if logger.getEffectiveLevel() == logging.DEBUG:
-            if not is_valid_minimal_curve_network_data(to_array, out_array, intersection_array):
+            if not self._is_valid_minimal_curve_network_data(to_array,
+                                                             out_array,
+                                                             intersection_array):
                 raise ValueError("Could not build abstract curve network")
-                # Rather than raising a ValueError, could perhaps log the error and then catch the error on the way back?
+                # Rather than raising a ValueError, could perhaps log the error and then catch the
+                # error on the way back?
                 # That way, the program doesn't crash, kind of.
                 # TODO: clear topology?
 
         # Build curve network
-        init_abstract_curve_network()
+        # init_abstract_curve_network()
+        self.__next_array: list[SegmentIndex]  # = self.build_next_array(self.to_array, self.out_array)
+        self.__prev_array: list[SegmentIndex]  # = self.build_prev_array(self.to_array, self.out_array)
+        self.__from_array: list[NodeIndex]    # = self.build_from_array(self.to_array, self.out_array)
+        self.__in_array: list[SegmentIndex]   # = self.build_in_array(self.to_array, self.out_array)
+        (self.__next_array,
+         self.__prev_array,
+         self.__from_array,
+         self.__in_array) = self._init_abstract_curve_network()
 
         # Check validity
         if logger.getEffectiveLevel() == logging.DEBUG:
@@ -100,20 +57,20 @@ class AbstractCurveNetwork():
                 raise ValueError("Inconsistent abstract curve network built")
 
     @property
-    def num_segments(self):
+    def num_segments(self) -> int:
         """
         Return the number of segments in the curve network.
         @return number of segments
         """
-        return self.__num_segments
+        return len(self.to_array)
 
     @property
-    def num_nodes(self):
+    def num_nodes(self) -> int:
         """
         Return the number of nodes in the curve network.
         @return number of nodes
         """
-        return self.__num_nodes
+        return len(self.out_array)
 
     def next(self, segment_index: SegmentIndex) -> SegmentIndex:
         """
@@ -190,12 +147,59 @@ class AbstractCurveNetwork():
             return -1
         return self.in_array[node_index]
 
+    def update_topology(self,
+                        to_array: list[NodeIndex],
+                        out_array: list[SegmentIndex],
+                        intersection_array: list[NodeIndex]) -> None:
+        """
+        Update the basic topological information of the curve network.
+        As in, set the to_array, out_array, and intersection_array of the AbstractCurveNetwork
+        class
+
+        :param to_array: [in] array mapping segments to their endpoints
+        :param out_array: [in] array mapping nodes to their outgoing segment
+        :param intersection_array: [in] list of intersection nodes
+        """
+        # Check input validity
+        # FIXME: arent the below line of assert doing the opposite of what I want???
+        assert self._is_valid_minimal_curve_network_data(to_array,
+                                                         out_array,
+                                                         intersection_array)
+        if not self._is_valid_minimal_curve_network_data(to_array, out_array, intersection_array):
+            self._clear_topology()
+            raise ValueError("Could not build abstract curve network")
+
+        # Set input arrays
+        self.__to_array = to_array
+        self.__out_array = out_array
+        self.__intersection_array = intersection_array
+
+        # Build curve network
+        (self.__next_array, self.__prev_array,
+         self.__from_array, self.__in_array) = self._init_abstract_curve_network()
+
+        if not self.__is_valid_abstract_curve_network():
+            self._clear_topology()
+            raise ValueError("Inconsistent abstract curve network built")
+
     def is_boundary_node(self, node_index: NodeIndex) -> bool:
         """
         Determine if the node is on the boundary of a curve in the curve network.
         @param[in] node_index: query node index
         @return true iff the given node is a boundary node
         """
+        #  Invalid nodes are not boundary nodes
+        if not self._is_valid_node_index(node_index):
+            return False
+
+        # Nodes without in or out segments are on the boundary
+        if not self._is_valid_segment_index(self.in_(node_index)):
+            return True
+        if not self._is_valid_segment_index(self.out(node_index)):
+            return True
+
+        # Otherwise, interior node
+        return True
 
     def has_intersection_node(self, node_index: NodeIndex) -> bool:
         """
@@ -203,6 +207,12 @@ class AbstractCurveNetwork():
         @param[in] node_index: query node index
         @return true iff the given node is an intersection node
         """
+        # Invalid nodes do not have intersection nodes
+        if not self._is_valid_node_index(node_index):
+            return False
+
+        # Check if intersection node exists
+        return self._is_valid_node_index(self.intersection(node_index))
 
     def is_tnode(self, node_index: NodeIndex) -> bool:
         """
@@ -214,42 +224,103 @@ class AbstractCurveNetwork():
         @param[in] node_index: query node index
         @return true iff the given node is a boundary intersection node
         """
+        # Invalid nodes are not T-nodes
+        if not self._is_valid_node_index(node_index):
+            return False
+
+        # Nodes without intersections are not T-nodes
+        if not self.has_intersection_node(node_index):
+            return False
+
+        # T-nodes are on the boundary or intersect a boundary node
+        if self.is_boundary_node(node_index):
+            return True
+        if self.is_boundary_node(self.intersection(node_index)):
+            return True
+
+        # Otherwise, interior intersection node
+        return False
 
     # ***********
     # Getters
     # ***********
 
     @property
-    def next_array(self):
+    def next_array(self) -> list[SegmentIndex]:
+        """Retrieves next_array"""
         return self.__next_array
 
     @property
-    def prev_array(self):
+    def prev_array(self) -> list[SegmentIndex]:
+        """Retrieves prev_array"""
         return self.__prev_array
 
     @property
     def to_array(self) -> list[int]:
+        """Retrieves to_array"""
         return self.__to_array
 
     @property
-    def from_array(self):
+    def from_array(self) -> list[NodeIndex]:
+        """Retrieves from_array"""
         return self.__from_array
 
     @property
-    def intersection_array(self) -> list[int]:
+    def intersection_array(self) -> list[NodeIndex]:
+        """Retrieves intersection_array"""
         return self.__intersection_array
 
     @property
-    def out_array(self) -> list[int]:
+    def out_array(self) -> list[SegmentIndex]:
+        """Retrieves out_array"""
         return self.__out_array
 
     @property
-    def in_array(self):
+    def in_array(self) -> list[SegmentIndex]:
+        """Retrieves in_array"""
         return self.__in_array
 
-    # ******************
-    #  Public methods
-    # ******************
+    # **********************
+    #  Public/Helper methods
+    # **********************
+    # NOTE: these were formerly included outside of the class...
+
+    @staticmethod
+    def build_next_array(to_array: list[NodeIndex],
+                         out_array: list[SegmentIndex]) -> list[SegmentIndex]:
+        """
+        Build next map from segments to the following segment or -1 if it is terminal.
+        @param[in] to_array: array mapping segments to their endpoints
+        @param[in] out_array: array mapping nodes to their outgoing segment
+        :return: next_array: array mapping
+        """
+        num_segments: int = len(to_array)
+        next_array: list[SegmentIndex] = []
+        for si in range(num_segments):
+            next_array.append(out_array[to_array[si]])
+        return next_array
+
+    @staticmethod
+    def build_prev_array(to_array: list[NodeIndex],
+                         out_array: list[SegmentIndex]) -> list[SegmentIndex]:
+        """
+        Build prev map from segments to their previous segment or -1 if it is initial.
+        @param[in] to_array: array mapping segments to their endpoints
+        @param[in] out_array: array mapping nodes to their outgoing segment
+        :return: prev_array: array mapping
+        """
+        # Initialize prev_array to -1
+        num_segments: int = len(to_array)
+        prev_array: list[SegmentIndex] = [-1] * num_segments
+
+        # Find previous segments when they exist
+        for si in range(num_segments):
+            next_segment: SegmentIndex = out_array[to_array[si]]
+            if (next_segment < 0) or (next_segment >= num_segments):
+                continue
+            prev_array[next_segment] = si
+
+        return prev_array
 
     @staticmethod
     def build_from_array(to_array: list[NodeIndex],
@@ -260,10 +331,102 @@ class AbstractCurveNetwork():
         @param[in] out_array: array mapping nodes to their outgoing segment
         @param[out] from_array: array mapping segments to their origin points
         """
+        # Initialize from array to -1
+        num_segments: SegmentIndex = len(to_array)
+        num_nodes: NodeIndex = len(out_array)
+        from_array: list[NodeIndex] = [-1] * num_segments
+
+        for ni in range(num_nodes):
+            out_segment: NodeIndex = out_array[ni]
+            if (out_segment < 0) or (out_segment >= num_segments):
+                continue
+            from_array[out_segment] = ni
+
+        return from_array
+
+    @staticmethod
+    def build_in_array(to_array: list[NodeIndex],
+                       out_array: list[SegmentIndex]) -> list[SegmentIndex]:
+        """
+        Build in map from nodes to incoming segments or -1 if they are initial
+        @param[in] to_array: array mapping segments to their endpoints
+        @param[in] out_array: array mapping nodes to their outgoing segment
+        :return: in_array: array mapping
+        """
+        # Initialize in array to -1
+        num_segments: SegmentIndex = len(to_array)
+        num_nodes: NodeIndex = len(out_array)
+        in_array: list[NodeIndex] = [-1] * num_nodes
+
+        for si in range(num_segments):
+            in_array[to_array[si]] = si
+
+        return in_array
 
     # ******************
     #  Protected methods
     # ******************
+    def _init_abstract_curve_network(self) -> tuple[list[SegmentIndex], list[SegmentIndex],
+                                                    list[NodeIndex], list[SegmentIndex]]:
+        """Implementation of the main constructor"""
+        #  Build next arrays
+        next_array: list[SegmentIndex] = self.build_next_array(self.to_array, self.out_array)
+        prev_array: list[SegmentIndex] = self.build_prev_array(self.to_array, self.out_array)
+        from_array: list[NodeIndex] = self.build_from_array(self.to_array, self.out_array)
+        in_array: list[SegmentIndex] = self.build_in_array(self.to_array, self.out_array)
+
+        return next_array, prev_array, from_array, in_array
+
+    def _is_valid_curve_data(self,
+                             to_array: list[NodeIndex],
+                             out_array: list[SegmentIndex]) -> bool:
+        """
+        Check if input has valid indexing, meaning all to nodes are valid
+        Note that out may be invalid for some nodes if they are terminal
+        @param[in] to_array: array mapping segments to their endpoints
+        @param[in] out_array: array mapping nodes to their outgoing segment
+        @return true iff the curve data is valid
+        """
+        num_segments: int = len(to_array)
+        num_nodes: int = len(out_array)
+
+        for si in range(num_segments):
+            if (to_array[si] < 0) or to_array[si] >= num_nodes:
+                logger.error("Segment %s is invalid with to node %s", si, to_array[si])
+
+        return True
+
+    def _is_valid_minimal_curve_network_data(self,
+                                             to_array: list[NodeIndex],
+                                             out_array: list[SegmentIndex],
+                                             intersection_array: list[NodeIndex]) -> bool:
+        """
+        Check if input describes a valid curve network
+        @param[in] to_array: array mapping segments to their endpoints
+        @param[in] out_array: array mapping nodes to their outgoing segment
+        @param[in] intersection_array: list of intersection nodes
+        @return true iff the curve network data is valid
+        """
+        num_segments: int = len(to_array)
+        num_nodes: int = len(out_array)
+
+        if len(to_array) != num_segments:
+            logger.error("to domain not in bijection with number of segments")
+            return False
+        if len(out_array) != num_nodes:
+            logger.error("out domain not in bijection with number of nodes")
+            return False
+        if len(intersection_array) != num_nodes:
+            logger.error("out domain not in bijection with number of nodes")
+            return False
+
+        # Check all out nodes are valid (to and intersection array can have invalid
+        # nodes)
+        if not self._is_valid_curve_data(to_array, out_array):
+            return False
+
+        return True
+
     def _is_valid_segment_index(self, segment_index: SegmentIndex) -> bool:
         """
         Determine if the index describes a segment of the curve network
@@ -286,9 +449,21 @@ class AbstractCurveNetwork():
             return False
         return True
 
-    # ****************
-    #  Private methods
-    # ****************
+    def _clear_topology(self) -> None:
+        """
+        Clear all member data
+        """
+        self.__next_array.clear()
+        self.__prev_array.clear()
+        self.__to_array.clear()
+        self.__from_array.clear()
+        self.__intersection_array.clear()
+        self.__out_array.clear()
+        self.__in_array.clear()
+
+    # ********************************
+    #  Formerly Private methods
+    # ********************************
 
     def __is_valid_abstract_curve_network(self) -> bool:
         """

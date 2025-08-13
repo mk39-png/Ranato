@@ -319,13 +319,13 @@ def test_patches_spot_mesh() -> None:
 
     # Now, checking the values that have been saved
     for i in range(num_patches):
-        surface_mapping_coeffs_control: Matrix6x3r = control_patches[i].get_surface_mapping()  # cx, cy, cz
-        domain_control: ConvexPolygon = control_patches[i].get_domain
-        vertices_control: Matrix3x2f = domain_control.get_vertices  # p1, p2, p3
+        surface_mapping_coeffs_control: Matrix6x3r = control_patches[i].surface_mapping  # cx, cy, cz
+        domain_control: ConvexPolygon = control_patches[i].domain
+        vertices_control: Matrix3x2f = domain_control.vertices  # p1, p2, p3
 
-        surface_mapping_coeffs_test: Matrix6x3r = test_patches[i].get_surface_mapping()  # cx, cy, cz
-        domain_test: ConvexPolygon = test_patches[i].get_domain
-        vertices_test: Matrix3x2f = domain_test.get_vertices  # p1, p2, p3
+        surface_mapping_coeffs_test: Matrix6x3r = test_patches[i].surface_mapping  # cx, cy, cz
+        domain_test: ConvexPolygon = test_patches[i].domain
+        vertices_test: Matrix3x2f = domain_test.vertices  # p1, p2, p3
 
         # lower precision because serialization loses precision
         npt.assert_allclose(vertices_control, vertices_test)

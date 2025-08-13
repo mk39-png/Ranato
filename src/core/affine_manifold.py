@@ -339,7 +339,7 @@ class AffineManifold:
         """
         return self.__face_charts[face_index]
 
-    def get_face_corner_charts(self, face_index: Index) -> list[Matrix2x2r]:
+    def get_face_corner_charts(self, face_index: Index) -> list[Matrix2x2f]:
         """
         Get the portions of the isometric vertex charts corresponding to the
         corners of a given face.
@@ -354,7 +354,7 @@ class AffineManifold:
         """
         # TODO: fill with 0s or some random value for easier debugging like -39..... but yeah...
         # This may be an issue of Eigen innerworkings.
-        corner_uv_positions: list[Matrix2x2r] = [np.zeros(shape=(2, 2), dtype=np.float64),
+        corner_uv_positions: list[Matrix2x2f] = [np.zeros(shape=(2, 2), dtype=np.float64),
                                                  np.zeros(shape=(2, 2), dtype=np.float64),
                                                  np.zeros(shape=(2, 2), dtype=np.float64)]
 
@@ -1082,7 +1082,7 @@ class AffineManifold:
             # TODO: confirm that the elements in this matrix matched position of elements in ASOC code
             # Documentation confirms that "comma intialization" in Eigen inserts row by row.
             # https://eigen.tuxfamily.org/dox-devel/group__TutorialAdvancedInitialization.html
-            local_similarity_map: Matrix2x2r = np.array(
+            local_similarity_map: Matrix2x2f = np.array(
                 [[local_edge[0], local_edge[1]],
                  [-local_edge[1], local_edge[0]]], dtype=np.float64)
             assert local_similarity_map.shape == (2, 2)
@@ -1098,7 +1098,7 @@ class AffineManifold:
             assert global_edge.shape == (2, )
 
             # TODO: confirm that the elements in this matrix matched position of elements in ASOC code
-            global_similarity_map: Matrix2x2r = np.array([[global_edge[0], global_edge[1]],
+            global_similarity_map: Matrix2x2f = np.array([[global_edge[0], global_edge[1]],
                                                           [-global_edge[1], global_edge[0]]])
             assert global_similarity_map.shape == (2, 2)
 

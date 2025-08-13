@@ -1,35 +1,27 @@
 # from igl.pyigl_core import writeOBJ
-from typing import TextIO
 import os
 import re
 from dataclasses import dataclass
+from typing import TextIO
 
 import igl
-import polyscope
 import numpy as np
+import polyscope
 
-from src.core.common import (
-    ROWS, COLS,
-    SKY_BLUE, DISCRETIZATION_LEVEL, HASH_TABLE_SIZE,
-    logger,
-    PatchIndex,
-    PlanarPoint,
-    SpatialVector,
-    Vector1D,
-    Matrix6x3f,
-    Matrix3x2f,
-    MatrixNx3f,
-    MatrixNx3i,
-    MatrixXf,
-    convert_nested_vector_to_matrix,
-    convert_polylines_to_edges,
-)
-from src.core.evaluate_surface_normal import generate_quadratic_surface_normal_coeffs
+from src.core.common import (COLS, DISCRETIZATION_LEVEL, HASH_TABLE_SIZE, ROWS,
+                             SKY_BLUE, Matrix3x2f, Matrix6x3f, MatrixNx3f,
+                             MatrixNx3i, MatrixXf, PatchIndex, PlanarPoint,
+                             SpatialVector, Vector1D,
+                             convert_nested_vector_to_matrix,
+                             convert_polylines_to_edges, logger)
+from src.core.convex_polygon import ConvexPolygon
+from src.core.evaluate_surface_normal import \
+    generate_quadratic_surface_normal_coeffs
 # from src.quadratic_spline_surface.position_data import (
 # )
 from src.core.line_segment import LineSegment
-from src.quadratic_spline_surface.quadratic_spline_surface_patch import QuadraticSplineSurfacePatch
-from src.core.convex_polygon import ConvexPolygon
+from src.quadratic_spline_surface.quadratic_spline_surface_patch import \
+    QuadraticSplineSurfacePatch
 
 
 @dataclass
@@ -294,7 +286,7 @@ class QuadraticSplineSurface:
             spline_surface_patch: QuadraticSplineSurfacePatch = self.get_patch(patch_index)
             # list of size 3
             patch_boundaries: list[LineSegment]
-            patch_boundaries = spline_surface_patch.get_domain.parametrize_patch_boundaries()
+            patch_boundaries = spline_surface_patch.domain.parametrize_patch_boundaries()
 
             for k, _ in enumerate(patch_boundaries):
                 # Get points on the boundary curve

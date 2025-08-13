@@ -2,9 +2,15 @@
 
 from enum import Enum
 
+import numpy as np
+
 from src.core.bivariate_quadratic_function import \
     formatted_bivariate_quadratic_mapping
-from src.core.rational_function import *
+from src.core.common import (Matrix2x2f, PlanarPoint, PlanarPoint1d, Vector2D,
+                             logger)
+from src.core.polynomial_function import (compute_polynomial_mapping_product,
+                                          formatted_polynomial)
+from src.core.rational_function import RationalFunction
 
 
 class ConicType(Enum):
@@ -30,10 +36,9 @@ class Conic(RationalFunction):
     # ************
     # Constructors
     # ************
-    def __init__(self, m_type=ConicType.UNKNOWN, *args, **kwargs):
+    def __init__(self, m_type=ConicType.UNKNOWN, *args, **kwargs) -> None:
         super().__init__(2, 2, *args, **kwargs)
-
-        self.m_type = m_type
+        self.m_type: ConicType = m_type
         assert self.__is_valid()
 
     # ******
@@ -47,17 +52,20 @@ class Conic(RationalFunction):
         """
         return self.__m_type
 
-    def transform(self, rotation: np.ndarray, translation: np.ndarray):
+    def transform(self, rotation: Matrix2x2f, translation: PlanarPoint1d) -> None:
         """
         NOTE: assumes row vector points... somewhat.
         """
         assert rotation.shape == (2, 2)
-        assert translation.shape == (1, 2)
 
-        P_rot_coeffs: np.ndarray = self.get_numerators @ \
-            rotation + self.get_denominator @ translation
+        # HACK: forcing translation to 1D shape
+        # FIXME: potentially bad C++ translation with 2D array now 1D
+        assert translation.ndim == 1
+        # assert translation.shape == (1, 2)
+
+        P_rot_coeffs: np.ndarray = self.numerators @ rotation + self.denominator @ translation
         assert P_rot_coeffs.shape == (3, 2)
-        self.set_numerators(P_rot_coeffs)
+        self.numerators = P_rot_coeffs
 
     def pullback_quadratic_function(self, dimension: int, F_coeffs: np.ndarray) -> RationalFunction:
         assert F_coeffs.shape == (6, dimension)
@@ -67,11 +75,11 @@ class Conic(RationalFunction):
                     formatted_bivariate_quadratic_mapping(dimension, F_coeffs))
 
         # Separate the individual polynomial coefficients from the rational function
-        P_coeffs = self.get_numerators
+        P_coeffs = self.numerators
 
         u_coeffs = P_coeffs[:, [0]]
         v_coeffs = P_coeffs[:, [1]]
-        Q_coeffs = self.get_denominator
+        Q_coeffs = self.denominator
         # Asserting to make sure we are getting the shape we want.
         assert u_coeffs.shape == (3, 1)
         assert v_coeffs.shape == (3, 1)
@@ -86,12 +94,12 @@ class Conic(RationalFunction):
         # formatted_polynomial(self.get_degree, self.get_dimension, Q_coeffs))
 
         # Compute (homogenized) polynomial coefficients for the quadratic terms
-        QQ_coeffs = np.ndarray(shape=(5, 1))
-        Qu_coeffs = np.ndarray(shape=(5, 1))
-        Qv_coeffs = np.ndarray(shape=(5, 1))
-        uv_coeffs = np.ndarray(shape=(5, 1))
-        uu_coeffs = np.ndarray(shape=(5, 1))
-        vv_coeffs = np.ndarray(shape=(5, 1))
+        QQ_coeffs: Vector2D = np.ndarray(shape=(5, 1))
+        Qu_coeffs: Vector2D = np.ndarray(shape=(5, 1))
+        Qv_coeffs: Vector2D = np.ndarray(shape=(5, 1))
+        uv_coeffs: Vector2D = np.ndarray(shape=(5, 1))
+        uu_coeffs: Vector2D = np.ndarray(shape=(5, 1))
+        vv_coeffs: Vector2D = np.ndarray(shape=(5, 1))
         QQ_coeffs = compute_polynomial_mapping_product(
             2, 2, 1, Q_coeffs, Q_coeffs)
         Qu_coeffs = compute_polynomial_mapping_product(
@@ -135,14 +143,14 @@ class Conic(RationalFunction):
         # XXX: specifically, just be wary of the getter that's used in the C++ code.
         # NOTE: below RationalFunction is made from interval
         pullback_function = RationalFunction(
-            4, dimension, pullback_coeffs, QQ_coeffs, self.m_domain)
+            4, dimension, pullback_coeffs, QQ_coeffs, self.domain)
 
         # Redundant checks just to be extra safe
-        assert pullback_function.get_degree == 4
-        assert pullback_function.get_dimension == dimension
+        assert pullback_function.degree == 4
+        assert pullback_function.dimension == dimension
         return pullback_function
 
-    def __is_valid(self):
+    def __is_valid(self) -> bool:
         if self.m_numerator_coeffs.shape[1] == 0:
             return False
         if self.m_denominator_coeffs.size == 0:
@@ -162,7 +170,7 @@ class Conic(RationalFunction):
             conic_string += ", \n "
 
         conic_string += "], t in "
-        conic_string += self.m_domain.formatted_interval()
+        conic_string += self.domain.formatted_interval()
 
         return conic_string
 

@@ -60,13 +60,13 @@ def test_read_write_spline_surface_serialization() -> None:
 
     # Now, checking the values that have been saved
     for i in range(num_patches):
-        surface_mapping_coeffs_control: Matrix6x3r = control_patches[i].get_surface_mapping()  # cx, cy, cz
-        domain_control: ConvexPolygon = control_patches[i].get_domain
-        vertices_control: Matrix3x2r = domain_control.get_vertices  # p1, p2, p3
+        surface_mapping_coeffs_control: Matrix6x3r = control_patches[i].surface_mapping  # cx, cy, cz
+        domain_control: ConvexPolygon = control_patches[i].domain
+        vertices_control: Matrix3x2r = domain_control.vertices  # p1, p2, p3
 
-        surface_mapping_coeffs_test: Matrix6x3r = test_patches[i].get_surface_mapping()  # cx, cy, cz
-        domain_test: ConvexPolygon = test_patches[i].get_domain
-        vertices_test: Matrix3x2r = domain_test.get_vertices  # p1, p2, p3
+        surface_mapping_coeffs_test: Matrix6x3r = test_patches[i].surface_mapping  # cx, cy, cz
+        domain_test: ConvexPolygon = test_patches[i].domain
+        vertices_test: Matrix3x2r = domain_test.vertices  # p1, p2, p3
 
         npt.assert_allclose(surface_mapping_coeffs_control, surface_mapping_coeffs_test, atol=FLOAT_EQUAL_PRECISION)
         npt.assert_allclose(vertices_control, vertices_test, atol=FLOAT_EQUAL_PRECISION)

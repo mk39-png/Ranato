@@ -2,16 +2,16 @@
 Used by optimize_spline_surface.py
 """
 
-from src.core.common import *
-from src.quadratic_spline_surface.PS12_patch_coeffs import PS12_patch_coeffs
-
 import numpy as np
 import numpy.linalg as LA
+
+from src.core.common import *
+from src.quadratic_spline_surface.PS12_patch_coeffs import PS12_patch_coeffs
 
 
 def get_C_gl(uv: Matrix3x2r,
              # FIXME: corner_to_corner_uv_positions loss of precision, need increase to float128
-             corner_to_corner_uv_positions: list[Matrix2x2r],
+             corner_to_corner_uv_positions: list[Matrix2x2f],
              reverse_edge_orientations: list[bool]) -> Matrix12x12r:
     """
     Compute the matrix to convert from global degrees of freedom
@@ -217,13 +217,13 @@ def get_R_quad(uv: np.ndarray) -> np.ndarray:
     assert uv.shape == (3, 2)
     # Compute 2x2 matrix mapping parametric to barycentric coordinates
     # TODO: ensure that this is the same as Eigen matrix construction
-    R_inv: Matrix2x2r = np.array(
+    R_inv: Matrix2x2f = np.array(
         [[uv[0, 0] - uv[2, 0], uv[1, 0] - uv[2, 0]],
          [uv[0, 1] - uv[2, 1], uv[1, 1] - uv[2, 1]]])
     assert R_inv.shape == (2, 2)
 
     # Compute inverse 2x2 matrix mapping barycentric to parametric coordinates
-    R: Matrix2x2r = np.array([[R_inv[1, 1], - R_inv[0, 1]],
+    R: Matrix2x2f = np.array([[R_inv[1, 1], - R_inv[0, 1]],
                               [-R_inv[1, 0], R_inv[0, 0]]])
     R = R / (R_inv[0, 0] * R_inv[1, 1] - R_inv[0, 1] * R_inv[1, 0])
     assert R.shape == (2, 2)
@@ -291,7 +291,7 @@ def get_S(uv: np.ndarray) -> np.ndarray:
 
 
 def build_local_smoothness_hessian(uv: Matrix3x2r,
-                                   corner_to_corner_uv_positions: list[Matrix2x2r],
+                                   corner_to_corner_uv_positions: list[Matrix2x2f],
                                    reverse_edge_orientations: list[bool]) -> Matrix12x12r:
     """
     Compute the thin plate energy Hessian matrix for a single 12-split 

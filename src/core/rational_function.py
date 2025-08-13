@@ -3,12 +3,16 @@
 """
 
 
-from src.core.common import *
-from src.core.polynomial_function import *
-from src.core.interval import Interval
-
 from dataclasses import dataclass
+
 import numpy as np
+
+from src.core.common import Vector1D, Vector2D, interval_lerp, logger, todo
+# from src.core.polynomial_function import
+from src.core.interval import Interval
+from src.core.polynomial_function import (
+    compute_polynomial_mapping_derivative, compute_polynomial_mapping_product,
+    compute_polynomial_mapping_scalar_product, evaluate_polynomial)
 
 
 # TODO: instead of a class... why not just make this a dict?
@@ -32,35 +36,36 @@ class RationalFunction:
     # But then again... we're trying to implment a C++-like system...
     # Some systems work... like that one file I was working on.
     # But other systems... not so much
-    def __init__(self, degree: int, dimension: int,
+    def __init__(self,
+                 degree: int,
+                 dimension: int,
                  numerator_coeffs: np.ndarray | None = None,
                  denominator_coeffs: np.ndarray | None = None,
                  domain: Interval | None = None) -> None:
         # TODO: assert the shape for numerator_coeffs and denominator_coeffs
-        """ General constructor over given interval.
-            --- Possible combinations include ---
-            Default constructor for 0 function R^n: numerator_coeffs == None, denominator_coeffs = None, domain == None
-            Constructor for vector polynomial: denominator_coeffs == None, domain == None
-            General constructor over entire real line: domain == None
-            General constructor over given interval: all arguments are NOT None
+        """ 
+        General constructor over given interval.
+        ### Possible combinations include 
+        Default constructor for 0 function R^n: 
+        numerator_coeffs == None, denominator_coeffs = None, domain == None \n
+        Constructor for vector polynomial: denominator_coeffs == None, domain == None \n
+        General constructor over entire real line: domain == None \n
+        General constructor over given interval: all arguments are NOT None \n
 
-        Args:
-            degree: [in]
-            dimension: [in]
-            numerator_coeffs (np.ndarray): [in] coefficients of the numerator polynomial
-            denominator_coeffs (np.ndarray): [in] coefficients of the denominator polynomial
-            domain (Interval): [in] domain interval for the mapping
-
-        Returns:
-            TODO: fill in return value
+        :param degree (int): [in]
+        :param dimension (int): [in]
+        :param numerator_coeffs (np.ndarray): [in] coefficients of the numerator polynomial
+        :param denominator_coeffs (np.ndarray): [in] coefficients of the denominator polynomial
+        :param domain (Interval): [in] domain interval for the mapping
         """
-
-        # """Default constructor"""
-        self.m_degree = degree
-        self.m_dimension = dimension
+        self.m_degree: int = degree
+        self.m_dimension: int = dimension
+        self.m_numerator_coeffs: Vector2D
+        self.m_denominator_coeffs: Vector2D
+        self.m_domain: Interval
 
         if (degree is None) or (dimension is None):
-            raise Exception("degree and dimension cannot be None.")
+            raise ValueError("degree and dimension cannot be None.")
 
         if numerator_coeffs is None:
             self.m_numerator_coeffs = np.zeros(
@@ -84,29 +89,49 @@ class RationalFunction:
         assert self.m_denominator_coeffs.shape == (degree + 1, 1)
         assert self.__is_valid()
 
-    # *******
-    # Methods
-    # *******
+    # *******************
+    # Getters and setters
+    # *******************
     @property
-    def get_degree(self) -> int:
+    def degree(self) -> int:
         """
         Compute the degree of the polynomial mapping as the max of the degrees
         of the numerator and denominator degrees.
-        @return degree of the rational mapping
+        :return: degree of the rational mapping
         """
         return self.m_degree
 
     @property
-    def get_dimension(self) -> int:
+    def dimension(self) -> int:
         """
         Compute the dimension of the rational mapping.
-        @return dimension of the rational mapping
+        :return: dimension of the rational mapping
         """
         return self.m_dimension
 
+    @property
+    def domain(self) -> Interval:
+        """Retrives domain of rational function"""
+        return self.m_domain
+
+    @property
+    def numerator_coeffs(self) -> np.ndarray:
+        """Retrives numerator coefficients"""
+        return self.m_numerator_coeffs
+
+    @property
+    def denominator_coeffs(self) -> np.ndarray:
+        """Retrieves denominator coefficients"""
+        return self.m_denominator_coeffs
+
+    # ***************
+    # Utility Methods
+    # ***************
+
     def compute_derivative(self) -> "RationalFunction":
         """
-        Compute the derivative of the rational function, which is also a rational function, using the quotient rule.
+        Compute the derivative of the rational function, which is also a rational function,
+        using the quotient rule.
 
         Args:
             None
@@ -120,7 +145,7 @@ class RationalFunction:
 
         # Compute the derivatives of the numerator and denominator polynomials
         logger.info("Taking derivative of rational function")
-        logger.info("Numerator:\n%s", self.m_denominator_coeffs)
+        logger.info("Numerator:\n%s", self.m_numerator_coeffs)
         logger.info("Denominator:\n%s", self.m_denominator_coeffs)
 
         # TODO: deal with the whole <degree, dimension> and <degree, 1> being passed in...
@@ -174,8 +199,38 @@ class RationalFunction:
     def apply_one_form(self):
         pass
 
-    def split_at_knot(self):
-        pass
+    def split_at_knot(self, knot: float) -> tuple["RationalFunction", "RationalFunction"]:
+        """
+        Split the rational function into two rational function at some knot
+        in the domain.
+
+        Used by contour network.
+
+        :param knot: [in] point in the domain to split the function at
+        :return lower_segment: [out] rational function with lower domain
+        :return upper_segment: [out] rational function with upper domain
+        """
+        #  Build lower segment
+        t0: float = self.domain.lower_bound
+        assert t0 <= knot
+        lower_domain = Interval(t0, knot)
+        lower_segment = RationalFunction(self.degree,
+                                         self.dimension,
+                                         self.numerator_coeffs,
+                                         self.denominator_coeffs,
+                                         lower_domain)
+
+        # Build upper segment
+        t1: float = self.domain.upper_bound
+        assert knot <= t1
+        upper_domain = Interval(knot, t1)
+        upper_segment = RationalFunction(self.degree,
+                                         self.dimension,
+                                         self.numerator_coeffs,
+                                         self.denominator_coeffs,
+                                         upper_domain)
+
+        return lower_segment, upper_segment
 
     def sample_points(self, num_points: int) -> list[Vector2D]:
         """
@@ -196,55 +251,112 @@ class RationalFunction:
         assert len(points) == num_points
         return points
 
-    def start_point(self):
-        pass
+    def start_point(self) -> np.ndarray:
+        """
+        Get the point at the start of the rational mapping curve.
+        Used in projected_curve_network.py
+
+        :return: curve start point in R^n.
+        :rtype: np.ndarray of dimension (1, self.dimension)
+        """
+        # Return the default constructor point if the domain is not bounded below
+        if self.domain.is_bounded_below():
+            return np.zeros(shape=(1, self.dimension), dtype=np.float64)
+
+        t0: float = self.domain.lower_bound
+        return self.__evaluate(t0)
 
     def mid_point(self):
         pass
 
-    def end_point(self):
-        pass
+    def end_point(self) -> np.ndarray:
+        """
+        Get the point at the end of the rational mapping curve.
+        Used in projected_curve_network.py
 
-    def evaluate_normalized_coordinate(self):
-        pass
+        :return: curve end point in R^n
+        :rtype: np.ndarray of dimension (1, self.dimension)
+        """
+        # Return the default constructor point if the domain is not bounded below
+        if self.domain.is_bounded_above():
+            return np.zeros(shape=(1, self.dimension), dtype=np.float64)
 
-    def is_in_domain(self):
-        pass
+        t1: float = self.domain.upper_bound
+        return self.__evaluate(t1)
+
+    def evaluate_normalized_coordinate(self, t: float) -> Vector1D:
+        """
+        Evaluate the function at an normalized parameter in [0, 1]
+
+        :param t: [in] normalized coordinate
+        :return point: rational function evaluated at normalized coordinate t
+        """
+        # Check if domain is bounded
+        # FIXME: potential issue returning (0, 0) shape array...
+        if not self.domain.is_bounded_below():
+            return np.ndarray(shape=(0, 0))
+        if not self.domain.is_bounded_above():
+            return np.ndarray(shape=(0, 0))
+
+        # Linearly interpolate the coordinate
+        t0: float = self.domain.lower_bound
+        t1: float = self.domain.upper_bound
+        s: float = interval_lerp(0.0, 1.0, t0, t1, t)
+
+        # Evaluate at the given domain coordinate
+        point: Vector2D = self.__evaluate(s)
+
+        # HACK: flattening to 1D when evaluate should natively return 1D
+        return point.flatten()
+
+    def is_in_domain(self, t: float) -> bool:
+        """
+        Determine if a point is in the domain of the rational mapping.
+
+        :return: true iff t is in the domain
+        """
+        return self.m_domain.contains(t)
 
     def is_in_domain_interior(self):
-        pass
+        todo()
 
     def discretize(self):
-        pass
+        todo()
 
     # TODO: this is where I need to interact with the Blender API since *that* is now my viewer.
     def add_curve_to_viewer(self):
-        pass
+        todo()
 
     def finite_difference_derivative(self):
-        pass
+        todo()
 
     # *******************
     # Getters and setters
     # *******************
     @property
-    def get_numerators(self):
+    def numerators(self) -> Vector2D:
+        """Retrieves numerator of RationalFunction"""
+
         assert self.m_numerator_coeffs.shape == (
             self.m_degree + 1, self.m_dimension)
         return self.m_numerator_coeffs
 
-    @property
-    def get_denominator(self):
-        assert self.m_denominator_coeffs.shape == (self.m_degree + 1, 1)
-        return self.m_denominator_coeffs
+    @numerators.setter
+    def numerators(self, numerator: np.ndarray) -> None:
+        """Sets numerator of RationalFunction"""
 
-    @get_numerators.setter
-    def set_numerators(self, numerator: np.ndarray):
         assert numerator.shape == (self.m_degree + 1, self.m_dimension)
         self.m_numerator_coeffs = numerator
 
-    @get_numerators.setter
-    def set_denominator(self, denominator: np.ndarray):
+    @property
+    def denominator(self) -> Vector2D:
+        """Retrieves denominator of RationalFunction"""
+        assert self.m_denominator_coeffs.shape == (self.m_degree + 1, 1)
+        return self.m_denominator_coeffs
+
+    @denominator.setter
+    def denominator(self, denominator: np.ndarray) -> None:
+        """Sets denominator of RationalFunction"""
         assert denominator.shape == (self.m_degree + 1, 1)
         self.m_denominator_coeffs = denominator
 
@@ -287,13 +399,13 @@ class RationalFunction:
 
     def __evaluate(self, t: float) -> np.ndarray:
         """
-        @brief Evaluate the function at a domain coordinate
+        Evaluate the function at a domain coordinate
 
-        Pt = np.ndarray(shape=(1, self.m_dimension))
-        Qt = np.ndarray(shape=(1,))
+        NOTE: Pt = np.ndarray(shape=(1, self.m_dimension)) \n
+        NOTE: Qt = np.ndarray(shape=(1,1))
 
-        @param[in] t: coordinate
-        @param[out] point: rational function evaluated at coordinate t. Shape = (1, self.dimension)
+        :param t: [in] coordinate
+        :return point: rational function evaluated at coordinate t. Shape = (1, self.dimension)
         """
         # NOTE: using evaluate_polynomial_mapping() rather than evaluate_polynomial() for cases where m_dimension > 1
         # NOTE: keep the modification by reference since that helps showcase what shape Pt and Qt should be.
