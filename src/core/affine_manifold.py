@@ -2,22 +2,18 @@
 Representation of an affine manifold.
 """
 
-import json  # for testing
 import logging
 import math
-from curses import COLS
 from dataclasses import dataclass
 
-import mathutils
 import numpy as np
-import numpy.testing as npt
 import polyscope as ps
 
-from src.core.common import (GOLD_YELLOW, PLACEHOLDER_BOOL, PLACEHOLDER_INDEX,
-                             PLACEHOLDER_VALUE, ROWS, Index, Matrix2x2f,
-                             Matrix3x2f, MatrixNx2f, MatrixNx3f, MatrixNx3i,
-                             MatrixXf, MatrixXi, PlanarPoint1d, Vector3i,
-                             angle_from_positions, area_from_length,
+from src.core.common import (COLS, GOLD_YELLOW, PLACEHOLDER_BOOL,
+                             PLACEHOLDER_INDEX, PLACEHOLDER_VALUE, ROWS, Index,
+                             Matrix2x2f, Matrix3x2f, MatrixNx2f, MatrixNx3f,
+                             MatrixNx3i, MatrixXf, MatrixXi, PlanarPoint1d,
+                             Vector3i, angle_from_positions, area_from_length,
                              find_face_vertex_index, float_equal,
                              float_equal_zero, formatted_vector, is_manifold,
                              logger, matrix_contains_nan,

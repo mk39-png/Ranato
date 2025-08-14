@@ -1,6 +1,5 @@
 # from igl.pyigl_core import writeOBJ
 import os
-import re
 from dataclasses import dataclass
 from typing import TextIO
 
@@ -13,12 +12,8 @@ from src.core.common import (COLS, DISCRETIZATION_LEVEL, HASH_TABLE_SIZE, ROWS,
                              MatrixNx3i, MatrixXf, PatchIndex, PlanarPoint,
                              PlanarPoint1d, SpatialVector, SpatialVector1d,
                              Vector1D, convert_nested_vector_to_matrix,
-                             convert_polylines_to_edges, logger)
+                             convert_polylines_to_edges, logger, todo)
 from src.core.convex_polygon import ConvexPolygon
-from src.core.evaluate_surface_normal import \
-    generate_quadratic_surface_normal_coeffs
-# from src.quadratic_spline_surface.position_data import (
-# )
 from src.core.line_segment import LineSegment
 from src.quadratic_spline_surface.quadratic_spline_surface_patch import \
     QuadraticSplineSurfacePatch
@@ -619,6 +614,8 @@ class QuadraticSplineSurface:
 
         :return: tuple of hash_x and hash_y computed.
         """
+
+        todo("Fix member variables")
         hash_x = int((point[0][0] - self.__patches_bbox_x_min) / self.hash_x_interval)
         hash_y = int((point[0][1] - self.__patches_bbox_y_min) / self.hash_y_interval)
 
@@ -665,13 +662,13 @@ class QuadraticSplineSurface:
         y_max: float = patches_ref[0].get_bbox_y_max()
 
         for i in range(1, self.num_patches):
-            if (x_min > patches_ref[i].get_bbox_x_min()):
+            if x_min > patches_ref[i].get_bbox_x_min():
                 x_min = patches_ref[i].get_bbox_x_min()
-            if (x_max < patches_ref[i].get_bbox_x_max()):
+            if x_max < patches_ref[i].get_bbox_x_max():
                 x_max = patches_ref[i].get_bbox_x_max()
-            if (y_min > patches_ref[i].get_bbox_y_min()):
+            if y_min > patches_ref[i].get_bbox_y_min():
                 y_min = patches_ref[i].get_bbox_y_min()
-            if (y_max < patches_ref[i].get_bbox_y_max()):
+            if y_max < patches_ref[i].get_bbox_y_max():
                 y_max = patches_ref[i].get_bbox_y_max()
 
         # Alias for readability.

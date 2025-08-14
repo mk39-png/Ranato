@@ -3,15 +3,22 @@ Representation for quadratic surface patches with convex domains.
 """
 from typing import TextIO
 
+import numpy as np
 import polyscope as ps
 
-from src.core.bivariate_quadratic_function import *
-from src.core.common import *
-from src.core.convex_polygon import *
+from src.core.bivariate_quadratic_function import (
+    evaluate_quadratic_mapping, generate_monomial_to_bezier_matrix,
+    generate_quadratic_coordinate_domain_triangle_normalization_matrix)
+from src.core.common import (ROWS, Matrix2x2f, Matrix3x2r, Matrix6x3f,
+                             Matrix6x3r, Matrix6x6r, MatrixNx2f, PlanarPoint1d,
+                             SpatialVector, SpatialVector1d,
+                             compute_point_cloud_bounding_box, todo,
+                             unimplemented)
 from src.core.convex_polygon import ConvexPolygon
-from src.core.evaluate_surface_normal import *
-from src.core.polynomial_function import *
-from src.core.rational_function import *
+from src.core.evaluate_surface_normal import \
+    generate_quadratic_surface_normal_coeffs
+from src.core.line_segment import LineSegment
+from src.core.rational_function import RationalFunction
 
 # **************************************
 # Quadratic Spline Surface Patch Helpers
@@ -40,6 +47,7 @@ def compute_normalized_surface_mapping(surface_mapping_coeffs: Matrix6x3r,
 
 def compute_bezier_points(normalized_surface_mapping_coeffs: Matrix6x3r) -> Matrix6x3r:
     """
+    Compute bezier points.
     """
     monomial_to_bezier_matrix: Matrix6x6r = generate_monomial_to_bezier_matrix()
 
@@ -64,44 +72,33 @@ class QuadraticSplineSurfacePatch:
     # **************
     # Public Methods
     # **************
-    def __init__(self,
-                 surface_mapping_coeffs: Matrix6x3r | None = None,
-                 domain: ConvexPolygon | None = None) -> None:
+    def __init__(self, surface_mapping_coeffs: Matrix6x3r, domain: ConvexPolygon) -> None:
+        """
+        Constructor for QuadraticSplineSurfacePatch
+        """
+        # -- Core independent data --
+        self.m_surface_mapping_coeffs: Matrix6x3r = surface_mapping_coeffs
+        self.m_domain: ConvexPolygon = domain
 
-        # NOTE: domain is not set by the default constructor in ASOC code and can be None type
-        if (surface_mapping_coeffs is None) and (domain is None):
-            self.m_surface_mapping_coeffs: Matrix6x3r = np.zeros(shape=(6, 3))
-            self.m_domain: None = None
-            self.m_normal_mapping_coeffs: Matrix6x3r = np.zeros(shape=(6, 3))
-            self.m_normalized_surface_mapping_coeffs: Matrix6x3r = np.zeros(
-                shape=(6, 3))
-            self.m_bezier_points: Matrix6x3r = np.zeros(shape=(6, 3))
-            self.m_min_point: SpatialVector1d = np.zeros(shape=(3, ))
-            self.m_max_point: SpatialVector1d = np.zeros(shape=(3, ))
-            self.m_cone_index: int = -1
-        elif ((surface_mapping_coeffs is not None) and (domain is not None)):
-            # -- Core independent data --
-            self.m_surface_mapping_coeffs: Matrix6x3r = surface_mapping_coeffs
-            self.m_domain: ConvexPolygon = domain
+        # -- Inferred dependent data --
+        self.m_normal_mapping_coeffs: Matrix6x3r = np.zeros(shape=(6, 3))
+        self.m_normalized_surface_mapping_coeffs: Matrix6x3r = np.zeros(shape=(6, 3))
+        self.m_bezier_points: Matrix6x3r = np.zeros(shape=(6, 3))
+        self.m_min_point: SpatialVector1d = np.zeros(shape=(3, ))
+        self.m_max_point: SpatialVector1d = np.zeros(shape=(3, ))
 
-            # -- Inferred dependent data --
-            # Compute derived mapping information from the surface mapping and domain
-            self.m_normal_mapping_coeffs: Matrix6x3r = generate_quadratic_surface_normal_coeffs(
-                surface_mapping_coeffs)
-            self.m_normalized_surface_mapping_coeffs: Matrix6x3r = compute_normalized_surface_mapping(
-                surface_mapping_coeffs, domain)
-            self.m_bezier_points: Matrix6x3r = compute_bezier_points(
-                surface_mapping_coeffs)
-            self.m_min_point, self.m_max_point = compute_point_cloud_bounding_box(
-                self.m_bezier_points)
+        # Compute derived mapping information from the surface mapping and domain
+        self.m_normal_mapping_coeffs = (
+            generate_quadratic_surface_normal_coeffs(surface_mapping_coeffs))
+        self.m_normalized_surface_mapping_coeffs = (
+            compute_normalized_surface_mapping(surface_mapping_coeffs, domain))
+        self.m_bezier_points = compute_bezier_points(surface_mapping_coeffs)
+        (self.m_min_point,
+         self.m_max_point) = compute_point_cloud_bounding_box(self.m_bezier_points)
 
-            # -- Additional cone marker to handle degenerate configurations --
-            # NOTE: Do not mark a cone by default
-            self.m_cone_index: int = -1
-        else:
-            unreachable(
-                "Supposed to have either both surface_mapping_coeffs and domain "
-                "or none for constructor")
+        # -- Additional cone marker to handle degenerate configurations --
+        # NOTE: Do not mark a cone by default
+        self.m_cone_index: int = -1
 
     @property
     def dimension(self) -> int:
@@ -264,8 +261,7 @@ class QuadraticSplineSurfacePatch:
         :rtype: list[RationalFunction]
         """
         # Get parametrized domain boundaries.
-        domain_boundaries: list[LineSegment] = self.domain.parametrize_patch_boundaries(
-        )
+        domain_boundaries: list[LineSegment] = self.domain.parametrize_patch_boundaries()
         # Checking len == 3 since ASOC code has domain_boundarys as array of 3 LineSegment elements
         assert len(domain_boundaries) == 3
 
@@ -332,7 +328,7 @@ class QuadraticSplineSurfacePatch:
         # Generate affine transformation mapping the standard triangle to the domain triangle
         # FIXME: double check implementation with C++ code...
         linear_transformation: Matrix2x2f = np.array([v1 - v0,
-                                                      v2 - v0], dtype=np.float64)
+                                                     v2 - v0], dtype=np.float64)
         assert linear_transformation.shape == (2, 2)
         translation: PlanarPoint1d = v0
 
@@ -487,38 +483,39 @@ class QuadraticSplineSurfacePatch:
 
         # Serialize domain boundary
         vertices: Matrix3x2r = self.m_domain.vertices
-        if (self.get_cone() == 0):
+        if self.get_cone() == 0:
             output_file.write("cp1 ")
         else:
             output_file.write("p1 ")
         output_file.write(f"{vertices[0, 0]:.{precision}f} {vertices[0, 1]:.{precision}f}\n")
 
-        if (self.get_cone() == 1):
+        if self.get_cone() == 1:
             output_file.write("cp2 ")
         else:
             output_file.write("p2 ")
         output_file.write(f"{vertices[1, 0]:.{precision}f} {vertices[1, 1]:.{precision}f}\n")
 
-        if (self.get_cone() == 2):
+        if self.get_cone() == 2:
             output_file.write("cp3 ")
         else:
             output_file.write("p3 ")
         output_file.write(f"{vertices[2, 0]:.{precision}f} {vertices[2, 1]:.{precision}f}\n")
 
+    def write_patch(self) -> None:
+        """
+        Write patch to file.
+        :param filename: file to write serialized patch to.
+        :type filename: str
+        """
+        unimplemented("this is only used to check a singular individual patch rather than "
+                      "an entire surface")
 
-def write_patch(self, filename: str):
-    """
-    Write patch to file.
+    # ***************
+    # Private methods
+    # ***************
 
-    :param filename: file to write serialized patch to.
-    :type filename: str
-    """
-    unimplemented("this is only used to check a singular individual patch rather than an entire surface")
-
-# ***************
-# Private methods
-# ***************
-
-
-def __formatted_patch(self):
-    todo()
+    def __formatted_patch(self) -> None:
+        """
+        Method not used
+        """
+        unimplemented("Use serialize instead")

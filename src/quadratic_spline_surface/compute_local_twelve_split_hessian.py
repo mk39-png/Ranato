@@ -5,12 +5,12 @@ Used by optimize_spline_surface.py
 import numpy as np
 import numpy.linalg as LA
 
-from src.core.common import *
+from src.core.common import (Matrix2x2f, Matrix3x2r, Matrix12x12r, Vector1D,
+                             logger)
 from src.quadratic_spline_surface.PS12_patch_coeffs import PS12_patch_coeffs
 
 
 def get_C_gl(uv: Matrix3x2r,
-             # FIXME: corner_to_corner_uv_positions loss of precision, need increase to float128
              corner_to_corner_uv_positions: list[Matrix2x2f],
              reverse_edge_orientations: list[bool]) -> Matrix12x12r:
     """
@@ -84,9 +84,9 @@ def get_C_gl(uv: Matrix3x2r,
 
     # Extract vertex chart rotated corner to corner uv directions
     # Note that eij = R(qj - qi), where R is some rigid transformation mapping
-    # the global uv triangle to some local layout containing the given corner FIXME: below is loosing some precision, specifically e02 loses its value at index [1] and becomes 0 rather than -2.168e-17.... why?
+    # the global uv triangle to some local layout containing the given corner
     e01: Vector1D = corner_to_corner_uv_positions[0][0, :]  # q1 - q0
-    e02: Vector1D = corner_to_corner_uv_positions[0][1, :]  # q2 - q0 FIXME losse of precision
+    e02: Vector1D = corner_to_corner_uv_positions[0][1, :]  # q2 - q0
     e12: Vector1D = corner_to_corner_uv_positions[1][0, :]  # q2 - q1
     e10: Vector1D = corner_to_corner_uv_positions[1][1, :]  # q0 - q1
     e20: Vector1D = corner_to_corner_uv_positions[2][0, :]  # q0 - q2
@@ -129,11 +129,11 @@ def get_C_gl(uv: Matrix3x2r,
 
     # Reverse (global) edge orientations as needed for consistency of the
     # midpoint reference frames
-    if (reverse_edge_orientations[0]):
+    if reverse_edge_orientations[0]:
         gm_12 = -gm_12
-    if (reverse_edge_orientations[1]):
+    if reverse_edge_orientations[1]:
         gm_20 = -gm_20
-    if (reverse_edge_orientations[2]):
+    if reverse_edge_orientations[2]:
         gm_01 = -gm_01
 
     # Compute the derivative of f in the direction of the edge midpoint to opposite
@@ -146,7 +146,8 @@ def get_C_gl(uv: Matrix3x2r,
     assert h20.shape == (12, )
 
     # Assemble matrix
-    # NOTE: assembly of matrix is correct, but precision is wrong. lots of values in -3e-17 or 3e-17 treated as 0...
+    # NOTE: assembly of matrix is correct, but precision is wrong. lots of values in -3e-17 or
+    # 3e-17 treated as 0...
     C_gl: Matrix12x12r = np.array([
         f0,
         f1,

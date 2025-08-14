@@ -1,8 +1,10 @@
+"""
+Method to retrieve planarH
+"""
+
 import numpy as np
 
 
-# TODO: ensure that H is 36x36
-# TODO: note how I changed from double array in C++ to np nd array for Python
 def planarHfun(nx: float, ny: float, nz: float) -> np.ndarray:
     """
     Returns np.ndarray of shape (36, 36)    

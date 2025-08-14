@@ -2,13 +2,12 @@
     Quotient of scalar or vector valued polynomial functions over an interval.
 """
 
-from curses import COLS
 from dataclasses import dataclass
 
 import numpy as np
 import polyscope
 
-from src.core.common import (MatrixXf, Vector1D, Vector2D,
+from src.core.common import (COLS, MatrixXf, Vector1D, Vector2D,
                              convert_nested_vector_to_matrix,
                              convert_polylines_to_edges, interval_lerp, logger,
                              todo, unimplemented, unreachable)
@@ -59,7 +58,7 @@ class RationalFunction:
         self.m_degree: int = degree
         self.m_dimension: int = dimension
         self.m_numerator_coeffs: Vector2D
-        self.m_denominator_coeffs: Vector2D
+        self.m_denominator_coeffs: Vector2D  # NOTE: keep denominator as Vector2D.
         self.m_domain: Interval
         # TODO: assert the shape for numerator_coeffs and denominator_coeffs
 
@@ -135,68 +134,63 @@ class RationalFunction:
         Compute the derivative of the rational function, which is also a rational function,
         using the quotient rule.
 
-        Args:
-            None
-
-        Returns:
-            derivative (RationalFunction<2*degree, dimension>): [in] derivative rational function.
+        :return derivative (RationalFunction<2*degree, dimension>): [out] derivative rational 
+            function.
         """
-        # TODO: is this right?
-        # assert derivative.m_degree == 2 * self.m_degree
-        # assert derivative.m_dimension == self.m_dimension
-
         # Compute the derivatives of the numerator and denominator polynomials
         logger.info("Taking derivative of rational function")
         logger.info("Numerator:\n%s", self.m_numerator_coeffs)
         logger.info("Denominator:\n%s", self.m_denominator_coeffs)
-
-        # TODO: deal with the whole <degree, dimension> and <degree, 1> being passed in...
-        numerator_deriv_coeffs = compute_polynomial_mapping_derivative(
+        numerator_deriv_coeffs: MatrixXf = compute_polynomial_mapping_derivative(
             self.m_degree, self.m_dimension, self.m_numerator_coeffs)
-        assert numerator_deriv_coeffs.shape == (
-            self.m_degree, self.m_dimension)
+        assert numerator_deriv_coeffs.shape == (self.m_degree, self.m_dimension)
 
         # HACK: denominator_deriv_coeffs must be shape (self.m_degree, 1) rather than
         # (self.m_degree,) because compute_polynomial_mapping_derivative() is not designed
         # to work with vectors.
-        # denominator_deriv_coeffs = np.ndarray(shape=(self.m_degree, 1))
-
-        denominator_deriv_coeffs = compute_polynomial_mapping_derivative(
-            self.m_degree, 1, self.m_denominator_coeffs)
+        denominator_deriv_coeffs: MatrixXf = compute_polynomial_mapping_derivative(
+            self.m_degree, 1, self.m_denominator_coeffs).flatten()
         assert denominator_deriv_coeffs.shape == (self.m_degree, 1)
-
         logger.info("Numerator derivative:\n%s", numerator_deriv_coeffs)
         logger.info("Denominator derivative:\n%s", denominator_deriv_coeffs)
 
-        # TODO: 0 degree case?
-        #  Compute the derivative numerator and denominator from the quotient rule
-        # XXX: there may be an issue between this and the mapping_product function....
-        term_0 = compute_polynomial_mapping_scalar_product(
-            self.m_degree, self.m_degree - 1, self.m_dimension, self.m_denominator_coeffs, numerator_deriv_coeffs)
-        term_1 = compute_polynomial_mapping_scalar_product(
-            self.m_degree - 1, self.m_degree, self.m_dimension, denominator_deriv_coeffs, self.m_numerator_coeffs)
+        # FIXME (ASOC): 0 degree case?
 
+        # Compute the derivative numerator and denominator from the quotient rule
+        term_0: MatrixXf = compute_polynomial_mapping_scalar_product(self.m_degree,
+                                                                     self.m_degree - 1,
+                                                                     self.m_dimension,
+                                                                     self.m_denominator_coeffs,
+                                                                     numerator_deriv_coeffs)
         assert term_0.shape == (2 * self.m_degree, self.m_dimension)
+
+        term_1: MatrixXf = compute_polynomial_mapping_scalar_product(self.m_degree - 1,
+                                                                     self.m_degree,
+                                                                     self.m_dimension,
+                                                                     denominator_deriv_coeffs,
+                                                                     self.m_numerator_coeffs)
         assert term_1.shape == (2 * self.m_degree, self.m_dimension)
 
         logger.info("First term: \n%s", term_0)
         logger.info("Second term: \n%s", term_1)
 
-        # TODO: is this supposed to be using self.m_degree? Or is it some other degree? Look at the C++ code to double check.
-        num_coeffs = np.zeros(shape=(2 * self.m_degree + 1, self.m_dimension), dtype=np.float64)
-
-        # XXX: something might go wrong with the slicing...
+        num_coeffs: MatrixXf = np.zeros(shape=(2 * self.m_degree + 1, self.m_dimension),
+                                        dtype=np.float64)
+        # FIXME: something might go wrong with the slicing.
         num_coeffs[0:2*self.m_degree, 0:self.m_dimension] = term_0 - term_1
 
-        # denom_coeffs = np.ndarray(shape=(2 * self.m_degree + 1, 1))
-        denom_coeffs = compute_polynomial_mapping_product(
-            self.m_degree, self.m_degree, 1, self.m_denominator_coeffs, self.m_denominator_coeffs)
+        denom_coeffs: Vector1D = compute_polynomial_mapping_product(self.m_degree,
+                                                                    self.m_degree,
+                                                                    self.m_denominator_coeffs,
+                                                                    self.m_denominator_coeffs)
+        assert denom_coeffs.shape == (2 * self.m_degree + 1, )
 
-        assert denom_coeffs.shape == (2 * self.m_degree + 1, 1)
-
-        # TODO: this should then change the derivative argument to reference a new RationalFunction
-        derivative = RationalFunction(2 * self.m_degree, self.m_dimension,
-                                      num_coeffs, denom_coeffs, self.m_domain)
+        # Build the derivative
+        derivative = RationalFunction(2 * self.m_degree,
+                                      self.m_dimension,
+                                      num_coeffs,
+                                      denom_coeffs,
+                                      self.m_domain)
 
         return derivative
 

@@ -1,3 +1,6 @@
+"""
+Method to retrieve 12 split spline patch surface triangulated bounds coefficients. 
+"""
 import numpy as np
 
 

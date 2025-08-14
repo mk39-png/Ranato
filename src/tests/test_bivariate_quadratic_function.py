@@ -1,9 +1,11 @@
-from ..core.bivariate_quadratic_function import *
 import numpy as np
 import pytest
 
+from src.core.bivariate_quadratic_function import \
+    compute_quadratic_cross_product
 
-def test_compute_quadratic_cross_product():
+
+def test_compute_quadratic_cross_product() -> None:
     V_coeffs = np.array([[0, 1, 2], [3, 4, 5], [7, 8, 9]])
     W_coeffs = np.array([[0, 1, 2], [3, 4, 5], [7, 8, 9]])
     assert V_coeffs.shape == (3, 3)

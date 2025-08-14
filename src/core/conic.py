@@ -7,7 +7,8 @@ import numpy as np
 
 from src.core.bivariate_quadratic_function import \
     formatted_bivariate_quadratic_mapping
-from src.core.common import Matrix2x2f, PlanarPoint1d, Vector2D, logger
+from src.core.common import (Matrix2x2f, Matrix3x2f, Matrix6xNi, PlanarPoint1d,
+                             Vector2D, Vector3f, logger)
 from src.core.interval import Interval
 from src.core.polynomial_function import (compute_polynomial_mapping_product,
                                           formatted_polynomial)
@@ -81,8 +82,12 @@ class Conic(RationalFunction):
         assert P_rot_coeffs.shape == (3, 2)
         self.numerators = P_rot_coeffs
 
-    def pullback_quadratic_function(self, dimension: int, F_coeffs_ref: np.ndarray) -> RationalFunction:
-        F_coeffs = copy.deepcopy(F_coeffs_ref)
+    def pullback_quadratic_function(self, dimension: int,
+                                    F_coeffs_ref: Matrix6xNi) -> RationalFunction:
+        """
+
+        """
+        F_coeffs: Matrix6xNi = copy.deepcopy(F_coeffs_ref)
         if dimension == 1:
             F_coeffs = F_coeffs.reshape((6, dimension))
 
@@ -93,11 +98,10 @@ class Conic(RationalFunction):
                     formatted_bivariate_quadratic_mapping(dimension, F_coeffs))
 
         # Separate the individual polynomial coefficients from the rational function
-        P_coeffs = self.numerators
-
-        u_coeffs = P_coeffs[:, 0]
-        v_coeffs = P_coeffs[:, 1]
-        Q_coeffs = self.denominator
+        P_coeffs: Matrix3x2f = self.numerators
+        u_coeffs: Vector3f = P_coeffs[:, 0]
+        v_coeffs: Vector3f = P_coeffs[:, 1]
+        Q_coeffs: Vector3f = self.denominator
         # Asserting to make sure we are getting the shape we want.
         assert u_coeffs.shape == (3, )
         assert v_coeffs.shape == (3, )
@@ -118,29 +122,31 @@ class Conic(RationalFunction):
         uv_coeffs: Vector2D = np.ndarray(shape=(5, 1))
         uu_coeffs: Vector2D = np.ndarray(shape=(5, 1))
         vv_coeffs: Vector2D = np.ndarray(shape=(5, 1))
+
+        # TODO: change the  function below to reemove the dimension parameter... maybe...
         QQ_coeffs = compute_polynomial_mapping_product(
-            2, 2, 1, Q_coeffs, Q_coeffs)
+            2, 2, Q_coeffs, Q_coeffs)
         Qu_coeffs = compute_polynomial_mapping_product(
-            2, 2, 1, Q_coeffs, u_coeffs)
+            2, 2, Q_coeffs, u_coeffs)
         Qv_coeffs = compute_polynomial_mapping_product(
-            2, 2, 1, Q_coeffs, v_coeffs)
+            2, 2, Q_coeffs, v_coeffs)
         uv_coeffs = compute_polynomial_mapping_product(
-            2, 2, 1, u_coeffs, v_coeffs)
+            2, 2, u_coeffs, v_coeffs)
         uu_coeffs = compute_polynomial_mapping_product(
-            2, 2, 1, u_coeffs, u_coeffs)
+            2, 2, u_coeffs, u_coeffs)
         vv_coeffs = compute_polynomial_mapping_product(
-            2, 2, 1, v_coeffs, v_coeffs)
+            2, 2, v_coeffs, v_coeffs)
 
         # Combine quadratic monomial functions into a matrix
         # NOTE: need to flatten the NP matrices into vectors from (5,1) to (5,)
         # shape for broadcasting to work
         # NOTE: Also transposing with .T to be shape (5,6) rather than (6,5)
-        monomial_coeffs = np.array([QQ_coeffs.flatten(),
-                                    Qu_coeffs.flatten(),
-                                    Qv_coeffs.flatten(),
-                                    uv_coeffs.flatten(),
-                                    uu_coeffs.flatten(),
-                                    vv_coeffs.flatten()]).T
+        monomial_coeffs = np.array([QQ_coeffs,
+                                    Qu_coeffs,
+                                    Qv_coeffs,
+                                    uv_coeffs,
+                                    uu_coeffs,
+                                    vv_coeffs]).T
         assert monomial_coeffs.shape == (5, 6)
         logger.info("Monomial coefficients matrix:\n%s", monomial_coeffs)
 

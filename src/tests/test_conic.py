@@ -1,5 +1,7 @@
 from numpy._typing._array_like import NDArray
 
+from src.core.rational_function import RationalFunction
+
 from ..core.common import *
 from ..core.conic import *
 
@@ -51,7 +53,7 @@ def test_u_projection_case():
     assert F_coeffs.shape == (6, )
 
     conic = Conic(ConicType.UNKNOWN, P_coeffs, Q_coeffs)
-    pullback = conic.pullback_quadratic_function(1, F_coeffs)
+    pullback: RationalFunction = conic.pullback_quadratic_function(1, F_coeffs)
 
     assert float_equal(pullback(-1.0)[0], 0.0)
     assert float_equal(pullback(0.0)[0], 1.0)

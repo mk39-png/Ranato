@@ -1,7 +1,9 @@
 import numpy as np
+import numpy.testing as npt
 import pytest
 
-from src.core.common import Vector1D, float_equal
+from src.core import polynomial_function
+from src.core.common import MatrixXf, Vector1D, Vector2D, float_equal
 from src.core.polynomial_function import (
     compute_polynomial_mapping_cross_product,
     compute_polynomial_mapping_derivative, compute_polynomial_mapping_product,
@@ -12,21 +14,21 @@ from src.core.polynomial_function import (
 def test_generate_monomials() -> None:
     degree = 2
     t = -1
-    T: Vector1D = generate_monomials(degree, t)
+    T: Vector2D = generate_monomials(degree, t)
 
-    assert T.shape == (degree + 1, )
-    assert T[0] == 1
-    assert T[1] == -1
-    assert T[2] == 1
+    assert T.shape == (1, degree + 1)
+    assert T[0][0] == 1
+    assert T[0][1] == -1
+    assert T[0][2] == 1
 
 
 def test_evaluate_polynomial() -> None:
     degree = 2
     dimension = 1
-    polynomial_coeffs = np.array([0., 0., 0.])
+    polynomial_coeffs: Vector1D = np.array([0., 0., 0.])
     t: float = -1.0
 
-    polynomial_evaluation: np.ndarray = evaluate_polynomial(
+    polynomial_evaluation: Vector1D = evaluate_polynomial(
         degree, dimension, polynomial_coeffs, t)
     assert polynomial_evaluation.shape == (dimension, )
 
@@ -37,45 +39,34 @@ def test_compute_polynomial_mapping_product_one_dimension() -> None:
     Because we don't need to reimplement everything if NumPy conveniently provides 
     functionality for us.
     """
-    # NOTE: apparently the dimension is always 1... in the cases that
-    # compute_polynomial_mapping_product() is used.
-    first_polynomial_coeffs = np.array([2, 1])
-    second_polynomial_coeffs = np.array([1, 1])
-    product_polynomial_coeffs = np.ndarray(shape=(3, ))
-
     first_degree = 1
     second_degree = 1
+    # Unnecessary parameter since compute_polynomial_mapping_product is only used with 1D
+    # coefficient arrays
     dimension = 1
+    first_polynomial_coeffs: Vector1D = np.array([2, 1])
+    second_polynomial_coeffs: Vector1D = np.array([1, 1])
+    product_polynomial_coeffs_control: Vector1D = np.zeros(shape=(3, ), dtype=np.float64)
 
     # *********
     # ASOC CODE
     # *********
     # Compute the new polynomial coefficients by convolution.
-    # Meaning, it is dependent on coeffs being all one-dimensional.
-    # NOTE: must set all elements of original NumPy array to 0 rather than creating .zeros_like because Python handles references differently from C++
-    product_polynomial_coeffs[:, :] = 0
-
-    # XXX: This differs from C++ code in that it is not <= first_degree...
-    # It also appears that for many dimensions, it just calculates row by row.... if I understand correctly
     for i in range(first_degree+1):
         for j in range(second_degree+1):
-            for k in range(dimension):
-                product_polynomial_coeffs[i + j, k] += first_polynomial_coeffs[i,
-                                                                               k] * second_polynomial_coeffs[j, k]
+            product_polynomial_coeffs_control[i + j] += (first_polynomial_coeffs[i] *
+                                                         second_polynomial_coeffs[j])
 
     # ******************
     # COMPARING RESULTS
     # ******************
     # Turns out that convolution likes same sized dimensions
-    numpy_product_polynomial_coeffs = compute_polynomial_mapping_product(
-        1, 1, 1, first_polynomial_coeffs, second_polynomial_coeffs)
-
-    assert np.array_equal(product_polynomial_coeffs,
-                          numpy_product_polynomial_coeffs)
+    product_polynomial_coeffs_test: Vector1D = compute_polynomial_mapping_product(
+        first_degree, second_degree, first_polynomial_coeffs, second_polynomial_coeffs)
+    npt.assert_allclose(product_polynomial_coeffs_test, product_polynomial_coeffs_control)
 
     # Below is a hardcoded result from previous testing
-    assert np.array_equal(
-        product_polynomial_coeffs, np.array([[2], [3], [1]]))
+    assert np.array_equal(product_polynomial_coeffs_test, np.array([2, 3, 1]))
 
 
 def test_compute_polynomial_mapping_derivative_with_asoc() -> None:
@@ -90,20 +81,21 @@ def test_compute_polynomial_mapping_derivative_with_asoc() -> None:
     # ******************
     degree = 1
     dimension = 1
-    polynomial_coeffs = np.array([0.0, 0.0])
-    derivative_polynomial_coeffs = np.array([0.0])
+    polynomial_coeffs: Vector2D = np.array([[0.0], [0.0]])
+    derivative_polynomial_coeffs_control: Vector2D = np.array([[0.0]])
+    assert polynomial_coeffs.shape == (2, 1)
+    assert derivative_polynomial_coeffs_control.shape == (1, 1)
 
     # ASOC CODE
     for i in range(1, degree + 1):
         for j in range(dimension):
-            derivative_polynomial_coeffs[i - 1,
-                                         j] = i * polynomial_coeffs[i, j]
+            derivative_polynomial_coeffs_control[i - 1, j] = i * polynomial_coeffs[i, j]
 
-    numpy_derivative_polynomial_coeffs = compute_polynomial_mapping_derivative(
+    derivative_polynomial_coeffs_test: MatrixXf = compute_polynomial_mapping_derivative(
         degree, dimension, polynomial_coeffs)
 
-    assert np.array_equal(derivative_polynomial_coeffs,
-                          numpy_derivative_polynomial_coeffs)
+    npt.assert_allclose(derivative_polynomial_coeffs_test,
+                        derivative_polynomial_coeffs_control)
 
     # TODO: test with other derivatives aside from zero function...
     # FIXME: because I'm quite sure this is not working as intended
@@ -111,14 +103,11 @@ def test_compute_polynomial_mapping_derivative_with_asoc() -> None:
     # ******************
     # LINEAR FUNCTION CASE
     # ******************
-    P_coeffs = np.array([-1, 2]).reshape(2, 1)
-    P_deriv_coeffs = np.ndarray(shape=(1, 1))
-    P_deriv_coeffs = compute_polynomial_mapping_derivative(1, 1, P_coeffs)
-
-    np_p_deriv_coeffs = np.polynomial.polynomial.polyder(P_coeffs)
-
-    assert np.array_equal(P_deriv_coeffs,
-                          np_p_deriv_coeffs)
+    P_coeffs: Vector2D = np.array([-1, 2]).reshape(2, 1)
+    # P_deriv_coeffs = np.ndarray(shape=(1, 1))
+    P_deriv_coeffs_test = compute_polynomial_mapping_derivative(1, 1, P_coeffs)
+    P_deriv_coeffs_control = np.polynomial.polynomial.polyder(P_coeffs)
+    assert np.array_equal(P_deriv_coeffs_test, P_deriv_coeffs_control)
 
     # TODO: derive each row of the polynomial for multidimensional coeff matrices (e.g shape (2, 3))
 
@@ -126,15 +115,15 @@ def test_compute_polynomial_mapping_derivative_with_asoc() -> None:
 def test_remove_polynomial_trailing_coefficients() -> None:
     print("Remove trailing zeros")
 
-    A_coeffs: np.ndarray = np.array([1, 2, 3, 0, 0, 0])
-    reduced_coeffs: np.ndarray
+    A_coeffs: Vector1D = np.array([1, 2, 3, 0, 0, 0])
+    reduced_coeffs: Vector1D
 
     # Find last nonzero entry and remove all zero entries after it
     last_zero: int = A_coeffs.size
-    while (last_zero > 0):
+    while last_zero > 0:
         # When reaching a non-zero number, stop and return new polynomial coefficient
         # vector with trailing zeros removed.
-        if (not float_equal(A_coeffs[last_zero - 1], 0.0)):
+        if not float_equal(A_coeffs[last_zero - 1], 0.0):
             # TODO: double check that the below is equivalent to .head() in Eigen
             reduced_coeffs = A_coeffs[1:last_zero]
             return
@@ -147,28 +136,33 @@ def test_remove_polynomial_trailing_coefficients() -> None:
     assert np.array_equal(np.trim_zeros(A_coeffs, 'b'), reduced_coeffs)
 
 
-def test_polynomial_mapping_cross_products_elementary_constant_functions():
-
-    # TODO: add section
-    # TODO: make this more pytest-esque
+def test_polynomial_mapping_cross_products_elementary_constant_functions() -> None:
+    """
+    Testing compute_polynomial_mapping_cross_product() with 
+    first_degree = 0 and second_degree = 0
+    """
     print("Elementary constant functions")
     A_coeffs = np.array([1, 0, 0])
     B_coeffs = np.array([0, 1, 0])
-    cross_product_coeffs = compute_polynomial_mapping_cross_product(
+    cross_product_coeffs: Vector1D = compute_polynomial_mapping_cross_product(
         0, 0, A_coeffs, B_coeffs)
 
-    assert cross_product_coeffs.shape == (3, )
+    assert cross_product_coeffs.shape == (1, 3)
 
-    assert float_equal(cross_product_coeffs[0], 0.0)
-    assert float_equal(cross_product_coeffs[1], 0.0)
-    assert float_equal(cross_product_coeffs[2], 1.0)
+    assert float_equal(cross_product_coeffs[0][0], 0.0)
+    assert float_equal(cross_product_coeffs[0][1], 0.0)
+    assert float_equal(cross_product_coeffs[0][2], 1.0)
 
 
-def test_polynomial_mapping_cross_products_elementary_linear_functions():
+def test_polynomial_mapping_cross_products_elementary_linear_functions() -> None:
+    """
+    Testing compute_polynomial_mapping_cross_product() with 
+    first_degree = 1 and second_degree = 1
+    """
     print("Elementary linear functions")
     A_coeffs = np.array([[2, 0, 0], [1, 0, 0]])
     B_coeffs = np.array([[0, 1, 0], [0, 1, 0]])
-    cross_product_coeffs = compute_polynomial_mapping_cross_product(
+    cross_product_coeffs: Vector2D = compute_polynomial_mapping_cross_product(
         1, 1, A_coeffs, B_coeffs)
 
     assert cross_product_coeffs.shape == (3, 3)
@@ -185,21 +179,21 @@ def test_polynomial_mapping_cross_products_general_constant_functions():
     print("General constant functions")
     A_coeffs = np.array([1, 2, 3])
     B_coeffs = np.array([4, 5, 6])
-    cross_product_coeffs = compute_polynomial_mapping_cross_product(
+    cross_product_coeffs: Vector2D = compute_polynomial_mapping_cross_product(
         0, 0,  A_coeffs, B_coeffs)
 
-    assert cross_product_coeffs.shape == (3, )
+    assert cross_product_coeffs.shape == (1, 3)
 
-    assert float_equal(cross_product_coeffs[0], -3.0)
-    assert float_equal(cross_product_coeffs[1], 6.0)
-    assert float_equal(cross_product_coeffs[2], -3.0)
+    assert float_equal(cross_product_coeffs[0][0], -3.0)
+    assert float_equal(cross_product_coeffs[0][1], 6.0)
+    assert float_equal(cross_product_coeffs[0][2], -3.0)
 
 
 def test_polynomial_mapping_cross_products_cancelling_linear_functions():
     print("Cancelling linear functions")
     A_coeffs = np.array([[1, 2, 3], [1, 1, 1]])
     B_coeffs = np.array([[4, 5, 6], [1, 1, 1]])
-    cross_product_coeffs = compute_polynomial_mapping_cross_product(
+    cross_product_coeffs: Vector2D = compute_polynomial_mapping_cross_product(
         1, 1, A_coeffs, B_coeffs, )
 
     assert cross_product_coeffs.shape == (3, 3)
@@ -217,7 +211,7 @@ def test_polynomial_mapping_cross_products_cancelling_linear_functions():
     assert float_equal(cross_product_coeffs[2, 2], 0.0)
 
 
-def test_polynomial_real_roots_linear_function():
+def test_polynomial_real_roots_linear_function() -> None:
     print("Linear function")
     A_coeffs = np.array([1, 1])
     roots = polynomial_real_roots(A_coeffs)
@@ -225,7 +219,7 @@ def test_polynomial_real_roots_linear_function():
     assert float_equal(roots[0], -1.0)
 
 
-def test_polynomial_real_roots_quadratic_function_with_roots():
+def test_polynomial_real_roots_quadratic_function_with_roots() -> None:
     print("Quadratic function with roots")
     A_coeffs = np.array([-1, 0, 1])
     roots = polynomial_real_roots(A_coeffs)
@@ -247,7 +241,7 @@ def test_polynomial_real_roots_vs_quadratic_real_roots():
     """
     print("Quadratic function with roots")
     A_coeffs = np.array([-1, 0, 1])
-    roots_polynomial = polynomial_real_roots(A_coeffs)
+    roots_polynomial: Vector2D = polynomial_real_roots(A_coeffs)
     roots_quadratic, num_solutions = quadratic_real_roots(A_coeffs)
 
     assert (roots_polynomial.size == 2)

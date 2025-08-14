@@ -8,14 +8,13 @@ NOTE: a lot of the methods in this file modify by reference.
 """
 
 import numpy as np
-from polyscope import polyscope, surface_mesh
 
-from src.core.affine_manifold import *
-from src.core.common import *
-from src.core.line_segment import *
-from src.core.polynomial_function import *
-from src.core.rational_function import *
-from src.core.vertex_circulator import *
+from src.core.affine_manifold import (AffineManifold, EdgeManifoldChart,
+                                      VertexManifoldChart)
+from src.core.common import (ROWS, Matrix2x3r, MatrixNx3f, MatrixNx3i,
+                             PlanarPoint, SpatialVector1d, Vector2f,
+                             find_face_vertex_index, logger, unimplemented,
+                             unreachable)
 
 
 class TriangleCornerData:

@@ -18,20 +18,19 @@ from src.core.common import (COLS, ROWS, Index, Matrix2x2f, Matrix2x3r,
                              SpatialVector, SpatialVector1d,
                              TwelveSplitGradient, TwelveSplitHessian, Vector1D,
                              Vector2D, Vector12f, Vector36f, VectorX,
-                             index_vector_complement, logger, unimplemented)
-from src.core.halfedge import Halfedge, TwelveSplitGradient
+                             find_face_vertex_index, index_vector_complement,
+                             logger, unimplemented)
+from src.core.halfedge import Halfedge
 from src.quadratic_spline_surface.compute_local_twelve_split_hessian import (
     build_local_smoothness_hessian, get_C_gl)
 from src.quadratic_spline_surface.planarH import planarHfun
 from src.quadratic_spline_surface.position_data import (
     TriangleCornerData, TriangleMidpointData,
-    generate_affine_manifold_corner_data,
+    compute_edge_midpoint_with_gradient, generate_affine_manifold_corner_data,
     generate_affine_manifold_midpoint_data)
 from src.quadratic_spline_surface.powell_sabin_local_to_global_indexing import (
     build_face_variable_vector, build_variable_edge_indices_map,
-    build_variable_vertex_indices_map, compute_edge_midpoint_with_gradient,
-    find_face_vertex_index, generate_affine_manifold_corner_data,
-    generate_affine_manifold_midpoint_data,
+    build_variable_vertex_indices_map,
     generate_local_edge_gradient_variable_index,
     generate_local_vertex_gradient_variable_index,
     generate_local_vertex_position_variable_index,

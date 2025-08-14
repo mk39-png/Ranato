@@ -63,6 +63,7 @@ Vector2D = np.ndarray
 Vector1D = np.ndarray  # shape (n, )
 MatrixNx2f = np.ndarray
 MatrixNx3 = np.ndarray[tuple[int, int], np.dtype[np.float64]]
+Matrix6xNi = np.ndarray
 Matrix3x6r = np.ndarray
 # Matrix2x2r = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (2, 2)
 # Matrix2x3r = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (2, 3)
