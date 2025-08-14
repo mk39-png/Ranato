@@ -3,6 +3,8 @@ File for conic conversion methods
 """
 
 import math
+from ast import TypeVar
+from typing import Any
 
 import numpy as np
 import numpy.testing as npt
@@ -39,7 +41,8 @@ def compute_symmetric_matrix_eigen_decomposition(A: Matrix2x2f) -> tuple[Vector2
     eigenvector_1: PlanarPoint1d
     if not float_equal(A[0, 1], 0.0):
         eigenvector_1 = np.array([A[0, 1], sigma_1 - A[0, 0]])
-        assert not float_equal(np.linalg.norm(eigenvector_1), 0.0)
+        # HACK: wrapping float() to avoid Pylance error
+        assert not float_equal(float(np.linalg.norm(eigenvector_1)), 0.0)
         eigenvector_1 /= np.linalg.norm(eigenvector_1)
     # This can be removed
     elif A[0, 0] < A[1, 1]:
@@ -142,7 +145,9 @@ def convert_conic_to_standard_form(conic_coeffs: Vector6f) -> tuple[Vector6f,
         # The conic is a line or plane if A = 0
         if float_equal(singular_values[0], 0.0):
             #  Normalize the equation
-            normalization_factor: float = np.linalg.norm(b)
+            # HACK: float wrapping to avoid Pylance error
+            # FIXME: does this introduce any precision error?
+            normalization_factor: float = float(np.linalg.norm(b))
             b /= normalization_factor
             c /= normalization_factor
 

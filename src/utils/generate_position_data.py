@@ -26,13 +26,13 @@ class QuadraticPositionFunction:
         """
         Method that allows for translation of coeffs into UV point space... I think.
         """
-        point: SpatialVector = np.array([[
+        point: SpatialVector = np.array([
             u,
             v,
-            self.uv_coeff * u * v + self.uu_coeff * u * u + self.vv_coeff * v * v]
+            self.uv_coeff * u * v + self.uu_coeff * u * u + self.vv_coeff * v * v
         ], dtype=float)
 
-        assert point.shape == (1, 3)
+        assert point.shape == (3, )
         return point
 
     @property
@@ -142,14 +142,14 @@ def generate_parametric_affine_manifold_corner_data(position_func: QuadraticPosi
         uvk: PlanarPoint = parametric_affine_manifold.get_vertex_global_uv(k)
 
         # Get vertex positions
-        vi: SpatialVector = position_func(uvi[0][0], uvi[0][1])
-        vj: SpatialVector = position_func(uvj[0][0], uvj[0][1])
-        vk: SpatialVector = position_func(uvk[0][0], uvk[0][1])
+        vi: SpatialVector = position_func(uvi[0], uvi[1])
+        vj: SpatialVector = position_func(uvj[0], uvj[1])
+        vk: SpatialVector = position_func(uvk[0], uvk[1])
 
         # Get vertex gradients
-        Gi: Matrix2x3r = gradient_func(uvi[0][0], uvi[0][1])
-        Gj: Matrix2x3r = gradient_func(uvj[0][0], uvj[0][1])
-        Gk: Matrix2x3r = gradient_func(uvk[0][0], uvk[0][1])
+        Gi: Matrix2x3r = gradient_func(uvi[0], uvi[1])
+        Gj: Matrix2x3r = gradient_func(uvj[0], uvj[1])
+        Gk: Matrix2x3r = gradient_func(uvk[0], uvk[1])
 
         # Get uv directions
         dij: PlanarPoint = uvj - uvi
@@ -207,9 +207,9 @@ def generate_parametric_affine_manifold_midpoint_data(gradient_func: QuadraticGr
 
         # Get midpoint gradients
         # TODO: again with the confusing index accessing for PlanarPoint...
-        Gij: Matrix2x3r = gradient_func(uvij[0][0], uvij[0][1])
-        Gjk: Matrix2x3r = gradient_func(uvjk[0][0], uvjk[0][1])
-        Gki: Matrix2x3r = gradient_func(uvki[0][0], uvki[0][1])
+        Gij: Matrix2x3r = gradient_func(uvij[0], uvij[1])
+        Gjk: Matrix2x3r = gradient_func(uvjk[0], uvjk[1])
+        Gki: Matrix2x3r = gradient_func(uvki[0], uvki[1])
 
         # Get uv directions
         nij: PlanarPoint = uvk - uvij

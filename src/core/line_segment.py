@@ -4,29 +4,37 @@ with degree 1 numerator and degree 0 denominator.
 TODO: how is the degree 0 denominator possible?
 """
 
-from src.core.bivariate_quadratic_function import *
-# TODO: address the whole : public Conic part of the C++ code
-from src.core.common import *
-from src.core.conic import *
-from src.core.polynomial_function import *
-from src.core.rational_function import *
+import numpy as np
+
+from src.core.bivariate_quadratic_function import \
+    formatted_bivariate_linear_mapping
+from src.core.common import Matrix3x2r, Vector2D, logger, unreachable
+from src.core.conic import Conic
+from src.core.interval import Interval
+from src.core.polynomial_function import formatted_polynomial
+from src.core.rational_function import RationalFunction
+
+# from src.core.conic import *
+# from src.core.polynomial_function import *
+# from src.core.rational_function import *
 
 
 class LineSegment(Conic):
     # ************
     # Constructors
     # ************
-    # TODO: fix the logic below to be more... uhh, python safe.
-    def __init__(self, numerator_coeffs: np.ndarray = None, input_domain: Interval = None):
+    def __init__(self, numerator_coeffs: np.ndarray = None, input_domain: Interval = None) -> None:
+        # TODO: call Conic super() constructor...
+
         # There's not much logic going on for the constructor in the C++ code, so just going to put them all here for simplicity.
         if (numerator_coeffs is None) and (input_domain is None):
-            raise Exception(
+            unreachable(
                 "Attempted LineSegment constructions with no parameters.")
 
-        if (numerator_coeffs is not None):
+        if numerator_coeffs is not None:
             self.__init_conic_coefficients(numerator_coeffs)
 
-        if (input_domain is not None):
+        if input_domain is not None:
             self.m_domain: Interval = input_domain
 
         # NOTE: these numbers are inherited from Conic, which has these numbers as the default.
@@ -34,7 +42,17 @@ class LineSegment(Conic):
         self.m_degree = 2
         self.m_dimension = 2
 
-    def pullback_linear_function(self, dimension: int, F_coeffs: np.ndarray, pullback_function:     RationalFunction):
+    def pullback_linear_function(self, dimension: int,
+                                 F_coeffs: np.ndarray) -> RationalFunction:
+        """
+        Pulles back line segment by linear function.
+        Used in discretize.py.
+
+        :param dimension: [in] dimension for use in parameters
+        :param F_coeffs: [in]: shape (3, dimension)
+        :return pullback_function: degree = 1, dimension = dimension
+
+        """
         logger.info("Pulling back line segment by linear function %s",
                     formatted_bivariate_linear_mapping(dimension, F_coeffs))
 
@@ -71,6 +89,8 @@ class LineSegment(Conic):
 
         pullback_function = RationalFunction(
             1, self.m_dimension, pullback_coeffs, Q_coeffs, self.m_domain)
+
+        return pullback_function
 
     def __init_conic_coefficients(self, numerator_coeffs: np.ndarray):
         # Build conic numerator with trivial quadratic term

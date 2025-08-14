@@ -18,7 +18,8 @@ from src.core.rational_function import *
 # **************************************
 
 
-def compute_normalized_surface_mapping(surface_mapping_coeffs: Matrix6x3r, domain: ConvexPolygon) -> Matrix6x3r:
+def compute_normalized_surface_mapping(surface_mapping_coeffs: Matrix6x3r,
+                                       domain: ConvexPolygon) -> Matrix6x3r:
     """
     Compute the surface mapping with normalized domain.
 
@@ -26,10 +27,11 @@ def compute_normalized_surface_mapping(surface_mapping_coeffs: Matrix6x3r, domai
     """
     assert surface_mapping_coeffs.shape == (6, 3)
     domain_vertices: Matrix3x2r = domain.vertices
-    v0: PlanarPoint = domain_vertices[[0], :]  # gets shape (1, 2)
-    v1: PlanarPoint = domain_vertices[[1], :]
-    v2: PlanarPoint = domain_vertices[[2], :]
-    change_of_basis_matrix: Matrix6x6r = generate_quadratic_coordinate_domain_triangle_normalization_matrix(v0, v1, v2)
+    v0: PlanarPoint1d = domain_vertices[0, :]
+    v1: PlanarPoint1d = domain_vertices[1, :]
+    v2: PlanarPoint1d = domain_vertices[2, :]
+    change_of_basis_matrix: Matrix6x6r = (
+        generate_quadratic_coordinate_domain_triangle_normalization_matrix(v0, v1, v2))
 
     # shape (6, 3) = (6, 6) @ (6, 3)
     normalized_surface_mapping_coeffs = change_of_basis_matrix @ surface_mapping_coeffs
@@ -37,6 +39,8 @@ def compute_normalized_surface_mapping(surface_mapping_coeffs: Matrix6x3r, domai
 
 
 def compute_bezier_points(normalized_surface_mapping_coeffs: Matrix6x3r) -> Matrix6x3r:
+    """
+    """
     monomial_to_bezier_matrix: Matrix6x6r = generate_monomial_to_bezier_matrix()
 
     # shape (6, 3) = (6, 6) @ (6, 3)
@@ -60,7 +64,8 @@ class QuadraticSplineSurfacePatch:
     # **************
     # Public Methods
     # **************
-    def __init__(self, surface_mapping_coeffs: Matrix6x3r | None = None,
+    def __init__(self,
+                 surface_mapping_coeffs: Matrix6x3r | None = None,
                  domain: ConvexPolygon | None = None) -> None:
 
         # NOTE: domain is not set by the default constructor in ASOC code and can be None type
@@ -71,15 +76,15 @@ class QuadraticSplineSurfacePatch:
             self.m_normalized_surface_mapping_coeffs: Matrix6x3r = np.zeros(
                 shape=(6, 3))
             self.m_bezier_points: Matrix6x3r = np.zeros(shape=(6, 3))
-            self.m_min_point: SpatialVector = np.zeros(shape=(1, 3))
-            self.m_max_point: SpatialVector = np.zeros(shape=(1, 3))
+            self.m_min_point: SpatialVector1d = np.zeros(shape=(3, ))
+            self.m_max_point: SpatialVector1d = np.zeros(shape=(3, ))
             self.m_cone_index: int = -1
         elif ((surface_mapping_coeffs is not None) and (domain is not None)):
             # -- Core independent data --
             self.m_surface_mapping_coeffs: Matrix6x3r = surface_mapping_coeffs
             self.m_domain: ConvexPolygon = domain
 
-            # -- Inferred dependent data - FIXME: sometimes, the below are NaNs... possibly because surface_mapping_coeffs is NaNs...
+            # -- Inferred dependent data --
             # Compute derived mapping information from the surface mapping and domain
             self.m_normal_mapping_coeffs: Matrix6x3r = generate_quadratic_surface_normal_coeffs(
                 surface_mapping_coeffs)
@@ -95,7 +100,8 @@ class QuadraticSplineSurfacePatch:
             self.m_cone_index: int = -1
         else:
             unreachable(
-                "Supposed to have either both surface_mapping_coeffs and domain or none for constructor")
+                "Supposed to have either both surface_mapping_coeffs and domain "
+                "or none for constructor")
 
     @property
     def dimension(self) -> int:
@@ -176,7 +182,8 @@ class QuadraticSplineSurfacePatch:
         """
         Compute the bounding box for the surface patch.
 
-        :return: (self.m_min_point, self.m_max_point) where min_point is the minimum coordinates bounding box point and max_point is the maximum coordinates bounding box point.
+        :return: (self.m_min_point, self.m_max_point) where min_point is the minimum coordinates 
+            bounding box point and max_point is the maximum coordinates bounding box point.
         :rtype: tuple[SpatialVector, SpatialVector]
         """
         return self.m_min_point, self.m_max_point
@@ -193,22 +200,23 @@ class QuadraticSplineSurfacePatch:
     def get_bbox_x_min(self) -> float:
         """
         Get the minimum x-coordinate of the bounding box.
-        Note that min_point is NumPy shape (1, 2)
+        Note that min_point is NumPy shape (3, ) as it is a point in 3D space as represented
+        by x, y, z
 
-        :return: self.m_min_point[0][0]: x-coordinate of the minimum point of the bounding box
+        :return: self.m_min_point[0]: x-coordinate of the minimum point of the bounding box
         :rtype: float
         """
-        return self.m_min_point[0][0]
+        return self.m_min_point[0]
 
     def get_bbox_y_min(self) -> float:
         """
         Get the minimum y-coordinate of the bounding box.
-        Note that min_point is NumPy shape (1, 2)
+        Note that min_point is NumPy shape (3, )
 
-        :return: self.m_min_point[0][1]: y-coordinate of the minimum point of the bounding box
+        :return: self.m_min_point[1]: y-coordinate of the minimum point of the bounding box
         :rtype: float
         """
-        return self.m_min_point[0][1]
+        return self.m_min_point[1]
 
     def get_bounding_box_max_point(self) -> SpatialVector:
         """
@@ -224,19 +232,19 @@ class QuadraticSplineSurfacePatch:
         Get the maximum x-coordinate of the bounding box.
         Note that max_point is NumPy shape (1, 2)
 
-        :return: self.m_max_point[0][0]: x-coordinate of the maximum point of the bounding box
+        :return: self.m_max_point[0]: x-coordinate of the maximum point of the bounding box
         :rtype: float
         """
-        return self.m_max_point[0][0]
+        return self.m_max_point[0]
 
     def get_bbox_y_max(self) -> float:
         """
         Get the maximum y-coordinate of the bounding box.
 
-        :return: self.m_max_point[0][1]: y-coordinate of the maximum point of the bounding box
+        :return: self.m_max_point[1]: y-coordinate of the maximum point of the bounding box
         :rtype: float
         """
-        return self.m_max_point[0][1]
+        return self.m_max_point[1]
 
     @property
     def domain(self) -> ConvexPolygon:
@@ -287,9 +295,9 @@ class QuadraticSplineSurfacePatch:
         :rtype: QuadraticSplineSurfacePatch
         """
         # Generate the standard u + v <= 1 triangle
-        # TODO: double check numpy array with the way eigen makes its matrices with the << operator
-        normalized_domain_vertices: Matrix3x2r = np.array(
-            [[0, 0], [1, 0], [0, 1]])
+        normalized_domain_vertices: Matrix3x2r = np.array([[0, 0],
+                                                           [1, 0],
+                                                           [0, 1]])
         assert normalized_domain_vertices.shape == (3, 2)
         normalized_domain: ConvexPolygon = ConvexPolygon.init_from_vertices(
             normalized_domain_vertices)
@@ -301,7 +309,7 @@ class QuadraticSplineSurfacePatch:
 
         return normalized_spline_surface_patch
 
-    def denormalize_domain_point(self, normalized_domain_point: PlanarPoint) -> PlanarPoint:
+    def denormalize_domain_point(self, normalized_domain_point: PlanarPoint1d) -> PlanarPoint1d:
         """
         Given a normalized domain point in the triangle u + v <= 1, map it to the
         corresponding point in the patch domain.
@@ -317,52 +325,54 @@ class QuadraticSplineSurfacePatch:
         # Get domain triangle vertices
         __domain_ref: ConvexPolygon = self.domain
         domain_vertices: Matrix3x2r = __domain_ref.vertices
-        v0: PlanarPoint = domain_vertices[[0], :]
-        v1: PlanarPoint = domain_vertices[[1], :]
-        v2: PlanarPoint = domain_vertices[[2], :]
+        v0: PlanarPoint1d = domain_vertices[0, :]
+        v1: PlanarPoint1d = domain_vertices[1, :]
+        v2: PlanarPoint1d = domain_vertices[2, :]
 
         # Generate affine transformation mapping the standard triangle to the domain triangle
-        linear_transformation: Matrix2x2f = np.array([[v1 - v0], [v2 - v0]], dtype=np.float64)
+        # FIXME: double check implementation with C++ code...
+        linear_transformation: Matrix2x2f = np.array([v1 - v0,
+                                                      v2 - v0], dtype=np.float64)
         assert linear_transformation.shape == (2, 2)
-        translation: PlanarPoint = v0
+        translation: PlanarPoint1d = v0
 
         # Denormalize the domain point
-        # shapes: (1, 2) @ (2, 2) + (1, 2)
+        # shapes: (2, ) @ (2, 2) + (2, )
         return normalized_domain_point @ linear_transformation + translation
 
-    def evaluate(self, domain_point: PlanarPoint) -> SpatialVector:
+    def evaluate(self, domain_point: PlanarPoint1d) -> SpatialVector1d:
         """
         Evaluate the surface at a given domain point.
 
-        :param domain_point: domain evaluation point of shape (1, 2)
+        :param domain_point: domain evaluation point of shape (2, )
         :type domain_point: PlanarPoint
 
-        :return: surface_point: image of the domain point on the surface of shape (1, 3)
+        :return: surface_point: image of the domain point on the surface of shape (3, )
         :rtype: SpatialVector
         """
-        # TODO: double check that evaluate_quadratic_mapping returns something
-        surface_point: SpatialVector = evaluate_quadratic_mapping(
+        assert domain_point.shape == (2, )
+        surface_point: SpatialVector1d = evaluate_quadratic_mapping(
             3, self.m_surface_mapping_coeffs, domain_point)
-        assert surface_point.shape == (1, 3)
+        assert surface_point.shape == (3, )
         return surface_point
 
-    def evaluate_normal(self, domain_point: PlanarPoint) -> SpatialVector:
+    def evaluate_normal(self, domain_point: PlanarPoint1d) -> SpatialVector1d:
         """
         Evaluate the surface normal at a given domain point.
 
-        :param domain_point: domain evaluation point of shape (1, 2)
+        :param domain_point: domain evaluation point of shape (2, )
         :type domain_point: PlanarPoint
 
-        :return: surface_point: surface normal (of shape (1, 3)) at the image of the domain point
+        :return: surface_normal: surface normal at the image of the domain point
         :rtype: SpatialVector
         """
-        surface_normal: SpatialVector = evaluate_quadratic_mapping(
+        assert domain_point.shape == (2, )
+        surface_normal: SpatialVector1d = evaluate_quadratic_mapping(
             3, self.m_normal_mapping_coeffs, domain_point)
-
-        assert surface_normal.shape == (1, 3)
+        assert surface_normal.shape == (3, )
         return surface_normal
 
-    def sample(self, sampling_density: int) -> list[SpatialVector]:
+    def sample(self, sampling_density: int) -> list[SpatialVector1d]:
         """
         Sample points on the surface.
 
@@ -373,12 +383,12 @@ class QuadraticSplineSurfacePatch:
         :rtype: list[SpatialVector]
         """
         # Sample the convex domain
-        domain_points: list[PlanarPoint] = self.m_domain.sample(sampling_density)
+        domain_points: list[PlanarPoint1d] = self.m_domain.sample(sampling_density)
 
         # Lift the domain points to the surface
         num_points: int = len(domain_points)
 
-        spline_surface_patch_points: list[SpatialVector] = []
+        spline_surface_patch_points: list[SpatialVector1d] = []
 
         # TODO: change for loop to utilize enumerate
         for i in range(num_points):
@@ -396,16 +406,16 @@ class QuadraticSplineSurfacePatch:
 
         :param num_refinements: number of refinements of the domain to perform.
         :type num_refinements: int
-        :return: (V_triangulate, F_triangulate, N_triangulate). Triangulated patch vertex positions (V), 
-        triangulated patch faces (F), and triangulated patch vertex normals (N). V and N shape (n, 3)
+        :return: (V_triangulate, F_triangulate, N_triangulate). 
+            Triangulated patch vertex positions (V), triangulated patch faces (F), and triangulated 
+            patch vertex normals (N). V and N shape (n, 3)
         :rtype: tuple[np.ndarray, np.ndarray, np.ndarray]
         """
         # Triangulate the domain
         # NOTE: domain refers to UV coords, which is (N, 2) shape
-        V_domain: np.ndarray[tuple[int, int], np.dtype[np.float64]]
+        V_domain: MatrixNx2f
         F_triangulate: np.ndarray[tuple[int, int], np.dtype[np.int64]]
         V_domain, F_triangulate = self.m_domain.triangulate(num_refinements)
-        # FIXME: check with V_domain
 
         # Lift the domain vertices to the surface and also compute the normals
         V_triangulate: np.ndarray[tuple[int, int], np.dtype[np.float64]]
@@ -413,15 +423,12 @@ class QuadraticSplineSurfacePatch:
         V_triangulate = np.ndarray(shape=(V_domain.shape[ROWS], self.dimension), dtype=np.float64)
         N_triangulate = np.ndarray(shape=(V_domain.shape[ROWS], self.dimension), dtype=np.float64)
 
-        for i in range(V_domain.shape[ROWS]):  # V_domain.rows()
+        for i in range(V_domain.shape[ROWS]):
             # V_domain of shape
-            # FIXME: normal and surface evaluations are NOT correct....
-            surface_point: SpatialVector = self.evaluate(V_domain[[i], :])
-            surface_normal: SpatialVector = self.evaluate_normal(V_domain[[i], :])
-
-            # TODO: something might go wrong with the broadcasting shapes
-            V_triangulate[i, :] = surface_point.flatten()
-            N_triangulate[i, :] = surface_normal.flatten()
+            surface_point: SpatialVector1d = self.evaluate(V_domain[i, :])
+            surface_normal: SpatialVector1d = self.evaluate_normal(V_domain[i, :])
+            V_triangulate[i, :] = surface_point
+            N_triangulate[i, :] = surface_normal
 
         return V_triangulate, F_triangulate, N_triangulate
 
@@ -435,7 +442,8 @@ class QuadraticSplineSurfacePatch:
         # Generate mesh discretization
         num_refinements: int = 2
 
-        # TODO: does the logic below work? Triangulate modifies by reference and that may bring up some issues with this Python code.
+        # TODO: does the logic below work? Triangulate modifies by reference and that may bring up
+        # some issues with this Python code.
         V: np.ndarray
         F: np.ndarray
         N: np.ndarray

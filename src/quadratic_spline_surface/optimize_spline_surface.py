@@ -11,24 +11,23 @@ from cholespy import CholeskySolverD, MatrixType
 from scipy.sparse import coo_matrix
 
 from src.core.affine_manifold import AffineManifold, EdgeManifoldChart
-from src.core.common import (COLS, ROWS, Index,  # Matrix2x3f,; MatrixNx3i,
-                             Matrix2x2f, Matrix2x3r, Matrix3x2r, Matrix12x12r,
-                             MatrixNx3, MatrixNx3f, MatrixXf, MatrixXi,
-                             PlanarPoint, SpatialVector, TwelveSplitGradient,
-                             TwelveSplitHessian, Vector1D, Vector2D, VectorX,
-                             float_equal, index_vector_complement, logger,
-                             unimplemented)
-# from src.core.differentiable_variable import compute_variable_gradient
+from src.core.common import (COLS, ROWS, Index, Matrix2x2f, Matrix2x3r,
+                             Matrix3x2r, Matrix12x3f, Matrix12x12r,
+                             Matrix36x36f, MatrixNx3, MatrixNx3f, MatrixXf,
+                             MatrixXi, PlanarPoint, PlanarPoint1d,
+                             SpatialVector, SpatialVector1d,
+                             TwelveSplitGradient, TwelveSplitHessian, Vector1D,
+                             Vector2D, Vector12f, Vector36f, VectorX,
+                             index_vector_complement, logger, unimplemented)
 from src.core.halfedge import Halfedge, TwelveSplitGradient
 from src.quadratic_spline_surface.compute_local_twelve_split_hessian import (
     build_local_smoothness_hessian, get_C_gl)
-# from src.quadratic_spline_surface.PS12_patch_coeffs import PS12_patch_coeffs
 from src.quadratic_spline_surface.planarH import planarHfun
-from src.quadratic_spline_surface.position_data import (  # generate_affine_manifold_chart_corner_data,
+from src.quadratic_spline_surface.position_data import (
     TriangleCornerData, TriangleMidpointData,
     generate_affine_manifold_corner_data,
     generate_affine_manifold_midpoint_data)
-from src.quadratic_spline_surface.powell_sabin_local_to_global_indexing import (  # generate_local_variable_matrix_index,; generate_affine_manifold_chart_corner_data,; generate_corner_data_matrices,
+from src.quadratic_spline_surface.powell_sabin_local_to_global_indexing import (
     build_face_variable_vector, build_variable_edge_indices_map,
     build_variable_vertex_indices_map, compute_edge_midpoint_with_gradient,
     find_face_vertex_index, generate_affine_manifold_corner_data,
@@ -40,9 +39,6 @@ from src.quadratic_spline_surface.powell_sabin_local_to_global_indexing import (
     generate_twelve_split_variable_value_vector,
     update_edge_gradient_variables, update_energy_quadratic,
     update_position_variables, update_vertex_gradient_variables)
-
-# from src.core.polynomial_function import (
-# )
 
 
 @dataclass
@@ -108,7 +104,7 @@ class LocalHessianData:
 
     @classmethod
     def generate_local_hessian_data(cls,
-                                    face_vertex_uv_positions: list[PlanarPoint],
+                                    face_vertex_uv_positions: list[PlanarPoint1d],
                                     corner_to_corner_uv_positions: list[Matrix2x2f],
                                     reverse_edge_orientations: list[bool],
                                     is_cone: list[bool],
@@ -122,22 +118,20 @@ class LocalHessianData:
         TODO: rename "param" to something else like "description" or some thing to 
         denote that they are not params since I used param so that they appear when 
         hovering over the method.
+
         :param H_f: shape (12, 12)
         :param H_s: shape (12, 12)
         :param H_p: shape (36, 36)
         :param w_f: float
         :param w_s: float
         :param w_p: float
-        :return cls(H_f, H_s, H_p, w_f, w_s, w_p)
+        :return cls(H_f, H_s, H_p, w_f, w_s, w_p):
         """
         # TODO This could be placed inside its class and serve as a constructor of some sort
         # Build uv from global positions
-
-        # Each face_vertex_uv_position element is shape (1, 2)
-        # TODO: shaping may be off
-        assert face_vertex_uv_positions[0].shape == (1, 2)
+        assert face_vertex_uv_positions[0].shape == (2, )
         assert corner_to_corner_uv_positions[0].shape == (2, 2)
-        assert face_normal.shape == (1, 3)
+        assert face_normal.shape == (3, )
         uv: Matrix3x2r = np.array([face_vertex_uv_positions[0],
                                    face_vertex_uv_positions[1],
                                    face_vertex_uv_positions[2]],
@@ -185,29 +179,32 @@ class LocalDOFData:
     """
     Structure for the energy quadratic local degree of freedom data
 
-    NOTE: use generate_local_dog_data to construct a LocalDOFData object
+    NOTE: use generate_local_dof_data to construct a LocalDOFData object
     """
 
     def __init__(self,
                  in_r_alpha_0: np.ndarray,  # shape (12, 3)
                  in_r_alpha: np.ndarray,  # shape (12, 3)
-                 in_r_alpha_flat: Vector2D,  # shape (36, 1)
+                 in_r_alpha_flat: Vector2D,  # shape (36, )
                  ) -> None:
+        """
+        Default constructor for LocalDOFData.
+        XXX: use generate_local_dog_data() to construct a LocalDOFData object
+        """
         assert in_r_alpha_0.shape == (12, 3)
         assert in_r_alpha.shape == (12, 3)
-        assert in_r_alpha_flat.shape == (36, 1)
+        assert in_r_alpha_flat.shape == (36, )
 
-        # NOTE: default types added to be more Pythonic.
-        self.r_alpha_0: np.ndarray = in_r_alpha_0  # initial local DOF
-        self.r_alpha: np.ndarray = in_r_alpha  # local DOF
-        self.r_alpha_flat: np.ndarray = in_r_alpha_flat  # flattened local DOF
+        self.r_alpha_0: Matrix12x3f = in_r_alpha_0  # initial local DOF
+        self.r_alpha: Matrix12x3f = in_r_alpha  # local DOF
+        self.r_alpha_flat: Vector36f = in_r_alpha_flat  # flattened local DOF
 
     @classmethod
     def generate_local_dof_data(cls,
-                                initial_vertex_positions_T: list[SpatialVector],
-                                vertex_positions_T: list[SpatialVector],
+                                initial_vertex_positions_T: list[SpatialVector1d],
+                                vertex_positions_T: list[SpatialVector1d],
                                 vertex_gradients_T: list[Matrix2x3r],
-                                edge_gradients_T: list[SpatialVector]) -> "LocalDOFData":
+                                edge_gradients_T: list[SpatialVector1d]) -> "LocalDOFData":
         """
         Assemble the local degree of freedom data.
         TODO: write description
@@ -223,44 +220,41 @@ class LocalDOFData:
         assert len(edge_gradients_T) == 3
 
         # lazily checking shape...
-        assert initial_vertex_positions_T[0].shape == (1, 3)
-        assert vertex_positions_T[0].shape == (1, 3)
+        assert initial_vertex_positions_T[0].shape == (3, )
+        assert vertex_positions_T[0].shape == (3, )
         assert vertex_gradients_T[0].shape == (2, 3)
-        assert edge_gradients_T[0].shape == (1, 3)
+        assert edge_gradients_T[0].shape == (3, )
 
         # r_alpha_0: fitting values
         # WARNING: Only fitting to zero implemented for gradients
         # TODO (ASOC): Implement fitting for creases
-        r_alpha_0: np.ndarray[tuple[int, int], np.dtype[np.float64]] = np.zeros(shape=(12, 3))
-        r_alpha_0[0, :] = initial_vertex_positions_T[0].flatten()
-        r_alpha_0[3, :] = initial_vertex_positions_T[1].flatten()
-        r_alpha_0[6, :] = initial_vertex_positions_T[2].flatten()
+        r_alpha_0: Matrix12x3f = np.zeros(shape=(12, 3))
+        r_alpha_0[0, :] = initial_vertex_positions_T[0]
+        r_alpha_0[3, :] = initial_vertex_positions_T[1]
+        r_alpha_0[6, :] = initial_vertex_positions_T[2]
 
         # r_alpha: input values
-        # TODO: check shaping....
-
-        r_alpha: np.ndarray[tuple[int, int], np.dtype[np.float64]] = np.zeros(shape=(12, 3))
-        # TODO: increment thru and see if correct...
-        r_alpha[0, :] = vertex_positions_T[0].flatten()
+        r_alpha: Matrix12x3f = np.zeros(shape=(12, 3))
+        r_alpha[0, :] = vertex_positions_T[0]
         r_alpha[1, :] = vertex_gradients_T[0][0, :]  # row
         r_alpha[2, :] = vertex_gradients_T[0][1, :]  # row
-        r_alpha[3, :] = vertex_positions_T[1].flatten()
+        r_alpha[3, :] = vertex_positions_T[1]
         r_alpha[4, :] = vertex_gradients_T[1][0, :]  # row
         r_alpha[5, :] = vertex_gradients_T[1][1, :]  # row
-        r_alpha[6, :] = vertex_positions_T[2].flatten()
+        r_alpha[6, :] = vertex_positions_T[2]
         r_alpha[7, :] = vertex_gradients_T[2][0, :]  # row
         r_alpha[8, :] = vertex_gradients_T[2][1, :]  # row
-        r_alpha[9, :] = edge_gradients_T[0].flatten()
-        r_alpha[10, :] = edge_gradients_T[1].flatten()
-        r_alpha[11, :] = edge_gradients_T[2].flatten()
+        r_alpha[9, :] = edge_gradients_T[0]
+        r_alpha[10, :] = edge_gradients_T[1]
+        r_alpha[11, :] = edge_gradients_T[2]
         logger.info("Input values:\n%s", r_alpha)
 
         #  Also flatten r_alpha for the normal constraint term
-        r_alpha_flat: np.ndarray[tuple[int, int], np.dtype[np.float64]] = np.zeros(shape=(36, 1))
+        r_alpha_flat: Vector36f = np.zeros(shape=(36, ))
         for i in range(12):
             for j in range(3):
-                # NOTE: r_alpha_flat is shape (36, 1)
-                r_alpha_flat[3 * i + j][0] = r_alpha[i, j]
+                # NOTE: r_alpha_flat is shape (36, )
+                r_alpha_flat[3 * i + j] = r_alpha[i, j]
 
         # FIXME: is the test case below equal or not?
         # Should be....
@@ -268,7 +262,7 @@ class LocalDOFData:
 
         assert r_alpha_0.shape == (12, 3)
         assert r_alpha.shape == (12, 3)
-        assert r_alpha_flat.shape == (36, 1)
+        assert r_alpha_flat.shape == (36, )
 
         return cls(r_alpha_0, r_alpha, r_alpha_flat)
 
@@ -282,38 +276,36 @@ def compute_local_twelve_split_energy_quadratic(local_hessian_data: LocalHessian
     TODO: finish docstring
 
     out: local_energy
-    out: local_derivatives (shape 36, 1)
+    out: local_derivatives (shape 36, )
     out: local_hessian (shape 36, 36)
     """
-    # todo("So, there is probably some issue with the matrix multiplication here")
-
-    local_derivatives: TwelveSplitGradient = np.ndarray(shape=(36, 1))
+    local_derivatives: TwelveSplitGradient = np.ndarray(shape=(36, ))
     local_hessian: TwelveSplitHessian = np.zeros(shape=(36, 36))
 
-    assert local_derivatives.shape == (36, 1)
+    assert local_derivatives.shape == (36, )
     assert local_hessian.shape == (36, 36)
 
     # Extract local hessian data
-    H_f: np.ndarray = local_hessian_data.H_f  # shape (12, 12)
-    H_s: np.ndarray = local_hessian_data.H_s  # shape (12, 12)
-    H_p: np.ndarray = local_hessian_data.H_p  # shape (36, 36)
+    H_f: Matrix12x12r = local_hessian_data.H_f  # shape (12, 12)
+    H_s: Matrix12x12r = local_hessian_data.H_s  # shape (12, 12)
+    H_p: Matrix36x36f = local_hessian_data.H_p  # shape (36, 36)
     w_f: float = local_hessian_data.w_f
     w_s: float = local_hessian_data.w_s
     w_p: float = local_hessian_data.w_p
 
     # Extract local degrees of freedom data
-    r_alpha_0: np.ndarray = local_dof_data.r_alpha_0  # shape (12, 3)
-    r_alpha: np.ndarray = local_dof_data.r_alpha  # shape (12, 3)
-    r_alpha_flat: np.ndarray = local_dof_data.r_alpha_flat  # shape (36, 1)
+    r_alpha_0: Matrix12x3f = local_dof_data.r_alpha_0  # shape (12, 3)
+    r_alpha: Matrix12x3f = local_dof_data.r_alpha  # shape (12, 3)
+    r_alpha_flat: Vector36f = local_dof_data.r_alpha_flat  # shape (36, )
 
     # Full local 12x12 hessian (only smoothness and fitting terms)
-    # Wait, the below doesn't make sense... why filling 12x12 with 12x12??
-    # FIXME: local_hessian_12x12 is the wrong shape...
     local_hessian_12x12: Matrix12x12r = 2 * (w_s * H_s + w_f * H_f)
 
+    # TODO: below testing numpy functionality
     npt.assert_array_equal(np.full(shape=(12, 12),
                                    fill_value=(2*(w_s*H_s+w_f*H_f))),
                            local_hessian_12x12)
+
     assert local_hessian_12x12.shape == (12, 12)
 
     # Add smoothness and fitting term blocks to the full local hessian per coordinate
@@ -326,7 +318,7 @@ def compute_local_twelve_split_energy_quadratic(local_hessian_data: LocalHessian
     local_hessian += 2.0 * w_p * H_p
 
     # Build per coordinate gradients for smoothness and fit terms
-    g_alpha: np.ndarray = 2 * (w_s * H_s) @ r_alpha
+    g_alpha: Matrix12x3f = 2 * (w_s * H_s) @ r_alpha
     assert g_alpha.shape == (12, 3)
     logger.info("Block gradient after adding smoothness term:\n%s", g_alpha)
     g_alpha += 2 * (w_f * H_f) @ (r_alpha - r_alpha_0)
@@ -335,9 +327,9 @@ def compute_local_twelve_split_energy_quadratic(local_hessian_data: LocalHessian
     # Combine per coordinate gradients into the local
     # TODO: use some NumPy indexing magic?
     for i in range(12):
-        local_derivatives[3 * i, 0] = g_alpha[i, 0]
-        local_derivatives[3 * i + 1, 0] = g_alpha[i, 1]
-        local_derivatives[3 * i + 2, 0] = g_alpha[i, 2]
+        local_derivatives[3 * i] = g_alpha[i, 0]
+        local_derivatives[3 * i + 1] = g_alpha[i, 1]
+        local_derivatives[3 * i + 2] = g_alpha[i, 2]
 
     # Add planar constraint term
     local_derivatives += 2.0 * w_p * H_p @ r_alpha_flat
@@ -348,28 +340,24 @@ def compute_local_twelve_split_energy_quadratic(local_hessian_data: LocalHessian
     # Add smoothness term
     smoothness_term: float = 0.0
     for i in range(3):
-        # r_alpha shape sliced = (12, 1)
-        __temp = (r_alpha[:, [i]].T @ (w_s * H_s) @ r_alpha[:, [i]])
-        assert __temp.shape == (1, 1)
-        smoothness_term += __temp[0, 0]
+        # r_alpha shape sliced = (12, )
+        # FIXME: is .T really needed?
+        smoothness_term += (r_alpha[:, i].T @ (w_s * H_s) @ r_alpha[:, i])
     assert isinstance(smoothness_term, float)
     logger.info("Smoothness term is %s", smoothness_term)
 
     # Add fit term
     fit_term: float = 0.0
     for i in range(3):
-        # r_alpha_diff shape sliced = (12, 1)
-        r_alpha_diff: np.ndarray = r_alpha[:, [i]] - r_alpha_0[:, [i]]  # gets columns
-        __temp = r_alpha_diff.T @ (w_f * H_f) @ r_alpha_diff
-        assert __temp.shape == (1, 1)
-        fit_term += __temp[0, 0]
+        # r_alpha_diff shape sliced = (12, )
+        r_alpha_diff: Vector12f = r_alpha[:, i] - r_alpha_0[:, i]  # gets columns
+        fit_term += (r_alpha_diff.T @ (w_f * H_f) @ r_alpha_diff)
     assert isinstance(fit_term, float)
     logger.info("Fit term is %s", fit_term)
 
     # Add planar fitting term
     planar_term: float = 0.0
-    # TODO: assert shape is (1, 1) for math below
-    planar_term += (r_alpha_flat.T @ (w_p * H_p) @ r_alpha_flat)[0, 0]
+    planar_term += (r_alpha_flat.T @ (w_p * H_p) @ r_alpha_flat)
     assert isinstance(planar_term, float)
 
     logger.info("Planar orthogonality term is %s", planar_term)
@@ -392,10 +380,10 @@ def shift_array(arr_ref: list, shift: int) -> None:
 
 
 def shift_local_energy_quadratic_vertices(
-        vertex_positions_T_ref: list[SpatialVector],
+        vertex_positions_T_ref: list[SpatialVector1d],
         vertex_gradients_T_ref: list[Matrix2x3r],
-        edge_gradients_T_ref: list[SpatialVector],
-        initial_vertex_positions_T_ref: list[SpatialVector],
+        edge_gradients_T_ref: list[SpatialVector1d],
+        initial_vertex_positions_T_ref: list[SpatialVector1d],
         face_vertex_uv_positions_ref: list[PlanarPoint],
         corner_to_corner_uv_positions_ref: list[Matrix2x2f],
         reverse_edge_orientations_ref: list[bool],
@@ -423,9 +411,9 @@ def shift_local_energy_quadratic_vertices(
 
 
 def compute_twelve_split_energy_quadratic(
-        vertex_positions: list[SpatialVector],
-        vertex_gradients: list[SpatialVector],
-        edge_gradients: list[list[SpatialVector]],  # list[SpatialVector] of length 3
+        vertex_positions: list[SpatialVector1d],
+        vertex_gradients: list[Matrix2x3r],
+        edge_gradients: list[list[SpatialVector1d]],  # list[SpatialVector1d] of length 3
         global_vertex_indices: list[int],
         global_edge_indices: list[list[int]],  # list[int] of length 3
         initial_vertex_positions: list[SpatialVector],
@@ -459,7 +447,7 @@ def compute_twelve_split_energy_quadratic(
     """
     num_independent_variables: int = 9 * num_variable_vertices + 3 * num_variable_edges
     energy: float = 0.0
-    derivatives: Vector2D = np.zeros(shape=(num_independent_variables, 1), dtype=np.float64)
+    derivatives: Vector1D = np.zeros(shape=(num_independent_variables, ), dtype=np.float64)
     hessian_entries: list[tuple[int, int, float]] = []
 
     for face_index in range(manifold.num_faces):
@@ -470,26 +458,22 @@ def compute_twelve_split_energy_quadratic(
         __k: int = F[face_index, 2]
 
         # Bundle relevant global variables into per face local vectors (all list of length 3)
-        initial_vertex_positions_T: list[SpatialVector] = build_face_variable_vector(
+        initial_vertex_positions_T: list[SpatialVector1d] = build_face_variable_vector(
             initial_vertex_positions, __i, __j, __k)
-        vertex_positions_T: list[SpatialVector] = build_face_variable_vector(vertex_positions,
-                                                                             __i,
-                                                                             __j,
-                                                                             __k)
-        edge_gradients_T: list[SpatialVector] = edge_gradients[face_index]
-        vertex_gradients_T: list[Matrix2x3r] = build_face_variable_vector(vertex_gradients,
-                                                                          __i,
-                                                                          __j,
-                                                                          __k)
-        assert len(initial_vertex_positions_T) == 3
-        assert len(vertex_positions_T) == 3
+        vertex_positions_T: list[SpatialVector1d] = build_face_variable_vector(
+            vertex_positions, __i,  __j,  __k)
+        edge_gradients_T: list[SpatialVector1d] = edge_gradients[face_index]
+        vertex_gradients_T: list[Matrix2x3r] = build_face_variable_vector(
+            vertex_gradients,  __i,  __j, __k)
+        assert len(initial_vertex_positions_T) == 3 and initial_vertex_positions_T[0].shape == (3, )
+        assert len(vertex_positions_T) == 3 and vertex_positions_T[0].shape == (3, )
         assert len(edge_gradients_T) == 3
-        assert len(vertex_gradients_T) == 3
+        assert len(vertex_gradients_T) == 3 and vertex_gradients_T[0].shape == (2, 3)
 
         # Get the global uv values for the face vertices
         # XXX: DO NOT MODIFY BELOW BY REFERNCE.
         # CHANGES SHOULD BE LOCAL TO EACH ITERATION OF THE FOR LOOP
-        face_vertex_uv_positions: list[PlanarPoint] = copy.deepcopy(
+        face_vertex_uv_positions: list[PlanarPoint1d] = copy.deepcopy(
             manifold.get_face_global_uv(face_index))  # length 3
         assert len(face_vertex_uv_positions) == 3
 
@@ -556,10 +540,10 @@ def compute_twelve_split_energy_quadratic(
                 break
 
         # Get normal for the face
-        normal: SpatialVector = np.zeros(shape=(1, 3))
+        normal: SpatialVector1d = np.zeros(shape=(3, ))
         if is_cone_adjacent_face:
-            normal = initial_face_normals[[face_index], :]
-            assert normal.shape == (1, 3)
+            normal = initial_face_normals[face_index, :]
+            assert normal.shape == (3, )
             logger.info("Weighting by normal %s", normal.T)
 
         # Get local to global map
@@ -589,13 +573,16 @@ def compute_twelve_split_energy_quadratic(
 
         # Compute the local energy quadratic system for the face
         local_energy: float
-        local_derivatives: TwelveSplitGradient
+        local_derivatives: TwelveSplitGradient  # shape (36, )
         local_hessian: TwelveSplitHessian
         # FIXME: local_derivatives adding to the global_derivative are WRONG!
-        local_energy, local_derivatives, local_hessian = compute_local_twelve_split_energy_quadratic(
-            local_hessian_data,
-            local_dof_data
-        )
+        local_energy, local_derivatives, local_hessian = (
+            compute_local_twelve_split_energy_quadratic(
+                local_hessian_data,
+                local_dof_data
+            ))
+        assert local_derivatives.shape == (36, )
+        assert local_hessian.shape == (36, 36)
 
         # Update the energy quadratic with the new face energy
         # NOTE: update_energy_quadratic is only used here.
@@ -626,7 +613,7 @@ def compute_twelve_split_energy_quadratic(
                                      #  shape=(num_independent_variables, num_independent_variables),
                                      dtype=np.float64)
 
-    assert derivatives.shape == (num_independent_variables, 1)
+    assert derivatives.shape == (num_independent_variables, )
 
     # Build the inverse.
     # TODO: This is very finicky with CSR sparse matrices...
@@ -642,15 +629,17 @@ def compute_twelve_split_energy_quadratic(
 # methods translated from .h are below
 # ******************************************
 
-def build_local_fit_hessian(is_cone: list[bool], is_cone_adjacent: list[bool], optimization_params:
-                            OptimizationParameters) -> np.ndarray:
+def build_local_fit_hessian(is_cone: list[bool],
+                            is_cone_adjacent: list[bool],
+                            optimization_params:
+                            OptimizationParameters) -> Matrix12x12r:
     """
     Build the hessian for the local fitting energy
     This is a diagonal matrix with special weights for cones and cone adjacent
     vertices.
     Shape returned = (12, 12)
     """
-    H_f: np.ndarray = np.zeros(shape=(12, 12), dtype=np.float64)
+    H_f: Matrix12x12r = np.zeros(shape=(12, 12), dtype=np.float64)
 
     # Check for cone collapsing vertices
     for i in range(3):
@@ -756,7 +745,7 @@ def build_planar_constraint_hessian(uv: np.ndarray,
     return H_p
 
 
-def build_twelve_split_spline_energy_system(initial_V: np.ndarray,
+def build_twelve_split_spline_energy_system(initial_V: MatrixNx3f,
                                             initial_face_normals: np.ndarray,
                                             affine_manifold: AffineManifold,
                                             optimization_params: OptimizationParameters
@@ -794,20 +783,22 @@ def build_twelve_split_spline_energy_system(initial_V: np.ndarray,
     num_variable_edges: int = len(variable_edges)
 
     # Initialize variables to optimize
-    vertex_positions: list[SpatialVector] = []
-    initial_vertex_positions: list[SpatialVector] = []
+    vertex_positions: list[SpatialVector1d] = []
+    initial_vertex_positions: list[SpatialVector1d] = []
     for i in range(num_vertices):
-        assert initial_V[[i], :].shape == (1, 3)
-        vertex_positions.append(initial_V[[i], :])  # shape (1, 3) for SpatialVectors
-        initial_vertex_positions.append(initial_V[[i], :])
+        assert initial_V[i, :].shape == (3, )
+        vertex_positions.append(initial_V[i, :])  # shape (3, ) for SpatialVectors
+        initial_vertex_positions.append(initial_V[i, :])
 
     vertex_gradients: list[Matrix2x3r] = generate_zero_vertex_gradients(num_vertices)
-    edge_gradients: list[list[SpatialVector]] = generate_zero_edge_gradients(num_faces)
-    # NOTE: assertion == 3 below since ASOC code originally has array<int, 3> as elements of edge_gradients
+    edge_gradients: list[list[SpatialVector1d]] = generate_zero_edge_gradients(num_faces)
+    # NOTE: assertion == 3 below since ASOC code originally has array<int, 3>
+    # as elements of edge_gradients
     assert len(edge_gradients[0]) == 3
 
     # Build vertex variable indices
-    global_vertex_indices: list[int] = build_variable_vertex_indices_map(num_vertices, variable_vertices)
+    global_vertex_indices: list[int] = build_variable_vertex_indices_map(num_vertices,
+                                                                         variable_vertices)
 
     # Build edge variable indices
     global_edge_indices: list[list[int]] = build_variable_edge_indices_map(
@@ -846,7 +837,7 @@ def optimize_twelve_split_spline_surface(
         variable_edges: list[int],
         fit_matrix: coo_matrix,
         hessian_inverse: CholeskySolverD
-) -> tuple[MatrixNx3, list[Matrix2x3r], list[list[SpatialVector]]]:
+) -> tuple[MatrixNx3, list[Matrix2x3r], list[list[SpatialVector1d]]]:
     """
     Helper function for generate_optimized_twelve_split_position_data()
 
@@ -863,7 +854,9 @@ def optimize_twelve_split_spline_surface(
     :param fit_matrix: fit matrix
     :param hessian_inverse: Cholespy package Cholesky solver
 
-    :return: (optimized_V, optimized_vertex_gradients, optimized_edge_gradients) with optimized_spatial_vector with list[SpatialVector] of length 3
+    :return optimized_V:
+    :return optimized_vertex_gradients:
+    :return optimized_edge_gradients: list[SpatialVector1d] of length 3
     :rtype: tuple[MatrixNx3, list[Matrix2x3r], list[list[SpatialVector]]]
     """
     # Get variable counts
@@ -872,26 +865,27 @@ def optimize_twelve_split_spline_surface(
     num_faces: int = affine_manifold.num_faces
 
     # Initialize variables to optimize
-    vertex_positions: list[SpatialVector] = []
-    initial_vertex_positions: list[SpatialVector] = []
+    vertex_positions: list[SpatialVector1d] = []
+    initial_vertex_positions: list[SpatialVector1d] = []
     for i in range(num_vertices):
-        assert initial_V[[i], :].shape == (1, 3)
-        vertex_positions.append(initial_V[[i], :])
-        initial_vertex_positions.append(initial_V[[i], :])
+        assert initial_V[i, :].shape == (3, )
+        vertex_positions.append(initial_V[i, :])
+        initial_vertex_positions.append(initial_V[i, :])
     assert len(vertex_positions) == num_vertices
     assert len(initial_vertex_positions) == num_vertices
     vertex_gradients: list[Matrix2x3r] = generate_zero_vertex_gradients(num_vertices)
-    edge_gradients: list[list[SpatialVector]] = generate_zero_edge_gradients(num_faces)
+    edge_gradients: list[list[SpatialVector1d]] = generate_zero_edge_gradients(num_faces)
     assert len(edge_gradients[0]) == 3
 
     # Build variable values gradient as H
-    initial_variable_values: Vector1D = generate_twelve_split_variable_value_vector(vertex_positions,
-                                                                                    vertex_gradients,
-                                                                                    edge_gradients,
-                                                                                    variable_vertices,
-                                                                                    variable_edges,
-                                                                                    halfedge,
-                                                                                    he_to_corner)
+    initial_variable_values: Vector1D = (
+        generate_twelve_split_variable_value_vector(vertex_positions,
+                                                    vertex_gradients,
+                                                    edge_gradients,
+                                                    variable_vertices,
+                                                    variable_edges,
+                                                    halfedge,
+                                                    he_to_corner))
     assert initial_variable_values.ndim == 1
     logger.info("Initial variable value vector:\n%s", initial_variable_values)
 
@@ -901,11 +895,11 @@ def optimize_twelve_split_spline_surface(
     hessian_inverse.solve(right_hand_side, optimized_variable_values)
 
     # Update variables
-    # NOTE: Below are simply references to the original lists, but renamed for readability.
-    # FIXME or maybe have these deep copied...
-    optimized_vertex_positions_ref: list[SpatialVector] = copy.deepcopy(vertex_positions)
+    # TODO: check if below need to be deep copied or not...
+    # It seems fine to just reassigned variable namings
+    optimized_vertex_positions_ref: list[SpatialVector1d] = copy.deepcopy(vertex_positions)
     optimized_vertex_gradients_ref: list[Matrix2x3r] = copy.deepcopy(vertex_gradients)
-    optimized_edge_gradients_ref: list[list[SpatialVector]] = copy.deepcopy(edge_gradients)
+    optimized_edge_gradients_ref: list[list[SpatialVector1d]] = copy.deepcopy(edge_gradients)
     update_position_variables(
         optimized_variable_values, variable_vertices, optimized_vertex_positions_ref)
     update_vertex_gradient_variables(
@@ -919,20 +913,24 @@ def optimize_twelve_split_spline_surface(
 
     # Copy variable values to constants... which gets overridden anyways.
     optimized_V: MatrixNx3 = np.ndarray(shape=(num_vertices, 3))
+    # TODO: this optimized_V seems redundant.... since just translating over to NumPy array
+    # Could just do np.array(optimized_vertex_positions)
     for i in range(num_vertices):
-        # Flattens so that broadcasting works.
-        optimized_V[i, :] = optimized_vertex_positions_ref[i].flatten()
+        # Make sure that element is 1D so broadcasting works.
+        assert optimized_vertex_positions_ref[i].shape == (3, )
+        optimized_V[i, :] = optimized_vertex_positions_ref[i]
 
     return optimized_V, optimized_vertex_gradients_ref, optimized_edge_gradients_ref
 
 
-def generate_optimized_twelve_split_position_data(V: MatrixXf,
-                                                  affine_manifold: AffineManifold,
-                                                  fit_matrix: coo_matrix,
-                                                  hessian_inverse: CholeskySolverD,
-                                                  corner_data_ref: dict[int, dict[int, TriangleCornerData]],
-                                                  midpoint_data_ref: dict[int, dict[int, TriangleMidpointData]]
-                                                  ) -> None:
+def generate_optimized_twelve_split_position_data(
+    V: MatrixXf,
+    affine_manifold: AffineManifold,
+    fit_matrix: coo_matrix,
+    hessian_inverse: CholeskySolverD,
+    corner_data_ref: dict[int, dict[int, TriangleCornerData]],
+    midpoint_data_ref: dict[int, dict[int, TriangleMidpointData]]
+) -> None:
     """
     Compute the optimal per triangle position data for given vertex positions.
     NOTE: used by twelve_split_spline.py
@@ -967,17 +965,19 @@ def generate_optimized_twelve_split_position_data(V: MatrixXf,
     # Run optimization
     optimized_V: MatrixNx3f
     optimized_vertex_gradients: list[Matrix2x3r]
-    optimized_reduced_edge_gradients: list[list[SpatialVector]]  # list[SpatialVector] of length 3
-    optimized_V, optimized_vertex_gradients, optimized_reduced_edge_gradients = optimize_twelve_split_spline_surface(
-        V,
-        affine_manifold,
-        halfedge,
-        he_to_corner,
-        variable_vertices,
-        variable_edges,
-        fit_matrix,
-        hessian_inverse)
-    assert len(optimized_reduced_edge_gradients[0]) == 3  # lazy size cehcking
+    optimized_reduced_edge_gradients: list[list[SpatialVector1d]]  # list[SpatialVector] of length 3
+    optimized_V, optimized_vertex_gradients, optimized_reduced_edge_gradients = (
+        optimize_twelve_split_spline_surface(
+            V,
+            affine_manifold,
+            halfedge,
+            he_to_corner,
+            variable_vertices,
+            variable_edges,
+            fit_matrix,
+            hessian_inverse))
+    assert len(optimized_reduced_edge_gradients[0]) == 3  # lazy size checking
+    assert optimized_reduced_edge_gradients[0][0].shape == (3, )
 
     # TESTING --
     # https://stackoverflow.com/questions/6736590/fast-check-for-nan-in-numpy
@@ -993,10 +993,11 @@ def generate_optimized_twelve_split_position_data(V: MatrixXf,
                                          corner_data_ref)
 
     # Build the full edge gradients with first gradient determined by the corner position data
-    optimized_edge_gradients: dict[int, dict[int, Matrix2x3r]] = convert_reduced_edge_gradients_to_full(
-        optimized_reduced_edge_gradients,
-        corner_data_ref,
-        affine_manifold)  # list[Matrix2x3r] of length 3
+    optimized_edge_gradients: dict[int, dict[int, Matrix2x3r]] = (
+        convert_reduced_edge_gradients_to_full(
+            optimized_reduced_edge_gradients,
+            corner_data_ref,
+            affine_manifold))  # list[Matrix2x3r] of length 3
     assert len(optimized_edge_gradients[0]) == 3
 
     # Build midpoint position data from the optimized gradients
@@ -1027,7 +1028,7 @@ def generate_zero_vertex_gradients(num_vertices: int) -> list[Matrix2x3r]:
     return gradients
 
 
-def generate_zero_edge_gradients(num_faces: int) -> list[list[SpatialVector]]:
+def generate_zero_edge_gradients(num_faces: int) -> list[list[SpatialVector1d]]:
     """
     Generate zero value gradients for a given number of halfedges.
     Helper function.
@@ -1037,12 +1038,12 @@ def generate_zero_edge_gradients(num_faces: int) -> list[list[SpatialVector]]:
     """
 
     # Set the zero gradient for each vertex
-    edge_gradients: list[list[SpatialVector]] = []  # list of list of 3 SpatialVector elements
+    edge_gradients: list[list[SpatialVector1d]] = []  # list of list of 3 SpatialVector elements
 
     for _ in range(num_faces):
-        edge_gradients.append([np.zeros(shape=(1, 3)),
-                               np.zeros(shape=(1, 3)),
-                               np.zeros(shape=(1, 3))])
+        edge_gradients.append([np.zeros(shape=(3, )),
+                               np.zeros(shape=(3, )),
+                               np.zeros(shape=(3, ))])
     return edge_gradients
 
 
@@ -1050,15 +1051,14 @@ def convert_full_edge_gradients_to_reduced(edge_gradients: list[list[Matrix2x3r]
     """
     Given edge and opposite corner direction gradients at triangle edge midpoints,
     extract just the opposite corner direction gradient
-    @param[in] edge_gradients: edge and corner directed gradients per edge midpoints
-    @param[out] reduced_edge_gradients: opposite corner directed gradients per edge midpoints
+    :param[in] edge_gradients: edge and corner directed gradients per edge midpoints
+    :param[out] reduced_edge_gradients: opposite corner directed gradients per edge midpoints
     :type reduced_edge_gradients: list[list[SpatialVector]]
     """
     unimplemented("Method is not used anywhere in original ASOC code.")
 
 
 def convert_reduced_edge_gradients_to_full(reduced_edge_gradients: list[list[SpatialVector]],
-                                           #    corner_data with FaceIndex as outerkey and FaceVertexIndex as innerkey
                                            corner_data: dict[int, dict[int, TriangleCornerData]],
                                            affine_manifold: AffineManifold
                                            ) -> dict[int, dict[int, Matrix2x3r]]:
@@ -1067,12 +1067,21 @@ def convert_reduced_edge_gradients_to_full(reduced_edge_gradients: list[list[Spa
     direction of the opposite triangle corners, which are determined by gradients and
     position data at the corners.
 
-    NOTE: returns edge_gradients rather than modifying it by reference since this method is only used internally within generate_optimized_twelve_split_position_data() and does not need to modify by reference.
+    NOTE: returns edge_gradients rather than modifying it by reference since this method is only 
+    used internally within generate_optimized_twelve_split_position_data() and does not need to
+    modify by reference.
 
-    @param[in] reduced_edge_gradients: opposite corner directed gradients per edge midpoints with list[SpatialVector] of length 3
-    @param[in] corner_data: quadratic vertex position and derivative data with list[TriangleCornerData] of length 3
-    @param[in] affine_manifold: mesh topology and affine manifold structure
-    @param[out] edge_gradients: edge and corner directed gradients per edge midpoints with list[Matrix2x3r] of length 3
+    :param reduced_edge_gradients: [in] opposite corner directed gradients per edge 
+        midpoints with list[SpatialVector] of length 3
+
+    :param corner_data: [in] quadratic vertex position and derivative data with 
+        list[TriangleCornerData] of length 3.
+        Has FaceIndex as outer key and FaceVertexIndex as inner key.
+
+    :param affine_manifold: [in] mesh topology and affine manifold structure
+
+    :param edge_gradients: [out] edge and corner directed gradients per edge midpoints with 
+        list[Matrix2x3r] of length 3
     """
     F: MatrixXi = affine_manifold.faces
     num_faces: int = len(reduced_edge_gradients)
@@ -1080,9 +1089,7 @@ def convert_reduced_edge_gradients_to_full(reduced_edge_gradients: list[list[Spa
     # Compute the first gradient and copy the second for each edge
     edge_gradients: dict[int, dict[int, Matrix2x3r]] = defaultdict(dict)
 
-    # FIXME: edge_gradients not in order we need...
     for i in range(num_faces):
-
         for j in range(3):
             chart: EdgeManifoldChart = affine_manifold.get_edge_chart(i, j)
             f_top: np.int64 = np.int64(chart.top_face_index)
@@ -1091,29 +1098,26 @@ def convert_reduced_edge_gradients_to_full(reduced_edge_gradients: list[list[Spa
 
             # Get midpoint position and derivative along the edge
             # TODO: maybe rename midpoint to "_" to show that it is not used?
-            midpoint: SpatialVector
-            midpoint_edge_gradient: SpatialVector
+            midpoint: SpatialVector1d
+            midpoint_edge_gradient: SpatialVector1d
             midpoint, midpoint_edge_gradient = compute_edge_midpoint_with_gradient(
                 corner_data[i][(j + 1) % 3],
                 corner_data[i][(j + 2) % 3])
 
             # Copy the gradients
             edge_gradient: Matrix2x3r = np.array([
-                midpoint_edge_gradient.flatten(),  # row(0)
-                reduced_edge_gradients[i][j].flatten()  # row(1)
+                midpoint_edge_gradient,  # row(0)
+                reduced_edge_gradients[i][j]  # row(1)
             ], dtype=np.float64)
             assert edge_gradient.shape == (2, 3)
 
             edge_gradients[i][j] = edge_gradient
 
-            # edge_gradients[i][j][0, :] = midpoint_edge_gradient.flatten()  # row(0)
-            # edge_gradients[i][j][1, :] = reduced_edge_gradients[i][j].flatten()  # row(1)
-
             # If the edge isn't on the boundary, set the other face corner corresponding to it
             if not chart.is_boundary:
                 f_bottom: int = chart.bottom_face_index
                 v_bottom: int = chart.bottom_vertex_index
-                j_bottom: int = find_face_vertex_index(F[f_bottom, :].flatten(), v_bottom)
+                j_bottom: int = find_face_vertex_index(F[f_bottom, :], v_bottom)
                 edge_gradients[f_bottom][j_bottom] = edge_gradients[i][j]
 
     return edge_gradients

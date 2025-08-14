@@ -11,8 +11,8 @@ from scipy.sparse import coo_matrix
 
 from src.core.affine_manifold import AffineManifold
 from src.core.common import (COLS, ROWS, Matrix2x3f, MatrixNx3f, MatrixXf,
-                             MatrixXi, SpatialVector, Vector1D,
-                             compare_eigen_numpy_matrix,
+                             MatrixXi, SpatialVector, SpatialVector1d,
+                             Vector1D, compare_eigen_numpy_matrix,
                              deserialize_eigen_matrix_csv_to_numpy,
                              float_equal, index_vector_complement,
                              initialize_spot_control_mesh, todo)
@@ -359,24 +359,24 @@ def test_initial_vertex_positions() -> None:
     vertex_positions: list[SpatialVector] = []
     initial_vertex_positions: list[SpatialVector] = []
     for i in range(num_vertices):
-        assert initial_V[[i], :].shape == (1, 3)
-        vertex_positions.append(initial_V[[i], :])  # shape (1, 3) for SpatialVectors
-        initial_vertex_positions.append(initial_V[[i], :])
+        assert initial_V[i, :].shape == (3, )
+        vertex_positions.append(initial_V[i, :])  # shape (1, 3) for SpatialVectors
+        initial_vertex_positions.append(initial_V[i, :])
 
     # NOTE: below should be the same for fit and full cases
     compare_eigen_numpy_matrix(
         "spot_control\\optimize_spline_surface\\build_twelve_split_spline_energy_system\\fit\\vertex_positions.csv",
-        np.array(vertex_positions).squeeze())
+        np.array(vertex_positions))
     compare_eigen_numpy_matrix(
         "spot_control\\optimize_spline_surface\\build_twelve_split_spline_energy_system\\fit\\initial_vertex_positions.csv",
-        np.array(initial_vertex_positions).squeeze())
+        np.array(initial_vertex_positions))
 
     compare_eigen_numpy_matrix(
         "spot_control\\optimize_spline_surface\\build_twelve_split_spline_energy_system\\full\\vertex_positions.csv",
-        np.array(vertex_positions).squeeze())
+        np.array(vertex_positions))
     compare_eigen_numpy_matrix(
         "spot_control\\optimize_spline_surface\\build_twelve_split_spline_energy_system\\full\\initial_vertex_positions.csv",
-        np.array(initial_vertex_positions).squeeze())
+        np.array(initial_vertex_positions))
 
 
 def test_optimize_twelve_split_spline_surface_spot_mesh() -> None:
@@ -450,7 +450,7 @@ def test_optimize_twelve_split_spline_surface_spot_mesh() -> None:
         make_3d=True)
     compare_eigen_numpy_matrix(
         filepath+"optimized_reduced_edge_gradients.csv",
-        np.array(optimized_reduced_edge_gradients).squeeze(),
+        np.array(optimized_reduced_edge_gradients),
         make_3d=True)
 
 
@@ -527,9 +527,9 @@ def test_generate_optimized_twelve_split_position_data_spot_mesh() -> None:
     for outer_key in sorted(corner_data):
         for inner_key in sorted(corner_data[outer_key]):
             triangle_corner_data: TriangleCornerData = corner_data[outer_key][inner_key]
-            corner_data_test.append(triangle_corner_data.function_value.flatten())
-            corner_data_test.append(triangle_corner_data.first_edge_derivative.flatten())
-            corner_data_test.append(triangle_corner_data.second_edge_derivative.flatten())
+            corner_data_test.append(triangle_corner_data.function_value)
+            corner_data_test.append(triangle_corner_data.first_edge_derivative)
+            corner_data_test.append(triangle_corner_data.second_edge_derivative)
     compare_eigen_numpy_matrix("spot_control\\12_split_spline\\corner_data.csv",
                                np.array(corner_data_test))
 
@@ -537,7 +537,7 @@ def test_generate_optimized_twelve_split_position_data_spot_mesh() -> None:
     for outer_key in sorted(midpoint_data):
         for inner_key in sorted(midpoint_data[outer_key]):
             triangle_midpoint_data: TriangleMidpointData = midpoint_data[outer_key][inner_key]
-            midpoint_data_test.append(triangle_midpoint_data.normal_derivative.flatten())
+            midpoint_data_test.append(triangle_midpoint_data.normal_derivative)
     compare_eigen_numpy_matrix("spot_control\\12_split_spline\\midpoint_data.csv",
                                np.array(midpoint_data_test))
 
@@ -556,12 +556,12 @@ def test_zero_vertex_gradients_spot_mesh() -> None:
     # NOTE: both fit and full cases shouuld be the same.
     compare_eigen_numpy_matrix(
         "spot_control\\optimize_spline_surface\\build_twelve_split_spline_energy_system\\fit\\vertex_gradients.csv",
-        np.array(vertex_gradients).squeeze(),
+        np.array(vertex_gradients),
         make_3d=True)
 
     compare_eigen_numpy_matrix(
         "spot_control\\optimize_spline_surface\\build_twelve_split_spline_energy_system\\full\\vertex_gradients.csv",
-        np.array(vertex_gradients).squeeze(),
+        np.array(vertex_gradients),
         make_3d=True)
 
 
@@ -574,16 +574,16 @@ def test_zero_edge_gradients_spot_mesh() -> None:
     affine_manifold: AffineManifold = initialize_affine_manifold_from_spot_control()
     num_faces: int = affine_manifold.num_faces
 
-    edge_gradients: list[list[SpatialVector]] = generate_zero_edge_gradients(num_faces)
+    edge_gradients: list[list[SpatialVector1d]] = generate_zero_edge_gradients(num_faces)
 
     # NOTE: both fit and full cases should be the same.
     compare_eigen_numpy_matrix(
         "spot_control\\optimize_spline_surface\\build_twelve_split_spline_energy_system\\fit\\edge_gradients.csv",
-        np.array(edge_gradients).squeeze(),
+        np.array(edge_gradients),
         make_3d=True)
     compare_eigen_numpy_matrix(
         "spot_control\\optimize_spline_surface\\build_twelve_split_spline_energy_system\\full\\edge_gradients.csv",
-        np.array(edge_gradients).squeeze(),
+        np.array(edge_gradients),
         make_3d=True)
 
 
@@ -656,7 +656,7 @@ def test_build_twelve_split_spline_energy_system_spot_mesh() -> None:
     # NOTE: magic number from ASOC code output for fit_energy
     assert float_equal(fit_energy, 0.0)
     compare_eigen_numpy_matrix(
-        "spot_control\\12_split_spline\\fit_derivatives.csv", fit_derivatives.flatten())
+        "spot_control\\12_split_spline\\fit_derivatives.csv", fit_derivatives)
     compare_eigen_numpy_matrix(
         "spot_control\\12_split_spline\\fit_matrix_dense.csv", fit_matrix.todense())
 
@@ -673,6 +673,6 @@ def test_build_twelve_split_spline_energy_system_spot_mesh() -> None:
     # from the original C++ code
     # NOTE: magic number from ASOC code's output for energy
     assert float_equal(energy, 1269.9805595159069)
-    compare_eigen_numpy_matrix("spot_control\\12_split_spline\\derivatives.csv", derivatives.flatten())
+    compare_eigen_numpy_matrix("spot_control\\12_split_spline\\derivatives.csv", derivatives)
     compare_eigen_numpy_matrix(
         "spot_control\\12_split_spline\\energy_hessian_dense.csv", energy_hessian.todense())

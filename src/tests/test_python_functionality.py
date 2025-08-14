@@ -287,6 +287,14 @@ def main():
     is_boundary_patch[0] = True
     print(is_boundary_patch)
 
+    print(np.array([1]).flatten())
+
+    a = np.array([0, 0, 0, 1, 1, 1])
+    b = np.trim_zeros(np.copy(a))
+    b[0] = 39
+    print(a)
+    print(b)
+
 
 if __name__ == "__main__":
     main()

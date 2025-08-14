@@ -1,13 +1,14 @@
 
 
+import copy
 from enum import Enum
 
 import numpy as np
 
 from src.core.bivariate_quadratic_function import \
     formatted_bivariate_quadratic_mapping
-from src.core.common import (Matrix2x2f, PlanarPoint, PlanarPoint1d, Vector2D,
-                             logger)
+from src.core.common import Matrix2x2f, PlanarPoint1d, Vector2D, logger
+from src.core.interval import Interval
 from src.core.polynomial_function import (compute_polynomial_mapping_product,
                                           formatted_polynomial)
 from src.core.rational_function import RationalFunction
@@ -36,8 +37,21 @@ class Conic(RationalFunction):
     # ************
     # Constructors
     # ************
-    def __init__(self, m_type=ConicType.UNKNOWN, *args, **kwargs) -> None:
-        super().__init__(2, 2, *args, **kwargs)
+    # def __init__(self, m_type=ConicType.UNKNOWN, *args, **kwargs) -> None:
+    #     super().__init__(2, 2, *args, **kwargs)
+    #     self.m_type: ConicType = m_type
+    #     assert self.__is_valid()
+    # FIXME: double check that the parameters to the constructor are OK
+    def __init__(self,
+                 m_type=ConicType.UNKNOWN,
+                 numerator_coeffs: np.ndarray | None = None,
+                 denominator_coeffs: np.ndarray | None = None,
+                 domain: Interval | None = None) -> None:
+        """
+        Constructor for Conic class.
+        NOTE: Conic has degree == 2 and dimension == 2.
+        """
+        super().__init__(2, 2, numerator_coeffs, denominator_coeffs, domain)
         self.m_type: ConicType = m_type
         assert self.__is_valid()
 
@@ -67,7 +81,11 @@ class Conic(RationalFunction):
         assert P_rot_coeffs.shape == (3, 2)
         self.numerators = P_rot_coeffs
 
-    def pullback_quadratic_function(self, dimension: int, F_coeffs: np.ndarray) -> RationalFunction:
+    def pullback_quadratic_function(self, dimension: int, F_coeffs_ref: np.ndarray) -> RationalFunction:
+        F_coeffs = copy.deepcopy(F_coeffs_ref)
+        if dimension == 1:
+            F_coeffs = F_coeffs.reshape((6, dimension))
+
         assert F_coeffs.shape == (6, dimension)
         assert F_coeffs.dtype == np.float64
 
@@ -77,13 +95,13 @@ class Conic(RationalFunction):
         # Separate the individual polynomial coefficients from the rational function
         P_coeffs = self.numerators
 
-        u_coeffs = P_coeffs[:, [0]]
-        v_coeffs = P_coeffs[:, [1]]
+        u_coeffs = P_coeffs[:, 0]
+        v_coeffs = P_coeffs[:, 1]
         Q_coeffs = self.denominator
         # Asserting to make sure we are getting the shape we want.
-        assert u_coeffs.shape == (3, 1)
-        assert v_coeffs.shape == (3, 1)
-        assert Q_coeffs.shape == (3, 1)
+        assert u_coeffs.shape == (3, )
+        assert v_coeffs.shape == (3, )
+        assert Q_coeffs.shape == (3, )
 
         logger.info("u function before pullback: (%s)/(%s)",
                     u_coeffs, Q_coeffs)

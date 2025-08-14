@@ -6,7 +6,6 @@ ORIGINAL PURPOSE: So, this file focuses on utilizing automatic differentiation v
 UPDATED PURPOSE: the methods in this class do not seem to be used elsewhere aside from testing.
 """
 from src.core.common import unimplemented
-# import jax.numpy as jnp
 
 
 def generate_local_variable_matrix_index(row: int, col: int, dimension=3) -> int:
@@ -16,7 +15,7 @@ def generate_local_variable_matrix_index(row: int, col: int, dimension=3) -> int
     return dimension * row + col
 
 
-def generate_independent_variable():
+def generate_independent_variable() -> None:
     # This is only used by build_independent_variable_vector() and build_independent_variable_matrix()
     """
      Build an independent variable with a given value and variable index.

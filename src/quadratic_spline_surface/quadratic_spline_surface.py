@@ -11,8 +11,8 @@ import polyscope
 from src.core.common import (COLS, DISCRETIZATION_LEVEL, HASH_TABLE_SIZE, ROWS,
                              SKY_BLUE, Matrix3x2f, Matrix6x3f, MatrixNx3f,
                              MatrixNx3i, MatrixXf, PatchIndex, PlanarPoint,
-                             SpatialVector, Vector1D,
-                             convert_nested_vector_to_matrix,
+                             PlanarPoint1d, SpatialVector, SpatialVector1d,
+                             Vector1D, convert_nested_vector_to_matrix,
                              convert_polylines_to_edges, logger)
 from src.core.convex_polygon import ConvexPolygon
 from src.core.evaluate_surface_normal import \
@@ -281,7 +281,6 @@ class QuadraticSplineSurface:
         points: list[SpatialVector] = []
         polylines: list[list[int]] = []
 
-        # FIXME this part takes the longest. optimize please.
         for patch_index in range(self.num_patches):
             spline_surface_patch: QuadraticSplineSurfacePatch = self.get_patch(patch_index)
             # list of size 3
@@ -290,8 +289,8 @@ class QuadraticSplineSurface:
 
             for k, _ in enumerate(patch_boundaries):
                 # Get points on the boundary curve
-                parameter_points_k: list[PlanarPoint] = patch_boundaries[k].sample_points(5)
-                points_k: list[SpatialVector] = []
+                parameter_points_k: list[PlanarPoint1d] = patch_boundaries[k].sample_points(5)
+                points_k: list[SpatialVector1d] = []
 
                 for i, _ in enumerate(parameter_points_k):
                     points_k.append(spline_surface_patch.evaluate(parameter_points_k[i]))

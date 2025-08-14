@@ -1,13 +1,17 @@
 """
 Methods to operate on bivariate quadratics represented by coefficient vectors.
 """
-from typing import NoReturn
+import numpy as np
 
-from src.core.common import *
-from src.core.polynomial_function import *
+from src.core.common import (Matrix2x2f, Matrix3x3r, Matrix3x6r, Matrix6x3f,
+                             Matrix6x6r, MatrixXf, PlanarPoint, PlanarPoint1d,
+                             SpatialVector1d, Vector1D, Vector2D, Vector3f,
+                             Vector6f, cross_product, float_equal,
+                             unimplemented)
+from src.core.polynomial_function import formatted_term
 
 
-def const_coeffs(dimension: int, quadratic_coeffs: np.ndarray, col: int):
+def const_coeffs(dimension: int, quadratic_coeffs: np.ndarray, col: int) -> float:
     """
     Retrieves quadratic_coeffs const element.
     """
@@ -16,7 +20,7 @@ def const_coeffs(dimension: int, quadratic_coeffs: np.ndarray, col: int):
     return quadratic_coeffs[0, col]
 
 
-def u_coeffs(dimension: int, quadratic_coeffs: np.ndarray, col: int):
+def u_coeffs(dimension: int, quadratic_coeffs: np.ndarray, col: int) -> float:
     """
     Retrieves quadratic_coeffs u element.
     """
@@ -26,7 +30,7 @@ def u_coeffs(dimension: int, quadratic_coeffs: np.ndarray, col: int):
     return quadratic_coeffs[1, col]
 
 
-def v_coeffs(dimension: int, quadratic_coeffs: np.ndarray, col: int):
+def v_coeffs(dimension: int, quadratic_coeffs: np.ndarray, col: int) -> float:
     """
     Retrieves quadratic_coeffs v element.
     """
@@ -36,7 +40,7 @@ def v_coeffs(dimension: int, quadratic_coeffs: np.ndarray, col: int):
     return quadratic_coeffs[2, col]
 
 
-def uv_coeffs(dimension: int, quadratic_coeffs: np.ndarray, col: int):
+def uv_coeffs(dimension: int, quadratic_coeffs: np.ndarray, col: int) -> float:
     """
     Retrieves quadratic_coeffs uv element.
     """
@@ -46,7 +50,7 @@ def uv_coeffs(dimension: int, quadratic_coeffs: np.ndarray, col: int):
     return quadratic_coeffs[3, col]
 
 
-def uu_coeffs(dimension: int, quadratic_coeffs: np.ndarray, col: int):
+def uu_coeffs(dimension: int, quadratic_coeffs: np.ndarray, col: int) -> float:
     """
     Retrieves quadratic_coeffs uu element.
     """
@@ -56,7 +60,7 @@ def uu_coeffs(dimension: int, quadratic_coeffs: np.ndarray, col: int):
     return quadratic_coeffs[4, col]
 
 
-def vv_coeffs(dimension: int, quadratic_coeffs: np.ndarray, col: int):
+def vv_coeffs(dimension: int, quadratic_coeffs: np.ndarray, col: int) -> float:
     """
     Retrieves quadratic_coeffs vv element.
     """
@@ -66,83 +70,76 @@ def vv_coeffs(dimension: int, quadratic_coeffs: np.ndarray, col: int):
     return quadratic_coeffs[5, col]
 
 
-def generate_quadratic_monomials(domain_point: PlanarPoint) -> Vector2D:
-    # TODO: decide what format to use for docstrings...
-    # Probably just use the  Epytext format similar to what's used in the ASOC code.
+def generate_quadratic_monomials(domain_point: PlanarPoint1d) -> Vector6f:
     """
     Generate monomial variable terms for a quadratic in order [1, u, v, uv, uu, vv]
 
     :param domain_point: uv coordinates to generate the monomials for
-    :returns: quadratic monomials of shape (1, 6)
+    :returns: quadratic monomials of shape (6, )
     """
-    assert domain_point.shape == (1, 2)
-    u: float = domain_point[0, 0]
-    v: float = domain_point[0, 1]
+    assert domain_point.shape == (2, )
+    u: float = domain_point[0]
+    v: float = domain_point[1]
 
-    w: Vector1D = np.array([[1, u, v, u * v, u * u, v * v]], dtype=np.float64)
-    assert w.shape == (1, 6)
+    w: Vector1D = np.array([1, u, v, u * v, u * u, v * v], dtype=np.float64)
+    assert w.shape == (6, )
     return w
 
 
-def generate_linear_monomials(domain_point: PlanarPoint) -> Vector2D:
+def generate_linear_monomials(domain_point: PlanarPoint1d) -> SpatialVector1d:
     """
     Generate monomial variable terms for a line in order [1, u, v]
 
-    @param domain_point: uv coordinates to generate the monomials for
-    @return: linear monomials of shape (1, 3)
+    :param domain_point: uv coordinates to generate the monomials for
+    :return: linear monomials of shape (3, )
     """
-    # NOTE: planarpoint is shape (1, 2)
-    u: float = domain_point[0, 0]
-    v: float = domain_point[0, 1]
+    assert domain_point.shape == (2, )
+    u: float = domain_point[0]
+    v: float = domain_point[1]
 
-    w: Vector2D = np.array([[1, u, v]])
-    assert w.shape == (1, 3)
+    w: Vector2D = np.array([1, u, v], dtype=np.float64)
+    assert w.shape == (3, )
     return w
 
 
 def evaluate_quadratic_mapping(dimension: int,
-                               quadratic_coeffs: np.ndarray,
+                               quadratic_coeffs: MatrixXf,
                                domain_point: PlanarPoint) -> Vector2D:
     """
     Evaluate a quadratic bivariate equation with scalar coefficients.
     Dimension can be greater than 1, as seen in quadratic_spline_surface_patch.py
     NOTE: This supports any dimension of quadratic coefficient, hence why it's used.
 
-    :param dimension: dimension of quadratic_coeffs
+    :param dimension: [in] dimension of quadratic_coeffs
     :type dimension: int
-    @param quadratic_coeffs: quadratic coefficients in order [1, u, v, uv, uu, vv]
-    @param domain_point: uv coordinates to evaluate the quadratic at
-
-    @return: quadratic_evaluation: quadratic function evaluation
+    :param quadratic_coeffs: [in] quadratic coefficients in order [1, u, v, uv, uu, vv]. 
+    quadratic_coeffs has shape (6, dimension)
+    :param domain_point: uv coordinates to evaluate the quadratic at
+    :return: quadratic_evaluation: quadratic function evaluation
     """
 
     assert quadratic_coeffs.shape == (6, dimension)
-    assert domain_point.shape == (1, 2)
-    w: Vector2D = generate_quadratic_monomials(domain_point)
-    assert w.shape == (1, 6)
+    assert domain_point.shape == (2, )
+    w: Vector6f = generate_quadratic_monomials(domain_point)
+    assert w.shape == (6, )
 
-    # shapes: (1, 6) @ (6, dimension)
+    # shapes: (6, ) @ (6, dimension)
     quadratic_evaluation: np.ndarray = w @ quadratic_coeffs
-    assert quadratic_evaluation.shape == (1, dimension)
+    assert quadratic_evaluation.shape == (dimension, )
 
     return quadratic_evaluation
 
 
 # TODO: This is the same as the above, just remove this or something
-def evaluate_quadratic(quadratic_coeffs: np.ndarray, domain_point: PlanarPoint):
+def evaluate_quadratic() -> None:
     """
-    Evaluate a quadratic bivariate equation with scalar coefficients.
-
-    @param quadratic_coeffs: quadratic coefficients in order [1, u, v, uv, uu, vv]
-    @param domain_point: uv coordinates to evaluate the quadratic at
-    @return: quadratic function evaluation
+    Function not used.
     """
-    assert quadratic_coeffs.shape == (6, 1)
     unimplemented(
         "evaluate_quadratic() will not be implemented.  Use evaluate_quadratic_mapping() instead.")
 
 
-def evaluate_line(line_coeffs: Matrix3x1r, domain_point: PlanarPoint) -> float:
+def evaluate_line(line_coeffs: Vector3f, domain_point: PlanarPoint1d) -> float:
     """
     Evaluate a linear bivariate equation with scalar coefficients.
 
@@ -150,81 +147,72 @@ def evaluate_line(line_coeffs: Matrix3x1r, domain_point: PlanarPoint) -> float:
     :param domain_point: [in] uv coordinates to evaluate the line at
     :return: linear function evaluation
     """
-    assert line_coeffs.shape == (3, 1)
+    assert line_coeffs.shape == (3, )
+    assert domain_point.shape == (2, )
 
-    # OneFormXr is shape RowVectorXd... what?
-    # NOTE: planarpoint is shape (1, 2)
-    # TODO: confirm the results of this and what they should be...
-    w: Vector2D = generate_linear_monomials(domain_point)
-    assert w.shape == (1, 3)
+    w: SpatialVector1d = generate_linear_monomials(domain_point)
+    assert w.shape == (3, )
 
-    return (w @ line_coeffs)[0]
+    return (w @ line_coeffs)
 
 
-def compute_linear_product(L1_coeffs_ref: Matrix3x1r, L2_coeffs_ref: Matrix3x1r) -> Vector2D:
+def compute_linear_product(L1_coeffs: Vector3f, L2_coeffs: Vector3f) -> Vector6f:
     """
     Compute the quadratic coefficients for the scalar product of two linear
     scalar functions V(u,v) and W(u,v) with coefficients in order [1, u, v]
 
-    @param[in] V_coeffs: coefficients for the first linear vector function
-    @param[in] W_coeffs: coefficients for the second linear vector function
-    @return coefficients for the quadratic product function of shape (6, 1)
+    :param[in] V_coeffs: coefficients for the first linear vector function
+    :param[in] W_coeffs: coefficients for the second linear vector function
+    :return coefficients for the quadratic product function of shape (6, )
     """
-    assert L1_coeffs_ref.shape == (3, 1)
-    assert L2_coeffs_ref.shape == (3, 1)
-
-    # Need to flatten into Vector1D for math below
-    L1_coeffs: Vector1D = L1_coeffs_ref.flatten()
-    L2_coeffs: Vector1D = L2_coeffs_ref.flatten()
+    assert L1_coeffs.shape == (3, )
+    assert L2_coeffs.shape == (3, )
 
     product_coeffs: Vector2D = np.array([
-        [L1_coeffs[0] * L2_coeffs[0]],
-        [L1_coeffs[1] * L2_coeffs[0] + L1_coeffs[0] * L2_coeffs[1]],
-        [L1_coeffs[2] * L2_coeffs[0] + L1_coeffs[0] * L2_coeffs[2]],
-        [L1_coeffs[1] * L2_coeffs[2] + L1_coeffs[2] * L2_coeffs[1]],
-        [L1_coeffs[1] * L2_coeffs[1]],
-        [L1_coeffs[2] * L2_coeffs[2]]])
-    assert product_coeffs.shape == (6, 1)
+        (L1_coeffs[0] * L2_coeffs[0]),
+        (L1_coeffs[1] * L2_coeffs[0] + L1_coeffs[0] * L2_coeffs[1]),
+        (L1_coeffs[2] * L2_coeffs[0] + L1_coeffs[0] * L2_coeffs[2]),
+        (L1_coeffs[1] * L2_coeffs[2] + L1_coeffs[2] * L2_coeffs[1]),
+        (L1_coeffs[1] * L2_coeffs[1]),
+        (L1_coeffs[2] * L2_coeffs[2])])
+    assert product_coeffs.shape == (6, )
 
     return product_coeffs
 
 
-def compute_quadratic_cross_product(V_coeffs: Matrix3x3r, W_coeffs: Matrix3x3r) -> np.ndarray:
+def compute_quadratic_cross_product(V_coeffs: Matrix3x3r, W_coeffs: Matrix3x3r) -> Matrix6x3f:
     """
-    /// Compute the quadratic coefficients for the cross product of two linear row
-    /// vector functions V(u,v) and W(u,v) with coefficients in order [1, u, v]
-    ///
-    /// @param[in] V_coeffs: coefficients for the first linear vector function
-    /// @param[in] W_coeffs: coefficients for the second linear vector function
-    /// @return coefficients for the quadratic cross function
+    Compute the quadratic coefficients for the cross product of two linear row
+    vector functions V(u,v) and W(u,v) with coefficients in order [1, u, v]
+
+    :param V_coeffs: [in] coefficients for the first linear vector function
+    :param W_coeffs: [in] coefficients for the second linear vector function
+    :return: coefficients for the quadratic cross function
     """
     assert V_coeffs.shape == (3, 3)
     assert W_coeffs.shape == (3, 3)
 
-    # Can't I just use NumPy's cross product... again???
-    # Something might come up with the shaping... again...
-    # FIXME: the whole row accessing is wrong.
-    N_coeffs: Matrix6x3r = np.array([
+    N_coeffs: Matrix6x3f = np.array([
         # 1 coefficient
-        cross_product(V_coeffs[[0], :], W_coeffs[[0], :]).flatten(),  # row 0
+        cross_product(V_coeffs[0, :], W_coeffs[0, :]),  # row 0
 
         # u coefficient
-        cross_product(V_coeffs[[0], :], W_coeffs[[1], :]).flatten() +  # row 1
-        cross_product(V_coeffs[[1], :], W_coeffs[[0], :]).flatten(),
+        cross_product(V_coeffs[0, :], W_coeffs[1, :]) +  # row 1
+        cross_product(V_coeffs[1, :], W_coeffs[0, :]),
 
         # v coefficient
-        cross_product(V_coeffs[[0], :], W_coeffs[[2], :]).flatten() +  # row 2
-        cross_product(V_coeffs[[2], :], W_coeffs[[0], :]).flatten(),
+        cross_product(V_coeffs[0, :], W_coeffs[2, :]) +  # row 2
+        cross_product(V_coeffs[2, :], W_coeffs[0, :]),
 
         # uv coefficient
-        cross_product(V_coeffs[[1], :], W_coeffs[[2], :]).flatten() +  # row 3
-        cross_product(V_coeffs[[2], :], W_coeffs[[1], :]).flatten(),
+        cross_product(V_coeffs[1, :], W_coeffs[2, :]) +  # row 3
+        cross_product(V_coeffs[2, :], W_coeffs[1, :]),
 
         # u^2 coefficient
-        cross_product(V_coeffs[[1], :], W_coeffs[[1], :]).flatten(),  # row 4
+        cross_product(V_coeffs[1, :], W_coeffs[1, :]),  # row 4
 
         # v^2 coefficient
-        cross_product(V_coeffs[[2], :], W_coeffs[[2], :]).flatten()  # row 5
+        cross_product(V_coeffs[2, :], W_coeffs[2, :])  # row 5
     ], dtype=np.float64)
 
     assert N_coeffs.shape == (6, 3)
@@ -328,17 +316,23 @@ def is_conic_standard_form(C_coeffs: Vector1D) -> bool:
     return True
 
 
-def formatted_bivariate_quadratic_mapping(dimension: int, quadratic_coeffs: np.ndarray, precision: int = 16) -> str:
+def formatted_bivariate_quadratic_mapping(dimension: int,
+                                          quadratic_coeffs_ref: np.ndarray,
+                                          precision: int = 16) -> str:
     """
     Generate a human readable format of a quadratic mapping
 
     @param[in] quadratic_coeffs: quadratic coefficients in order [1, u, v, uv, uu, vv]
     @return formatted quadratic mapping
     """
-    assert quadratic_coeffs.shape == (6, dimension)
+    # Making sure to make vector into 2D vector for sake of iterating through it
+    if quadratic_coeffs_ref.ndim == 1:
+        quadratic_coeffs = quadratic_coeffs_ref.reshape((quadratic_coeffs_ref.size, dimension))
+    else:
+        quadratic_coeffs = quadratic_coeffs_ref
 
     quadratic_string: str = ""
-    for i in range(quadratic_coeffs.shape[1]):
+    for i in range(dimension):
         quadratic_string += f"{quadratic_coeffs[0, i]}:.{precision}f"
         quadratic_string += formatted_term(
             quadratic_coeffs[1, i], "u", precision)
@@ -355,12 +349,14 @@ def formatted_bivariate_quadratic_mapping(dimension: int, quadratic_coeffs: np.n
     return quadratic_string
 
 
-def formatted_bivariate_linear_mapping(dimension: int, line_coeffs: np.ndarray, precision: int = 16) -> str:
+def formatted_bivariate_linear_mapping(dimension: int,
+                                       line_coeffs: np.ndarray,
+                                       precision: int = 16) -> str:
     """
-    /// Generate a human readable format of a linear mapping
-    ///
-    /// @param[in] line_coeffs: linear coefficients in order [1, u, v]
-    /// @return formatted linear mapping
+    Generate a human readable format of a linear mapping
+
+    :param line_coeffs: [in] linear coefficients in order [1, u, v]
+    :return formatted linear mapping
     """
     line_string: str = ""
     for i in range(dimension):
@@ -372,7 +368,8 @@ def formatted_bivariate_linear_mapping(dimension: int, line_coeffs: np.ndarray, 
 
 
 def generate_quadratic_coordinate_affine_transformation_matrix(linear_transformation: Matrix2x2f,
-                                                               translation: PlanarPoint) -> Matrix6x6r:
+                                                               translation: PlanarPoint1d
+                                                               ) -> Matrix6x6r:
     """
     Given an affine transformation [u, v]^T = A*[u', v']^T + b of R^2, generate
     the change of basis matrix C for the bivariate quadratic monomial
@@ -385,15 +382,15 @@ def generate_quadratic_coordinate_affine_transformation_matrix(linear_transforma
     @param[out] change_of_basis_matrix: change of coefficient basis matrix
     """
     assert linear_transformation.shape == (2, 2)
-    assert translation.shape == (1, 2)
+    assert translation.shape == (2, )
 
     # Get matrix information
     b11: float = linear_transformation[0, 0]
     b12: float = linear_transformation[0, 1]
     b21: float = linear_transformation[1, 0]
     b22: float = linear_transformation[1, 1]
-    b1: float = translation[0][0]
-    b2: float = translation[0][1]
+    b1: float = translation[0]
+    b2: float = translation[1]
 
     # Set matrix
     # TODO: check order that change_of_basis_matrix is being filled.
@@ -421,8 +418,8 @@ def generate_quadratic_coordinate_translation_matrix(du: float, dv: float) -> Ma
     @param[out] change_of_basis_matrix: change of coefficient basis matrix
     """
     # Build (inverse) translation and linear identity matrix
-    translation: PlanarPoint = np.array([[-du, -dv]], dtype=np.float64)
-    assert translation.shape == (1, 2)
+    translation: PlanarPoint1d = np.array([-du, -dv], dtype=np.float64)
+    assert translation.shape == (2, )
     identity: Matrix2x2f = np.identity(2, dtype=np.float64)
     # TODO: redundant check below
     assert identity.shape == (2, 2)
@@ -433,18 +430,19 @@ def generate_quadratic_coordinate_translation_matrix(du: float, dv: float) -> Ma
     return change_of_basis_matrix
 
 
-def generate_quadratic_coordinate_barycentric_transformation_matrix(barycentric_transformation: Matrix3x3r
-                                                                    ) -> Matrix6x6r:
+def generate_quadratic_coordinate_barycentric_transformation_matrix(
+    barycentric_transformation: Matrix3x3r
+) -> Matrix6x6r:
     """
-    /// Given an barycentric transformation [u, v, w]^T = A*[u', v', w']^T of RP^2
-    /// with coordinates normalized so that u + v + w = u' + v' + w' = 1, generate
-    /// the change of basis matrix C for the bivariate quadratic monomial
-    /// coefficients vector Q with respect to u, v so that Q' = C * Q is the
-    /// coefficient vector for the bivariate quadratic monomials with respect to u',
-    /// v'.
-    ///
-    /// @param[in] barycentric_transformation: transformation of the coordinates
-    /// @param[out] change_of_basis_matrix: change of coefficient basis matrix
+    Given an barycentric transformation [u, v, w]^T = A*[u', v', w']^T of RP^2
+    with coordinates normalized so that u + v + w = u' + v' + w' = 1, generate
+    the change of basis matrix C for the bivariate quadratic monomial
+    coefficients vector Q with respect to u, v so that Q' = C * Q is the
+    coefficient vector for the bivariate quadratic monomials with respect to u',
+    v'.
+
+    :param barycentric_transformation: [in] transformation of the coordinates
+    :return change_of_basis_matrix: change of coefficient basis matrix
     """
     assert barycentric_transformation.shape == (3, 3)
 
@@ -462,8 +460,8 @@ def generate_quadratic_coordinate_barycentric_transformation_matrix(barycentric_
     linear_transformation: Matrix2x2f = np.array(
         [[a11 - a13, a21 - a23], [a12 - a13, a22 - a23]], dtype=np.float64)
     assert linear_transformation.shape == (2, 2)
-    translation: PlanarPoint = np.array([[a13, a23]], dtype=np.float64)
-    assert translation.shape == (1, 2)
+    translation: PlanarPoint1d = np.array([a13, a23], dtype=np.float64)
+    assert translation.shape == (2, )
 
     # Get change of basis matrix from the affine transformation
     change_of_basis_matrix: Matrix6x6r = generate_quadratic_coordinate_affine_transformation_matrix(
@@ -472,9 +470,10 @@ def generate_quadratic_coordinate_barycentric_transformation_matrix(barycentric_
     return change_of_basis_matrix
 
 
-def generate_quadratic_coordinate_domain_triangle_normalization_matrix(v0: PlanarPoint,
-                                                                       v1: PlanarPoint,
-                                                                       v2: PlanarPoint) -> Matrix6x6r:
+def generate_quadratic_coordinate_domain_triangle_normalization_matrix(v0: PlanarPoint1d,
+                                                                       v1: PlanarPoint1d,
+                                                                       v2: PlanarPoint1d
+                                                                       ) -> Matrix6x6r:
     """
     of basis matrix C for the bivariate quadratic monomial coefficients vector
     Given vertex positions in R^2 for a domain triangle, generate the change
@@ -482,20 +481,20 @@ def generate_quadratic_coordinate_domain_triangle_normalization_matrix(v0: Plana
     surface mapping over the triangle in the positive quadrant with u + v <= 1
     that has the same image as the surface mapping over the input domain.
 
-    @param[in] v0: first domain triangle vertex position
-    @param[in] v1: second domain triangle vertex position
-    @param[in] v2: third domain triangle vertex position
-    @param[out] change_of_basis_matrix: change of coefficient basis matrix
+    :param v0: [in] first domain triangle vertex position
+    :param v1: [in] second domain triangle vertex position
+    :param v2: [in] third domain triangle vertex position
+    :param change_of_basis_matrix: [out] change of coefficient basis matrix
     """
-    assert v0.shape == (1, 2)
-    assert v1.shape == (1, 2)
-    assert v2.shape == (1, 2)
+    assert v0.shape == (2, )
+    assert v1.shape == (2, )
+    assert v2.shape == (2, )
 
     # Generate affine transformation mapping the standard triangle to the new
     # triangle
     linear_transformation: Matrix2x2f = np.array(
-        [(v1 - v0).flatten(),
-         (v2 - v0).flatten()],
+        [(v1 - v0),
+         (v2 - v0)],
         dtype=np.float64)
     translation: PlanarPoint = v0
     assert linear_transformation.shape == (2, 2)
@@ -508,9 +507,8 @@ def generate_quadratic_coordinate_domain_triangle_normalization_matrix(v0: Plana
     return change_of_basis_matrix
 
 
-def generate_reparameterization() -> NoReturn:
+def generate_reparameterization() -> None:
     """
-    Deprecated.
+    Function not used.
     """
-    raise Exception(
-        "generate_reparameterization() is deprecated. DO NOT IMPLEMENT")
+    unimplemented()

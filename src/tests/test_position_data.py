@@ -4,14 +4,12 @@ So, dependent on the assertions made in methods like compute_least_squares_verte
 
 """
 
-import math
-from src.quadratic_spline_surface.position_data import *
-from src.core.common import *
 import numpy as np
-import pytest
 
-from src.quadratic_spline_surface.position_data import TriangleCornerData, TriangleMidpointData
-
+from src.core.common import *
+from src.quadratic_spline_surface.position_data import *
+from src.quadratic_spline_surface.position_data import (TriangleCornerData,
+                                                        TriangleMidpointData)
 
 # def test_gradients_find_constant() -> None:
 #     V = np.array([[1.0, 0.0, 0.0],
@@ -39,14 +37,15 @@ from src.quadratic_spline_surface.position_data import TriangleCornerData, Trian
 
 #     todo("There are no assert statements in the ASOC code for this test")
 
+
 def test_generate_corner_data_matrices() -> None:
     """
     Test to see if the method goes through ALL elements in the arrays 
     position_matrix, first_derivative_matrix, and second_derivative_matrix.
     """
-    function_value = np.ones(shape=(1, 3), dtype=np.float64)
-    first_edge_derivative = np.ones(shape=(1, 3), dtype=np.float64)
-    second_edge_derivative = np.ones(shape=(1, 3), dtype=np.float64)
+    function_value = np.ones(shape=(3, ), dtype=np.float64)
+    first_edge_derivative = np.ones(shape=(3, ), dtype=np.float64)
+    second_edge_derivative = np.ones(shape=(3, ), dtype=np.float64)
 
     corner_data: list[list[TriangleCornerData]] = [[
         TriangleCornerData(function_value,
@@ -80,10 +79,10 @@ def test_generate_corner_data_matrices() -> None:
 
 
 def test_generate_midpoint_data_matrices() -> None:
-    function_value = np.ones(shape=(1, 3), dtype=np.float64)
-    first_edge_derivative = np.ones(shape=(1, 3), dtype=np.float64)
-    second_edge_derivative = np.ones(shape=(1, 3), dtype=np.float64)
-    normal_derivative = np.ones(shape=(1, 3), dtype=np.float64)
+    function_value = np.ones(shape=(3, ), dtype=np.float64)
+    first_edge_derivative = np.ones(shape=(3, ), dtype=np.float64)
+    second_edge_derivative = np.ones(shape=(3, ), dtype=np.float64)
+    normal_derivative = np.ones(shape=(3, ), dtype=np.float64)
 
     corner_data: list[list[TriangleCornerData]] = [
         [TriangleCornerData(function_value,

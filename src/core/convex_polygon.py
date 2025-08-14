@@ -3,10 +3,15 @@ Convex polygons. Used in Quadratic Surface Patch files.
 Convex polygon formed by intersecting half planes.
 """
 
+from venv import logger
+
 import numpy as np
 
-from src.core.common import *  # import float_equal, generate_linspace, PlanarPoint, Index
-from src.core.interval import *
+from src.core.common import (ROWS, Index, Matrix2x2f, Matrix3x2f, MatrixNx3f,
+                             MatrixNx3i, PlanarPoint, PlanarPoint1d, Vector1D,
+                             Vector3f, float_equal, generate_linspace,
+                             unreachable)
+from src.core.interval import Interval
 from src.core.line_segment import LineSegment
 
 # *******
@@ -14,7 +19,7 @@ from src.core.line_segment import LineSegment
 # *******
 
 
-def compute_line_between_points(point_0: PlanarPoint, point_1: PlanarPoint) -> np.ndarray:
+def compute_line_between_points(point_0: PlanarPoint1d, point_1: PlanarPoint1d) -> Vector3f:
     """
     Compute the implicit form of a line between two points
 
@@ -26,35 +31,42 @@ def compute_line_between_points(point_0: PlanarPoint, point_1: PlanarPoint) -> n
     :return: line_coeff of shape (3, 1) made from the points
     :rtype: np.ndarray 
     """
-    x0: np.float64 = point_0[0, 0]
-    y0: np.float64 = point_0[0, 1]
-    x1: np.float64 = point_1[0, 0]
-    y1: np.float64 = point_1[0, 1]
-    line_coeffs: np.ndarray = np.array([[x0 * y1 - x1 * y0],
-                                        [y0 - y1],
-                                        [x1 - x0]])
+    assert point_0.shape == (2, )
+    assert point_1.shape == (2, )
 
-    assert line_coeffs.shape == (3, 1)
+    x0: np.float64 = point_0[0]
+    y0: np.float64 = point_0[1]
+    x1: np.float64 = point_1[0]
+    y1: np.float64 = point_1[1]
+    line_coeffs: Vector3f = np.array([(x0 * y1 - x1 * y0),
+                                      (y0 - y1),
+                                      (x1 - x0)],
+                                     dtype=np.float64)
+
+    assert line_coeffs.shape == (3, )
     return line_coeffs
 
 
-def compute_parametric_line_between_points(point_0: PlanarPoint,
-                                           point_1: PlanarPoint) -> LineSegment:
+def compute_parametric_line_between_points(point_0: PlanarPoint1d,
+                                           point_1: PlanarPoint1d) -> LineSegment:
     """
     Compute the parametric form of a line between two points
 
-    :param point_0: first point of shape (1, 2)
+    :param point_0: first point of shape (2, )
     :type point_0: PlanarPoint
-    :param point_1: second point of shape (1, 2)
+    :param point_1: second point of shape (2, )
     :type point_1: PlanarPoint
 
     :return: line_segment
     :rtype: LineSegment
     """
+    assert point_0.shape == (2, )
+    assert point_1.shape == (2, )
+
     # Set numerator
     numerators: Matrix2x2f = np.array([
-        [point_0[0, 0], point_0[0, 1]],
-        [point_1[0, 0] - point_0[0, 0], point_1[0, 1] - point_0[0, 1]]], dtype=np.float64)
+        [point_0[0], point_0[1]],
+        [point_1[0] - point_0[0], point_1[1] - point_0[1]]], dtype=np.float64)
 
     assert numerators.shape == (2, 2)
 
@@ -68,29 +80,28 @@ def compute_parametric_line_between_points(point_0: PlanarPoint,
     return line_segment
 
 
-def refine_triangles(V: np.ndarray, F: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+def refine_triangles(V: MatrixNx3f, F: MatrixNx3i) -> tuple[MatrixNx3f, MatrixNx3i]:
     """
     Refine a mesh with midpoint subdivision.
-    Logic of this method does not modify V and F by reference and instead creates new np.ndarray V_refined and F_refined.
+    Logic of this method does not modify V and F by reference and instead creates 
+    new np.ndarray V_refined and F_refined.
 
     :param V: vertices
     :type V: np.ndarray
-
     :param F: faces
     :type F: np.ndarray
 
     :return: Vertices and Faces refined
     :rtype: tuple[np.ndarray, np.ndarray]
     """
-    # Need proper for F or else indexing from V will not work (because cannot use floats for accesing indices)
+    # Need proper datatype for F or else indexing from V will not work
+    # (because cannot use floats for accesing indices)
     assert V.dtype == np.float64
     assert F.dtype == np.int64
 
     num_faces: Index = F.shape[ROWS]  # rows
-    V_refined: np.ndarray = np.ndarray(shape=(num_faces * 6, 2), dtype=np.float64)
-    F_refined: np.ndarray = np.ndarray(shape=(num_faces * 4, 3), dtype=np.int64)
-
-    # TODO: could probably use NumPy indexing for the things below, right?
+    V_refined: MatrixNx3f = np.ndarray(shape=(num_faces * 6, 2), dtype=np.float64)
+    F_refined: MatrixNx3i = np.ndarray(shape=(num_faces * 4, 3), dtype=np.int64)
     for i in range(num_faces):
         # We have vectors below, this time of shape (n, ) because we're using NumPy broadcasting
         v0: Vector1D = V[F[i, 0], :]
@@ -101,7 +112,6 @@ def refine_triangles(V: np.ndarray, F: np.ndarray) -> tuple[np.ndarray, np.ndarr
         assert v2.ndim == 1
 
         # Add vertices for refined face
-        # TODO: do I need ", :" to access the row?
         V_refined[6 * i + 0, :] = v0
         V_refined[6 * i + 1, :] = v1
         V_refined[6 * i + 2, :] = v2
@@ -126,8 +136,9 @@ class ConvexPolygon:
     """
     # TODO (from ASOC code): Implement constructor from collection of points
 
-    def __init__(self, boundary_segments_coeffs: list[Matrix3x1r],
-                 vertices: Matrix3x2r) -> None:
+    def __init__(self,
+                 boundary_segments_coeffs: list[Vector3f],
+                 vertices: Matrix3x2f) -> None:
         """
         Constructor that is called by classmethod init_from_boundary_segments_coeffs 
         or init_from_vertices.
@@ -137,93 +148,95 @@ class ConvexPolygon:
 
         :param boundary_segments_coeffs: boundary segment coefficients list of size 3 with 
         element np.ndarray of shape (3, 1) and type np.float64
-        :type boundary_segments_coeffs: list[Matrix3x1r]
+        :type boundary_segments_coeffs: list[Vector3f]
         :param vertices: vertices of type np.ndarray of shape (3, 2)
         :type vertices: Matrix3x2r
         """
         # Assertions to match ASOC code C++ code
         assert len(boundary_segments_coeffs) == 3
-        assert boundary_segments_coeffs[0].shape == (3, 1)  # lazily checking elements are shape (3,1) in list
+        assert boundary_segments_coeffs[0].shape == (3, )  # lazily checking elements
         assert vertices.shape == (3, 2)
 
         # *******
         # Private
         # *******
-        self.m_boundary_segments_coeffs: list[Matrix3x1r] = boundary_segments_coeffs
-        self.m_vertices: Matrix3x2r = vertices
+        self.m_boundary_segments_coeffs: list[Vector3f] = boundary_segments_coeffs
+        self.m_vertices: Matrix3x2f = vertices
 
     @classmethod
-    def init_from_boundary_segments_coeffs(cls, boundary_segments_coeffs: list[Matrix3x1r]):
+    def init_from_boundary_segments_coeffs(cls, boundary_segments_coeffs: list[Vector3f]):
         """
         Only boundary_segments_coeffs passed in. Construct m_vertices.
         """
-        v0: PlanarPoint = cls.intersect_patch_boundaries(boundary_segments_coeffs[1], boundary_segments_coeffs[2])
-        v1: PlanarPoint = cls.intersect_patch_boundaries(boundary_segments_coeffs[2], boundary_segments_coeffs[0])
-        v2: PlanarPoint = cls.intersect_patch_boundaries(boundary_segments_coeffs[0], boundary_segments_coeffs[1])
+        v0: PlanarPoint1d = cls.intersect_patch_boundaries(boundary_segments_coeffs[1],
+                                                           boundary_segments_coeffs[2])
+        v1: PlanarPoint1d = cls.intersect_patch_boundaries(boundary_segments_coeffs[2],
+                                                           boundary_segments_coeffs[0])
+        v2: PlanarPoint1d = cls.intersect_patch_boundaries(boundary_segments_coeffs[0],
+                                                           boundary_segments_coeffs[1])
 
-        # TODO: may be problem with vertices shape
-        # v0 shape == (1, 2)
-        # v1 shape == (1, 2)
-        # v2 shape == (1, 2)
-        # So, we want vertices shape == (3, 2)
-        vertices: Matrix3x2r = np.array([v0, v1, v2], dtype=np.float64).squeeze()
+        vertices: Matrix3x2f = np.array([v0, v1, v2], dtype=np.float64)
         assert vertices.shape == (3, 2)
 
         # return vertices
         return cls(boundary_segments_coeffs, vertices)
 
     @classmethod
-    def init_from_vertices(cls, vertices: Matrix3x2r):
+    def init_from_vertices(cls, vertices: Matrix3x2f):
         """
         Only vertices passed in. Construct m_boundary_segments_coeffs.
         """
         assert vertices.shape == (3, 2)
         num_vertices: int = vertices.shape[ROWS]
-        boundary_segments_coeffs: list[Matrix3x1r] = []
+        boundary_segments_coeffs: list[Vector3f] = []
 
         # TODO: is the below the dynamic sizing of arrays that I needed to avoid?
         for i in range(num_vertices):
-            line_coeffs: np.ndarray = compute_line_between_points(vertices[[i], :],
-                                                                  vertices[[(i + 1) % num_vertices], :])
+            line_coeffs: Vector3f
+            line_coeffs = compute_line_between_points(vertices[i, :],
+                                                      vertices[(i + 1) % num_vertices, :])
             boundary_segments_coeffs.append(line_coeffs)
 
         assert len(boundary_segments_coeffs) == num_vertices
-        assert boundary_segments_coeffs[0].shape == (3, 1)  # lazy check
+        assert boundary_segments_coeffs[0].shape == (3, )  # lazy check
 
         # return boundary_segments_coeffs
         return cls(boundary_segments_coeffs, vertices)
 
-    def contains(self, point: PlanarPoint) -> bool:
+    def contains(self, point: PlanarPoint1d) -> bool:
         """
         Return true iff point is in the convex polygon
         """
-        assert point.shape == (1, 2)
+        assert point.shape == (2, )
 
         for _, L_coeffs in enumerate(self.m_boundary_segments_coeffs):
             # NOTE: redundant check
-            assert L_coeffs.shape == (3, 1)
+            assert L_coeffs.shape == (3, )
 
             # NOTE: index accessing was wrong beforehand...
-            if (L_coeffs.flatten()[0] + L_coeffs.flatten()[1] * point.flatten()[0] + L_coeffs.flatten()[2] * point.flatten()[1]) < 0.0:
+            if (L_coeffs[0] + L_coeffs[1] * point[0] + L_coeffs[2] * point[1]) < 0.0:
                 return False
 
         return True
 
     @staticmethod
-    def intersect_patch_boundaries(first_boundary_segment_coeffs: np.ndarray,
-                                   second_boundary_segment_coeffs: np.ndarray) -> PlanarPoint:
+    def intersect_patch_boundaries(first_boundary_segment_coeffs: Vector3f,
+                                   second_boundary_segment_coeffs: Vector3f) -> PlanarPoint1d:
         """
-        NOTE: method has decorator @staticmethod to work with @classmethod init_from_boundary_segments_coeffs.
-        """
-        assert first_boundary_segment_coeffs.shape == (3, 1)
-        assert second_boundary_segment_coeffs.shape == (3, 1)
+        Computes intersecting patch boundaries.
 
-        a00: float = first_boundary_segment_coeffs[0, 0]
-        a10: float = first_boundary_segment_coeffs[1, 0]
-        a01: float = first_boundary_segment_coeffs[2, 0]
-        b00: float = second_boundary_segment_coeffs[0, 0]
-        b10: float = second_boundary_segment_coeffs[1, 0]
-        b01: float = second_boundary_segment_coeffs[2, 0]
+        Method has decorator @staticmethod to work with @classmethod 
+        init_from_boundary_segments_coeffs.
+        """
+        assert first_boundary_segment_coeffs.shape == (3, )
+        assert second_boundary_segment_coeffs.shape == (3, )
+
+        a00: float = first_boundary_segment_coeffs[0]
+        a10: float = first_boundary_segment_coeffs[1]
+        a01: float = first_boundary_segment_coeffs[2]
+        b00: float = second_boundary_segment_coeffs[0]
+        b10: float = second_boundary_segment_coeffs[1]
+        b01: float = second_boundary_segment_coeffs[2]
 
         x: float
         y: float
@@ -244,16 +257,16 @@ class ConvexPolygon:
             x = mx * y + bx
         else:
             logger.error("Degenerate line")
-            # TODO: maybe exception is a bit too extreme... originally there was a "return"
-            # here in the ASOC code
-            unreachable("Error with intersect_patch_boundaries()")
+            # FIXME: maybe exception is a bit too extreme... originally there was a "return"
+            # here in the ASOC code.
+            # Since we don't want the program to fail if the user inputs an invalid mesh.
+            raise ValueError("Degenerate line trying to form ConvexPolygon")
 
         # Build intersection
         # TODO: I really need a subclass of np.ndarray called PlanarPoint that automatically checks
         # the sizing of the array for me... Because manually checking shape==(1,2) is cumbersome
-        intersection: PlanarPoint = np.array([[x, y]])
-        assert intersection.shape == (1, 2)
-
+        intersection: PlanarPoint1d = np.array([x, y], dtype=np.float64)
+        assert intersection.shape == (2, )
         return intersection
 
     @property
@@ -274,36 +287,36 @@ class ConvexPolygon:
         return boundary_segments_coeffs_flattened
 
     @property
-    def vertices(self) -> Matrix3x2r:
+    def vertices(self) -> Matrix3x2f:
+        """Gets vertices from Convex Polygon"""
         return self.m_vertices
 
     def parametrize_patch_boundaries(self) -> list[LineSegment]:
         """
+        Parametrizes patch boundaries
 
+        :return patch_boundaries: list of length 3
         """
         patch_boundaries: list[LineSegment] = []
 
-        # Get rows of m_vertices
+        # Get rows of m_vertices.
+        # NOTE: num_verices should be 3
         num_vertices: int = self.m_vertices.shape[ROWS]
-
         for i in range(num_vertices):
-            # TODO: maybe something wrong with the shape?
-            # Because we need to grab shape (1, 2) from m_vertices
-            # m_vertices is shape (3, 2)...
             line_segment: LineSegment = compute_parametric_line_between_points(
-                self.m_vertices[[i], :],
-                self.m_vertices[[(i + 1) % num_vertices], :])
+                self.m_vertices[i, :],
+                self.m_vertices[((i + 1) % num_vertices), :])
             patch_boundaries.append(line_segment)
 
         # Double checking that we indeed only have 3 elements inside patch_boundaries as per
-        # ASOC code
+        # original code
         assert len(patch_boundaries) == num_vertices
         return patch_boundaries
 
-    def triangulate(self, num_refinements: int) -> tuple[np.ndarray, np.ndarray]:
+    def triangulate(self, num_refinements: int) -> tuple[MatrixNx3f, MatrixNx3i]:
         """
         Triangulate domain with.
-        This takes in self.m_vertices and creates a new F matrix of shape (1, 3) to return.
+        This takes in self.m_vertices and creates a new F matrix to return.
         TODO Can generalize to arbitrary domain if needed
 
         :param num_refinements: number of iterations to refine V and F
@@ -312,14 +325,12 @@ class ConvexPolygon:
         :return: tuple of V (shape (3, 2)) and F (shape (1, 3))
         :rtype: tuple[np.ndarray, np.ndarray]
         """
-
-        # TODO: logic of triangulate might be weird in comparison to the original ASOC code
-
         V: MatrixNx3f = self.m_vertices
         F: MatrixNx3i = np.array([[0, 1, 2]], dtype=np.int64)
+        # NOTE: keep F as shape (1, 3) since F can have any number of rows and should not be 1D
         assert F.shape == (1, 3)
 
-        for i in range(num_refinements):
+        for _ in range(num_refinements):
             V_refined: MatrixNx3f
             F_refined: MatrixNx3i
             V_refined, F_refined = refine_triangles(V, F)
@@ -328,24 +339,24 @@ class ConvexPolygon:
 
         return V, F
 
-    def sample(self, num_samples: int) -> list[PlanarPoint]:
+    def sample(self, num_samples: int) -> list[PlanarPoint1d]:
         """
+        Sample points from ConvexPolygon.
 
+        :param num_samples: number of samples from ConvexPolygon
+        :return domain_points: [out]
         """
-        domain_points: list[PlanarPoint] = []
+        domain_points: list[PlanarPoint1d] = []
+        lower_left_corner: PlanarPoint1d = np.array([-1, -1], dtype=np.float64)
+        upper_right_corner: PlanarPoint1d = np.array([1, 1], dtype=np.float64)
+        # Checking if shape (2, ) since that is the shape of PlanarPoint1d type
+        assert lower_left_corner.shape == (2, )
+        assert upper_right_corner.shape == (2, )
 
-        # TODO (from ASOC code): Make actual bounding box
-        lower_left_corner: PlanarPoint = np.array([[-1, -1]])
-        upper_right_corner: PlanarPoint = np.array([[1, 1]])
-
-        # Checking if shape (1, 2) since that is the shape of PlanarPoint type
-        assert lower_left_corner.shape == (1, 2)
-        assert upper_right_corner.shape == (1, 2)
-
-        x0: float = lower_left_corner[0, 0]
-        y0: float = lower_left_corner[0, 1]
-        x1: float = upper_right_corner[0, 0]
-        y1: float = upper_right_corner[0, 1]
+        x0: float = lower_left_corner[0]
+        y0: float = lower_left_corner[1]
+        x1: float = upper_right_corner[0]
+        y1: float = upper_right_corner[1]
 
         # Compute points
         x_axis: Vector1D = generate_linspace(x0, x1, num_samples)
@@ -356,8 +367,8 @@ class ConvexPolygon:
 
         for i in range(num_samples):
             for j in range(num_samples):
-                point: PlanarPoint = np.array([[x_axis[i], y_axis[j]]], dtype=np.float64)
-                assert point.shape == (1, 2)
+                point: PlanarPoint1d = np.array([x_axis[i], y_axis[j]], dtype=np.float64)
+                assert point.shape == (2, )
                 if self.contains(point):
                     domain_points.append(point)
 

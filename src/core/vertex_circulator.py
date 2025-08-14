@@ -2,8 +2,10 @@
 Class to build circulators around vertices in VF representation
 """
 
-from src.core.common import *
 import numpy as np
+
+from src.core.common import (PLACEHOLDER_VALUE, MatrixNx3i, Vector1D,
+                             contains_vertex, logger)
 
 
 def contains_edge(face: Vector1D, vertex_0: int, vertex_1: int) -> bool:
@@ -54,11 +56,11 @@ def find_next_vertex(face: Vector1D, vertex: int) -> int:
     """
     assert face.ndim == 1
 
-    if (face[0] == vertex):
+    if face[0] == vertex:
         return face[1]
-    if (face[1] == vertex):
+    if face[1] == vertex:
         return face[2]
-    if (face[2] == vertex):
+    if face[2] == vertex:
         return face[0]
 
     return -1
@@ -70,11 +72,11 @@ def find_prev_vertex(face: Vector1D, vertex: int) -> int:
     """
     assert face.ndim == 1
 
-    if (face[0] == vertex):
+    if face[0] == vertex:
         return face[2]
-    if (face[1] == vertex):
+    if face[1] == vertex:
         return face[0]
-    if (face[2] == vertex):
+    if face[2] == vertex:
         return face[1]
 
     return -1
@@ -87,11 +89,11 @@ def are_adjacent(face_0: Vector1D, face_1: Vector1D) -> bool:
     assert face_0.ndim == 1
     assert face_1.ndim == 1
 
-    if (contains_edge(face_0, face_1[0], face_1[1])):
+    if contains_edge(face_0, face_1[0], face_1[1]):
         return True
-    if (contains_edge(face_0, face_1[1], face_1[2])):
+    if contains_edge(face_0, face_1[1], face_1[2]):
         return True
-    if (contains_edge(face_0, face_1[2], face_1[0])):
+    if contains_edge(face_0, face_1[2], face_1[0]):
         return True
 
     return False
@@ -120,7 +122,7 @@ def compute_vertex_one_ring_first_face(F: np.ndarray, vertex_index: int, adjacen
     Compute the first face of the vertex one ring, which should be right
     boundary face for a boundary vertex.
     """
-    if (len(adjacent_faces) == 0):
+    if len(adjacent_faces) == 0:
         return -1
 
     #  Get arbitrary adjacent face to start and vertex on the face
@@ -190,7 +192,7 @@ def compute_vertex_one_ring(F: np.ndarray,
         # Get next face
         for j in range(num_faces):
             f: int = adjacent_faces[j]
-            if (is_left_face(F[f, :], vertex_index, vertex_one_ring[i])):
+            if is_left_face(F[f, :], vertex_index, vertex_one_ring[i]):
                 face_one_ring[i] = f
 
     # Get final vertex(same as first for closed loop)
@@ -205,12 +207,9 @@ def compute_vertex_one_ring(F: np.ndarray,
 
 class VertexCirculator:
     """
-    TODO: docstring
+    Class to build circulators around vertices in VF representation
     """
 
-    # ***************
-    # Constructor
-    # ***************
     def __init__(self, F: MatrixNx3i) -> None:
         """
         Constructor for the vertex circulator from the faces of the mesh.
@@ -233,11 +232,12 @@ class VertexCirculator:
 
         # TODO: there must be a better way of doing this.
         for i in range(num_vertices):
-            # TODO: the function below did NOT modify a particular part of the list by reference... which is bad for us.
-            # TODO: meaning, we'll have to return something to store into m_all_vertex_one_rings and m_all_face_one_rings
-            self.m_all_vertex_one_rings[i], self.m_all_face_one_rings[i] = compute_vertex_one_ring(F,
-                                                                                                   i,
-                                                                                                   self.m_all_adjacent_faces[i])
+            # TODO: the function below did NOT modify a particular part of the list by reference...
+            # which is bad for us.
+            # TODO: meaning, we'll have to return something to store into m_all_vertex_one_rings and
+            # m_all_face_one_rings
+            self.m_all_vertex_one_rings[i], self.m_all_face_one_rings[i] = (
+                compute_vertex_one_ring(F, i, self.m_all_adjacent_faces[i]))
 
     # ***************
     # Public Members

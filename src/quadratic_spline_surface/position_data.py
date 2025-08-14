@@ -18,50 +18,47 @@ from src.core.rational_function import *
 from src.core.vertex_circulator import *
 
 
-@dataclass
 class TriangleCornerData:
     """
     Position and derivative data at the corner of a triangle.
     """
 
     def __init__(self,
-                 input_function_value: Vector2D,
-                 input_first_edge_derivative: Vector2D,
-                 input_second_edge_derivative: Vector2D) -> None:
+                 input_function_value: SpatialVector1d,
+                 input_first_edge_derivative: SpatialVector1d,
+                 input_second_edge_derivative: SpatialVector1d) -> None:
         """
-        Default constructor
-        NOTE: no longer need None values since implementing m_corner_data with dict of dict rather than list of list.
+        Constructor for TriangleCornerData
 
         :param function_value: position value vector at the corner
         :param first_edge_derivative: derivative in the counter-clockwise edge direction
         :param second_edge_derivative: derivative in the clockwise edge direction
         """
-        assert input_function_value.shape[ROWS] == 1  # shape (1, N)?
-        assert input_first_edge_derivative.shape[ROWS] == 1  # shape (1, M)?
-        assert input_second_edge_derivative.shape[ROWS] == 1  # shape (1, K)?
+        # FIXME: maybe the below are not shape (3, )
+        assert input_function_value.shape == (3, )
+        assert input_first_edge_derivative.shape == (3, )
+        assert input_second_edge_derivative.shape == (3, )
 
-        self.function_value: Vector2D = input_function_value
-        self.first_edge_derivative: Vector2D = input_first_edge_derivative
-        self.second_edge_derivative: Vector2D = input_second_edge_derivative
+        self.function_value: SpatialVector1d = input_function_value
+        self.first_edge_derivative: SpatialVector1d = input_first_edge_derivative
+        self.second_edge_derivative: SpatialVector1d = input_second_edge_derivative
 
 
-@dataclass
 class TriangleMidpointData:
     """
     Derivative data at the midpoint of a triangle
     """
 
-    def __init__(self, input_normal_derivative: Vector2D) -> None:
+    def __init__(self, input_normal_derivative: SpatialVector1d) -> None:
         """
-        Default constructor.
-        NOTE: made arguments optional to have some sort of default constructor.
+        Constructor for TriangleMidpointData
 
         :param input_normal_derivative: derivative in the direction of the opposite corner
         """
-        assert input_normal_derivative.shape[0] == 1
+        assert input_normal_derivative.shape == (3, )
 
-        # derivative in the direction of the opposite corner
-        self.normal_derivative: Vector2D = input_normal_derivative
+        # Derivative in the direction of the opposite corner
+        self.normal_derivative: SpatialVector1d = input_normal_derivative
 
 
 def view_triangle_corner_data() -> None:
@@ -71,18 +68,22 @@ def view_triangle_corner_data() -> None:
     unimplemented()
 
 
-def generate_affine_manifold_chart_corner_data(V: np.ndarray,
-                                               F: np.ndarray,
-                                               chart: VertexManifoldChart,
-                                               gradient: Matrix2x3r,
-                                               corner_data_ref: dict[int, dict[int, TriangleCornerData]]
-                                               ) -> None:
+def generate_affine_manifold_chart_corner_data(
+    V: MatrixNx3f,
+    F: MatrixNx3i,
+    chart: VertexManifoldChart,
+    gradient: Matrix2x3r,
+    corner_data_ref: dict[int, dict[int, TriangleCornerData]]
+) -> None:
     """
     Helper function to add corner data for a given chart.
     Used by genenerate_affine_manifold_corner_data().
 
-    NOTE: Modifies corner_data by reference since this method is indirectly used in update_positions() in twelve_split_spline.py to update m_corner_data of the TwelveSplitSplineSurface class.
-    Which means that since this updating the pre-existing corner_data, we do not want to overwrite all of pre-existing data inside corner_data by creating a new list[list[TriangleCornerData]]
+    NOTE: Modifies corner_data by reference since this method is indirectly used in 
+    update_positions() in twelve_split_spline.py to update m_corner_data of the 
+    TwelveSplitSplineSurface class.
+    Which means that since this updating the pre-existing corner_data, we do not want to overwrite
+    all of pre-existing data inside corner_data by creating a new list[list[TriangleCornerData]]
 
     :param V: vertices
     :type V: np.ndarray of float64
@@ -92,7 +93,8 @@ def generate_affine_manifold_chart_corner_data(V: np.ndarray,
     :type chart: VertexManifoldChart
     :param gradient: matrix of the gradient
     :type gradient: Matrix2x3r
-    :param corner_data_ref: (out) corner data for given chart with list[TriangleCornerData] of length 3.
+    :param corner_data_ref: [out] corner data for given chart with list[TriangleCornerData] 
+    of length 3.
     :type corner_data_ref: list[list[TriangleCornerData]]
     """
 
@@ -104,22 +106,20 @@ def generate_affine_manifold_chart_corner_data(V: np.ndarray,
         face_vertex_index: int = find_face_vertex_index(F[f, :], chart.vertex_index)
 
         # Compute position and edge derivatives from layout positions
-        pi: SpatialVector = V[[chart.vertex_index], :]
-        assert pi.shape == (1, 3)
-        # TODO: is OneFormXr supposed to be ndim == 1 or what?
-        # FIXME: check if OneFormXr is supposed to be ndim == 1... probably not
-        uj: OneFormXr = chart.one_ring_uv_positions[[face_index], :]
-        uk: OneFormXr = chart.one_ring_uv_positions[[face_index + 1], :]
+        pi: SpatialVector1d = V[chart.vertex_index, :]
+        assert pi.shape == (3, )
+        uj: Vector2f = chart.one_ring_uv_positions[face_index, :]
+        uk: Vector2f = chart.one_ring_uv_positions[face_index + 1, :]
 
-        # Presumably shaped (1, 2) since accessing UV position (which are typically (1, 2))
-        assert uj.shape == (1, 2)
-        assert uk.shape == (1, 2)
+        # Presumably shaped (2, ) since accessing UV position (which are typically (2, ))
+        assert uj.shape == (2, )
+        assert uk.shape == (2, )
 
         # shapes: (1, 2) @ (2, 3) = (1, 3)
-        dij: SpatialVector = uj @ gradient
-        dik: SpatialVector = uk @ gradient
-        assert dij.shape == (1, 3)
-        assert dik.shape == (1, 3)
+        dij: SpatialVector1d = uj @ gradient
+        dik: SpatialVector1d = uk @ gradient
+        assert dij.shape == (3, )
+        assert dik.shape == (3, )
 
         logger.info("Vertex position: %s", pi)
         logger.info("Vertex gradient:\n%s", gradient)
@@ -140,7 +140,7 @@ def generate_affine_manifold_chart_corner_data(V: np.ndarray,
     # assert len(corner_data_ref[-1]) == 3
 
 
-def generate_affine_manifold_corner_data(V: np.ndarray,
+def generate_affine_manifold_corner_data(V: MatrixNx3f,
                                          affine_manifold: AffineManifold,
                                          gradients: list[Matrix2x3r],
                                          corner_data_ref: dict[int, dict[int, TriangleCornerData]]
@@ -227,10 +227,11 @@ def generate_affine_manifold_midpoint_data(affine_manifold: AffineManifold,
 
             # Compute midpoint to opposite corner derivative for the top face
             uv_top: PlanarPoint = chart.top_vertex_uv_position
-            assert uv_top.shape == (1, 2)
+            assert uv_top.shape == (2, )
             # uv_top @ edge_gradients = (1, 2) @ (2, 3) == (1, 3)
-            midpoint_data_ref[f_top][j_top] = TriangleMidpointData(uv_top @ edge_gradients[i][j])
-            assert midpoint_data_ref[f_top][j_top].normal_derivative.shape == (1, 3)
+            midpoint_data_ref[f_top][j_top] = TriangleMidpointData(
+                uv_top @ edge_gradients[i][j])
+            assert midpoint_data_ref[f_top][j_top].normal_derivative.shape == (3, )
             logger.info("Midpoint data for corner (%s, %s) is %s = %s\n%s", f_top, j_top,
                         midpoint_data_ref[f_top][j_top].normal_derivative.T,
                         uv_top,
@@ -245,10 +246,11 @@ def generate_affine_manifold_midpoint_data(affine_manifold: AffineManifold,
 
                 # Compute midpoint to opposite corner derivative for the bottom face
                 uv_bottom: PlanarPoint = chart.bottom_vertex_uv_position
-                assert uv_bottom.shape == (1, 2)
+                assert uv_bottom.shape == (2, )
                 # uv_bottom @ edge_gradients = (1, 2) @ (2, 3) == (1, 3)
-                midpoint_data_ref[f_bottom][j_bottom] = TriangleMidpointData(uv_bottom @ edge_gradients[i][j])
-                assert midpoint_data_ref[f_bottom][j_bottom].normal_derivative.shape == (1, 3)
+                midpoint_data_ref[f_bottom][j_bottom] = TriangleMidpointData(
+                    uv_bottom @ edge_gradients[i][j])
+                assert midpoint_data_ref[f_bottom][j_bottom].normal_derivative.shape == (3, )
                 logger.info("Midpoint data for corner (%s, %s) is %s",
                             f_bottom,
                             j_bottom,
@@ -257,7 +259,7 @@ def generate_affine_manifold_midpoint_data(affine_manifold: AffineManifold,
 
 def compute_edge_midpoint_with_gradient(edge_origin_corner_data: TriangleCornerData,
                                         edge_dest_corner_data: TriangleCornerData
-                                        ) -> tuple[SpatialVector, SpatialVector]:
+                                        ) -> tuple[SpatialVector1d, SpatialVector1d]:
     """
     Given corner data for the endpoints of the edge, compute the midpoint
     and the edge aligned midpoint gradient of the corresponding Powell-Sabin
@@ -280,26 +282,28 @@ def compute_edge_midpoint_with_gradient(edge_origin_corner_data: TriangleCornerD
     :rtype: tuple[SpatialVector, SpatialVector]
     """
 
-    fi: SpatialVector = edge_origin_corner_data.function_value
-    fj: SpatialVector = edge_dest_corner_data.function_value
-    dij: SpatialVector = edge_origin_corner_data.first_edge_derivative
-    dji: SpatialVector = edge_dest_corner_data.second_edge_derivative
-    midpoint: SpatialVector = 0.5 * (fi + fj) + 0.125 * (dij + dji)
-    midpoint_edge_gradient: SpatialVector = 2.0 * (fj - fi) + 0.5 * (dji - dij)
-    assert midpoint.shape == (1, 3)
-    assert midpoint_edge_gradient.shape == (1, 3)
+    fi: SpatialVector1d = edge_origin_corner_data.function_value
+    fj: SpatialVector1d = edge_dest_corner_data.function_value
+    dij: SpatialVector1d = edge_origin_corner_data.first_edge_derivative
+    dji: SpatialVector1d = edge_dest_corner_data.second_edge_derivative
+    midpoint: SpatialVector1d = 0.5 * (fi + fj) + 0.125 * (dij + dji)
+    midpoint_edge_gradient: SpatialVector1d = 2.0 * (fj - fi) + 0.5 * (dji - dij)
+    assert midpoint.shape == (3, )
+    assert midpoint_edge_gradient.shape == (3, )
 
     return midpoint, midpoint_edge_gradient
 
 
-def generate_corner_data_matrices(corner_data: dict[int, dict[int, TriangleCornerData]],
-                                  ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+def generate_corner_data_matrices(corner_data: dict[int, dict[int, TriangleCornerData]]
+                                  ) -> tuple[MatrixNx3f, MatrixNx3f, MatrixNx3f]:
     """
     Given per corner position data, rearrange it into matrices with row i
     corresponding to the data for vertex i.
     NOTE: Used in twelve_split_spline.py
 
-    :param corner_data: quadratic vertex position and derivative data with elements list[TriangleCornerData, TriangleCornerData, TriangleCornerData]
+    :param corner_data: quadratic vertex position and derivative data with elements 
+    list[TriangleCornerData, TriangleCornerData, TriangleCornerData]
+
     :return:
         - position_matrix: matrix with position data as rows
         - first_derivative_matrix: matrix with first derivative data as rows
@@ -309,27 +313,23 @@ def generate_corner_data_matrices(corner_data: dict[int, dict[int, TriangleCorne
     num_faces: int = len(corner_data)
 
     # Resize the corner data matrices
-    position_matrix: np.ndarray[tuple[int, int], np.dtype[np.float64]]
-    first_derivative_matrix:  np.ndarray[tuple[int, int], np.dtype[np.float64]]
-    second_derivative_matrix:  np.ndarray[tuple[int, int], np.dtype[np.float64]]
-    position_matrix = np.zeros(shape=(3 * num_faces, 3), dtype=np.float64)
-    first_derivative_matrix = np.zeros(shape=(3 * num_faces, 3), dtype=np.float64)
-    second_derivative_matrix = np.zeros(shape=(3 * num_faces, 3), dtype=np.float64)
+    position_matrix: MatrixNx3f = np.zeros(shape=(3 * num_faces, 3), dtype=np.float64)
+    first_derivative_matrix: MatrixNx3f = np.zeros(shape=(3 * num_faces, 3), dtype=np.float64)
+    second_derivative_matrix: MatrixNx3f = np.zeros(shape=(3 * num_faces, 3), dtype=np.float64)
 
     # Organize position data into matrices
     for i in range(num_faces):
         for j in range(3):
-            # NOTE: flatten() for NumPy broadcasting
-            position_matrix[3 * i + j, :] = corner_data[i][j].function_value.flatten()
-            first_derivative_matrix[3 * i + j, :] = corner_data[i][j].first_edge_derivative.flatten()
-            second_derivative_matrix[3 * i + j, :] = corner_data[i][j].second_edge_derivative.flatten()
+            position_matrix[3 * i + j, :] = corner_data[i][j].function_value
+            first_derivative_matrix[3 * i + j, :] = corner_data[i][j].first_edge_derivative
+            second_derivative_matrix[3 * i + j, :] = corner_data[i][j].second_edge_derivative
 
     return position_matrix, first_derivative_matrix, second_derivative_matrix
 
 
 def generate_midpoint_data_matrices(corner_data: dict[int, dict[int, TriangleCornerData]],
                                     midpoint_data: dict[int, dict[int, TriangleMidpointData]]
-                                    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+                                    ) -> tuple[MatrixNx3f, MatrixNx3f, MatrixNx3f]:
     """
     Given position data, rearrange the edge midpoint data into matrices with row i
     corresponding to the data for edge i.
@@ -337,7 +337,7 @@ def generate_midpoint_data_matrices(corner_data: dict[int, dict[int, TriangleCor
     Note that the normal derivative matrix is extracted directly from the midpoint data
     and the position and tangent derivative matrices are inferred from the corner data.
 
-    NOTE: function used in twelve_split_spline.cpp
+    NOTE: function used in twelve_split_spline.py
 
     :param corner_data: quadratic vertex position and derivative data
     :type corner_data: dict[int, dict[int, TriangleCornerData]],
@@ -346,7 +346,7 @@ def generate_midpoint_data_matrices(corner_data: dict[int, dict[int, TriangleCor
     :type midpoint_data: dict[int, dict[int, TriangleMidpointData]]
 
     :return:
-        - position_matrix: matrix with midpoint position data as rows
+        - position_matrix: matrix with midpoint position data as rows \n
         - tangent_derivative_matrix: matrix with edge tangent derivative data as rows
         - normal_derivative_matrix: matrix with normal derivative data as rows
     :rtype: tuple[np.ndarray, np.ndarray, np.ndarray]
@@ -357,26 +357,23 @@ def generate_midpoint_data_matrices(corner_data: dict[int, dict[int, TriangleCor
     num_faces: int = len(corner_data)
 
     # Resize the corner data matrices
-    position_matrix: MatrixXf
-    tangent_derivative_matrix: MatrixXf
-    normal_derivative_matrix: MatrixXf
-    position_matrix = np.zeros(shape=(3 * num_faces, 3), dtype=np.float64)
-    tangent_derivative_matrix = np.zeros(shape=(3 * num_faces, 3), dtype=np.float64)
-    normal_derivative_matrix = np.zeros(shape=(3 * num_faces, 3), dtype=np.float64)
+    position_matrix: MatrixNx3f = np.zeros(shape=(3 * num_faces, 3), dtype=np.float64)
+    tangent_derivative_matrix: MatrixNx3f = np.zeros(shape=(3 * num_faces, 3), dtype=np.float64)
+    normal_derivative_matrix: MatrixNx3f = np.zeros(shape=(3 * num_faces, 3), dtype=np.float64)
 
     # Organize position data into matrices
     # TODO: could try to use NumPy indexing magic
     for i in range(num_faces):
         for j in range(3):
-            midpoint: SpatialVector
-            midpoint_edge_gradient: SpatialVector
+            midpoint: SpatialVector1d
+            midpoint_edge_gradient: SpatialVector1d
             midpoint, midpoint_edge_gradient = compute_edge_midpoint_with_gradient(
                 corner_data[i][(j + 1) % 3],
                 corner_data[i][(j + 2) % 3])
-            assert midpoint.shape == (1, 3)
-            assert midpoint_edge_gradient.shape == (1, 3)
-            position_matrix[3 * i + j, :] = midpoint.flatten()
-            tangent_derivative_matrix[3 * i + j, :] = midpoint_edge_gradient.flatten()
-            normal_derivative_matrix[3 * i + j, :] = midpoint_data[i][j].normal_derivative.flatten()
+            assert midpoint.shape == (3, )
+            assert midpoint_edge_gradient.shape == (3, )
+            position_matrix[3 * i + j, :] = midpoint
+            tangent_derivative_matrix[3 * i + j, :] = midpoint_edge_gradient
+            normal_derivative_matrix[3 * i + j, :] = midpoint_data[i][j].normal_derivative
 
     return position_matrix, tangent_derivative_matrix, normal_derivative_matrix

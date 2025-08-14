@@ -16,7 +16,7 @@ from src.core.affine_manifold import AffineManifold, VertexManifoldChart
 from src.core.common import (COLS, DISCRETIZATION_LEVEL, ROWS, SKY_BLUE, Index,
                              Matrix3x1r, Matrix6x3f, Matrix6x12f, Matrix12x3f,
                              MatrixNx3f, MatrixXf, MatrixXi, PlanarPoint,
-                             Vector1D, logger, unimplemented)
+                             Vector1D, Vector3f, logger, unimplemented)
 from src.core.compute_boundaries import compute_face_boundary_edges
 from src.core.convex_polygon import ConvexPolygon
 from src.quadratic_spline_surface.optimize_spline_surface import (
@@ -303,7 +303,9 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
     def build_twelve_split_patches(corner_data_ref: dict[int, dict[int, TriangleCornerData]],
                                    midpoint_data_ref: dict[int, dict[int, TriangleMidpointData]],
                                    is_cone_corner_ref: list[list[bool]]
-                                   ) -> tuple[list[list[int]], list[int], list[QuadraticSplineSurfacePatch]]:
+                                   ) -> tuple[list[list[int]],
+                                              list[int],
+                                              list[QuadraticSplineSurfacePatch]]:
         """
         NOTE: this method is renamed from init_twelve_split_patches to build_twelve_split_patches
         to better represent what it is doing.
@@ -318,9 +320,7 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
         :rtype patch_to_face_indices: list[int]
         :return patches: [out]
         :rtype patches: list[QuadraticSplineSurfacePatch]
-
         """
-
         num_faces: int = len(corner_data_ref)
 
         # Get number of patches per face
@@ -328,10 +328,11 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
         num_patches: int = patches_per_face * num_faces  # NOTE: num_patches used for reserving __patches
 
         # Get general patch domains to use for all faces
-        patch_boundaries: list[list[np.ndarray]] = generate_twelve_split_spline_patch_patch_boundaries()
+        patch_boundaries: list[list[Vector3f]]
+        patch_boundaries = generate_twelve_split_spline_patch_patch_boundaries()
         assert len(patch_boundaries) == 12
         assert len(patch_boundaries[0]) == 3
-        assert patch_boundaries[0][0].shape == (3, 1)
+        assert patch_boundaries[0][0].shape == (3, )
 
         domains: list[ConvexPolygon] = []  # list of length patches_per_face
         for i in range(patches_per_face):
@@ -481,28 +482,30 @@ def generate_twelve_split_domain_areas() -> None:
     unimplemented("Only used in test_assemble_matrix.cpp in original ASOC code.")
 
 
-def generate_twelve_split_spline_patch_patch_boundaries() -> list[list[Matrix3x1r]]:
+def generate_twelve_split_spline_patch_patch_boundaries() -> list[list[Vector3f]]:
     """
     Generate patch boundary equations for the twelve split patches in the same
     order as the patch surface mappings
 
     :return: [out] patch_boundaries: twelve patch domain boundary coefficients. 
-    list of length 12 with list[Matrix3x1r] of length 3.
-    :rtype: list[list[Matrix3x1r]]
+    list of length 12 with list[Vector3f] of length 3.
+    :rtype: list[list[Vector3f]]
     """
     num_patches = 12
     num_boundaries = 3
     num_coeffs = 3
-    patch_boundaries: list[list[np.ndarray]] = [
+    patch_boundaries: list[list[Vector3f]] = [
         [
-            np.zeros(shape=(num_coeffs, 1))
+            np.zeros(shape=(num_coeffs, ))
             for _ in range(num_boundaries)
         ]
         for _ in range(num_patches)
     ]
+
     assert len(patch_boundaries) == 12
     assert len(patch_boundaries[0]) == 3
-    assert patch_boundaries[0][0].shape == (3, 1)  # lazy shape checking.
+    assert patch_boundaries[0][0].shape == (3, )  # lazy shape checking.
+    assert patch_boundaries[0][0].ndim == 1
 
     # Get boundary coefficients
     bound_coeffs: np.ndarray = PS12tri_bounds_coeffs()

@@ -9,8 +9,11 @@ Mesh halfedge representation. Supports meshes with boundary and basic
 topological information. Can be initialized from face topology information.
 """
 
-from src.core.common import *
-from src.core.vertex_circulator import *
+import logging
+
+from src.core.common import (PLACEHOLDER_INDEX, Index, MatrixNx3i,
+                             find_face_vertex_index, is_manifold, logger)
+from src.core.vertex_circulator import VertexCirculator
 
 
 def build_halfedge_to_edge_maps(opp: list[Index]
@@ -202,6 +205,7 @@ class Halfedge:
     def next_halfedge(self, he: Index) -> Index:
         """
         Retrieves self.next at index he.
+
         :param he: [in] index to retrieve next Halfedge
         :return: index of next Halfedge
         """
@@ -234,66 +238,71 @@ class Halfedge:
     # ********************
 
     def halfedge_to_edge(self, he: Index) -> Index:
+        """Gets halfedge to edge at index"""
         if not self.is_valid_halfedge_index(he):
             return self.INVALID_EDGE_INDEX
         return self.__he2e[he]
 
     def edge_to_halfedge(self, e: Index) -> tuple[Index, Index]:
+        """Gets edge to halfedge at index"""
         return self.__e2he[e]
 
     def edge_to_first_halfedge(self, e: Index) -> Index:
+        """Gets edge to first halfedge at index"""
         # NOTE: equivalent to C++ pair .first
         return self.__e2he[e][0]
 
     def edge_to_second_halfedge(self, e: Index) -> Index:
+        """Gets edge to second halfedge at index"""
         # NOTE: equivalent to C++ pair .second
         return self.__e2he[e][1]
 
     @property
     def halfedge_to_edge_map(self) -> list[Index]:
-        """
-        Gets he2e
-        :returns: h2e2
-        """
+        """Gets halfedge to edge"""
         return self.__he2e
 
     @property
     def edge_to_halfedge_map(self) -> list[tuple[Index, Index]]:
-        """
-        Gets e2he
-        :returns: e2he
-        """
+        """Gets edge to halfedge"""
         return self.__e2he
 
     # **********************
     # Attributes for Testing
     # **********************
     @property
-    def f2he(self):
+    def f2he(self) -> list[int]:
+        """Gets face to halfedge"""
         return self.__f2he
 
     @property
-    def face(self):
+    def face(self) -> list[int]:
+        """Gets face"""
         return self.__face
 
     @property
-    def _from(self):
+    def _from(self) -> list[int]:
+        """Gets halfedge from"""
         return self.__from
 
     @property
-    def next(self):
+    def next(self) -> list[int]:
+        """Gets halfedge next"""
         return self.__next
 
     @property
-    def opp(self):
+    def opp(self) -> list[int]:
+        """Gets halfedge opposite"""
         return self.__opp
 
     @property
-    def out(self):
+    def out(self) -> list[int]:
+        """Gets halfedge out"""
         return self.__out
 
     @property
-    def to(self):
+    def to(self) -> list[int]:
+        """Gets halfedge to"""
         return self.__to
 
     # ******************
@@ -301,41 +310,41 @@ class Halfedge:
     # ******************
 
     def is_boundary_edge(self, e: Index) -> bool:
-        if (not self.is_valid_halfedge_index(self.edge_to_first_halfedge(e))):
+        """
+        Checks if halfedge is boundary edge
+        """
+        if not self.is_valid_halfedge_index(self.edge_to_first_halfedge(e)):
             return True
-        if (not self.is_valid_halfedge_index(self.edge_to_second_halfedge(e))):
+        if not self.is_valid_halfedge_index(self.edge_to_second_halfedge(e)):
             return True
         return False
 
     def is_boundary_halfedge(self, he: Index) -> bool:
+        """
+        Checks if halfedge is boundary halfedge
+        """
         return self.is_boundary_edge(self.halfedge_to_edge(he))
 
     def build_boundary_edge_list(self) -> list[Index]:
         """
-            Args:
-                None
-            Returns:
-                boundary_halfedges (list[Index]): out
+        :return boundary_halfedges: [out]
         """
         boundary_edges: list[Index] = []
 
         for ei in range(self.__num_edges):
-            if (self.is_boundary_edge(ei)):
+            if self.is_boundary_edge(ei):
                 boundary_edges.append(ei)
 
         return boundary_edges
 
     def build_boundary_halfedge_list(self) -> list[Index]:
         """
-            Args:
-                None
-            Returns:
-                boundary_halfedges (list[Index]): out
+        :return boundary_halfedges: [out]
         """
         boundary_halfedges: list[Index] = []
 
         for hi in range(self.__num_halfedges):
-            if (self.is_boundary_halfedge(hi)):
+            if self.is_boundary_halfedge(hi):
                 boundary_halfedges.append(hi)
 
         return boundary_halfedges
@@ -372,17 +381,18 @@ class Halfedge:
         """
         Builds list for corner to he and he to corner maps.
 
-        Args:
-            num_faces: in.
-            # TODO: write this whole docstring in markdown notation or whatnot
-        Returns:
-            corner_to_he (list[list[Index]]): output.
-            he_to_corner (list[tuple[Index, Index]]): out
+        :param num_faces: [in]
+
+        :returns:
+            - corner_to_he (list[list[Index]]): [out]
+
+            - he_to_corner (list[tuple[Index, Index]]): out
         """
 
         # FIXME: resizing probably all works, but find a way that's neater than whatever is below
         corner_to_he: list[list[Index]] = [[] for _ in range(num_faces)]
-        he_to_corner: list[tuple[Index, Index]] = [(PLACEHOLDER_INDEX, PLACEHOLDER_INDEX) for _ in range(3 * num_faces)]
+        he_to_corner: list[tuple[Index, Index]] = [(PLACEHOLDER_INDEX, PLACEHOLDER_INDEX)
+                                                   for _ in range(3 * num_faces)]
 
         # Iterate over faces to build corner to he maps
         he_index: Index = 0

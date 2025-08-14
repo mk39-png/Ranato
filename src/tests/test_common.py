@@ -35,10 +35,10 @@ def test_index_vector_complement_spot_mesh() -> None:
 
 
 def test_cross_product() -> None:
-    v = np.array([[1], [2], [3]])
-    w = np.array([[4], [5], [6]])
-    assert v.shape == (3, 1)
-    assert w.shape == (3, 1)
+    v = np.array([1, 2, 3])
+    w = np.array([4, 5, 6])
+    assert v.shape == (3, )
+    assert w.shape == (3, )
 
     n = cross_product(v, w)
     n_numpy = np.cross(v, w, axis=0)

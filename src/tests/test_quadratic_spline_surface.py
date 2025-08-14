@@ -1,18 +1,15 @@
-import numpy as np
-import pytest
+
 import os
 
-from src.core.common import (
-    todo,
-    compare_eigen_numpy_matrix,
-    convert_nested_vector_to_matrix,  # TODO: move this test case to test_common.py
-    convert_polylines_to_edges,  # TODO: move this test case to test_common.py
-    SpatialVector,
-    MatrixNx3f,
-    MatrixNx3i)
+import numpy as np
+import pytest
+
+from src.core.common import (MatrixNx3f, MatrixNx3i, SpatialVector,
+                             SpatialVector1d, compare_eigen_numpy_matrix,
+                             convert_nested_vector_to_matrix,
+                             convert_polylines_to_edges, todo)
 from src.quadratic_spline_surface.quadratic_spline_surface import (
-    QuadraticSplineSurface,
-    SurfaceDiscretizationParameters)
+    QuadraticSplineSurface, SurfaceDiscretizationParameters)
 
 
 def test_spot_control_triangulate_patch_patch_index_0() -> None:
@@ -74,12 +71,12 @@ def test_spot_control_discretize_patch_boundaries() -> None:
     filepath: str = os.path.abspath(f"src\\tests\\spot_control\\{filename}")
     spline_surface: QuadraticSplineSurface = QuadraticSplineSurface.from_file(filepath)
 
-    boundary_points: list[SpatialVector]
+    boundary_points: list[SpatialVector1d]
     boundary_polylines: list[list[int]]
     boundary_points, boundary_polylines = spline_surface.discretize_patch_boundaries()
 
     compare_eigen_numpy_matrix("spot_control\\quadratic_spline_surface\\add_surface_to_viewer\\boundary_points.csv",
-                               np.array(boundary_points).squeeze())
+                               np.array(boundary_points))
     compare_eigen_numpy_matrix("spot_control\\quadratic_spline_surface\\add_surface_to_viewer\\boundary_polylines.csv",
                                np.array(boundary_polylines))
 
@@ -95,7 +92,7 @@ def test_spot_control_boundary_points_matrix() -> None:
     filepath: str = os.path.abspath(f"src\\tests\\spot_control\\{filename}")
     spline_surface: QuadraticSplineSurface = QuadraticSplineSurface.from_file(filepath)
 
-    boundary_points: list[SpatialVector]
+    boundary_points: list[SpatialVector1d]
     _boundary_polylines: list[list[int]]
     boundary_points, _boundary_polylines = spline_surface.discretize_patch_boundaries()
 
@@ -121,4 +118,4 @@ def test_spot_control_boundary_edges() -> None:
 
     boundary_edges: list[tuple[int, int]] = convert_polylines_to_edges(boundary_polylines)
     compare_eigen_numpy_matrix("spot_control\\quadratic_spline_surface\\add_surface_to_viewer\\boundary_edges.csv",
-                               np.array(boundary_edges).squeeze())
+                               np.array(boundary_edges))

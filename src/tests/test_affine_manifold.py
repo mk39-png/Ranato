@@ -1,9 +1,8 @@
-import os
 
-import igl
+from typing import Any
+
 import numpy as np
 import numpy.testing as npt
-import pytest
 
 from src.core.affine_manifold import (AffineManifold, EdgeManifoldChart,
                                       FaceManifoldChart,
@@ -23,7 +22,7 @@ from src.core.common import (FLOAT_EQUAL_PRECISION, Index, Matrix2x2f,
 
 
 def compare_vertex_charts(
-        vertex_charts_control: list[dict],
+        vertex_charts_control: list[dict[str, Any]],
         vertex_charts_test: list['VertexManifoldChart']) -> None:
     """
     TEMPORARY: used to test the vertex charts inputs...
@@ -51,7 +50,8 @@ def compare_vertex_charts(
         assert control_is_cone_adjacent == vertex_chart_test.is_cone_adjacent
 
 
-def compare_edge_charts(edge_charts_control: list[dict],  edge_charts_test: list[EdgeManifoldChart]):
+def compare_edge_charts(edge_charts_control: list[dict],
+                        edge_charts_test: list[EdgeManifoldChart]) -> None:
     """
     TEMPORARY: used to test the edge charts inputs...
     """
@@ -96,10 +96,8 @@ def compare_edge_charts(edge_charts_control: list[dict],  edge_charts_test: list
         assert control_is_boundary_control == test_is_boundary_control
 
 
-def compare_face_charts(
-    face_charts_control: list[dict],
-    face_charts_test: list['FaceManifoldChart']
-) -> None:
+def compare_face_charts(face_charts_control: list[dict],
+                        face_charts_test: list['FaceManifoldChart']) -> None:
     """
     Compare control dicts with actual FaceManifoldChart objects.
     """

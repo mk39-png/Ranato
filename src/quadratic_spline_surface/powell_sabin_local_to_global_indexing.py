@@ -13,18 +13,19 @@ Used by optimize_spline_surface.py
 """
 
 from typing import Literal
-from src.core.common import VectorX
+
+import numpy as np
+
 from src.core.affine_manifold import *
+from src.core.common import VectorX
 from src.core.differentiable_variable import *
 from src.core.halfedge import *
 from src.quadratic_spline_surface.position_data import *
 
-import numpy as np
-
-
 # *******************
 # Local block indices
 # *******************
+
 
 def generate_local_vertex_position_variables_start_index(vertex_index: int,
                                                          dimension: int = 3) -> int:
@@ -268,7 +269,7 @@ def generate_global_edge_gradient_variable_index(num_variable_vertices: int,
 # Variable flattening
 # *******************
 
-def generate_six_split_variable_value_vector(vertex_positions: list[SpatialVector],
+def generate_six_split_variable_value_vector(vertex_positions: list[SpatialVector1d],
                                              vertex_gradients: list[Matrix2x3r],
                                              variable_vertices: list[int]) -> Vector1D:
     """"
@@ -280,7 +281,8 @@ def generate_six_split_variable_value_vector(vertex_positions: list[SpatialVecto
 
     i.e. Get flat vector of all current variable values for the six-split
     NOTE: Also used as a subroutine to generate the twelve split maps.
-    NOTE: keeping variable_values as 1D array since generate_twelve_split_variable_value_vector() expects 1D array back.
+    NOTE: keeping variable_values as 1D array since generate_twelve_split_variable_value_vector() 
+    expects 1D array back.
 
     :param vertex_positions:  (in) list of vertex position values. SpatialVector shape (1, 3)
     :param vertex_gradients:  (in) list of vertex gradient matrices 
@@ -289,6 +291,7 @@ def generate_six_split_variable_value_vector(vertex_positions: list[SpatialVecto
     """
     num_variable_vertices: int = len(variable_vertices)
     if num_variable_vertices == 0:
+        # FIXME: determine severity of warning (i.e. Exception or not)
         logger.warning("Building value vector for zero variable vertices")
         variable_values: Vector1D = np.ndarray(shape=(0, 0))
         raise Exception("building value vector for zero variable vertices")
@@ -304,8 +307,9 @@ def generate_six_split_variable_value_vector(vertex_positions: list[SpatialVecto
             dimension)
 
         for i in range(dimension):
-            # NOTE: SpatialVector shape is (1, 3), but flattened to (3, ) shape
-            variable_values[start_index + i] = vertex_positions[variable_vertices[vertex_index]].flatten()[i]
+            # NOTE: SpatialVector shape is (3, )
+            assert vertex_positions[variable_vertices[vertex_index]].shape == (3, )
+            variable_values[start_index + i] = vertex_positions[variable_vertices[vertex_index]][i]
 
     # Get gradient values
     for vertex_index in range(num_variable_vertices):
@@ -324,9 +328,9 @@ def generate_six_split_variable_value_vector(vertex_positions: list[SpatialVecto
     return variable_values
 
 
-def generate_twelve_split_variable_value_vector(vertex_positions: list[SpatialVector],
+def generate_twelve_split_variable_value_vector(vertex_positions: list[SpatialVector1d],
                                                 vertex_gradients: list[Matrix2x3r],
-                                                edge_gradients: list[list[SpatialVector]],
+                                                edge_gradients: list[list[SpatialVector1d]],
                                                 variable_vertices: list[int],
                                                 variable_edges: list[int],
                                                 halfedge: Halfedge,
@@ -364,7 +368,7 @@ def generate_twelve_split_variable_value_vector(vertex_positions: list[SpatialVe
     dimension: int = 3
 
     variable_values: Vector1D = np.ndarray(shape=(3 * dimension * num_variable_vertices +
-                                                  dimension * num_variable_edges,))
+                                                  dimension * num_variable_edges, ))
     variable_values[:six_split_variable_values.size] = six_split_variable_values
     assert variable_values.ndim == 1
 
@@ -385,8 +389,9 @@ def generate_twelve_split_variable_value_vector(vertex_positions: list[SpatialVe
 
             # Extract variable value of the edge to the corner
             # FIXME: problem with setting an array element with a sequence.
-            # NOTE: edge_gradients[face_index][face_vertex_index] gets SpatialVector of shape (1, 3), h
-            variable_values[variable_index] = edge_gradients[face_index][face_vertex_index].flatten()[coord]
+            # NOTE: edge_gradients[face_index][face_vertex_index] gets SpatialVector of shape (3, )
+            assert edge_gradients[face_index][face_vertex_index].shape == (3, )
+            variable_values[variable_index] = edge_gradients[face_index][face_vertex_index][coord]
 
     assert variable_values.ndim == 1
     return variable_values
@@ -413,8 +418,7 @@ def generate_six_split_local_to_global_map(global_vertex_indices: list[int],
     # TODO: check if having -1 initialized into local_to_global_map is the way to go
     # TODO: seems like it since the below sets global_index to -1... somewhere.
     # TODO: what if instead of list[int]... we use numpy arrays???
-    PLACEHOLDER_INT: int = -1
-    local_to_global_map: list[int] = [PLACEHOLDER_INT for _ in range(27)]
+    local_to_global_map: list[int] = [PLACEHOLDER_VALUE for _ in range(27)]
 
     for local_vertex_index in range(3):
         global_vertex_index: int = global_vertex_indices[local_vertex_index]
@@ -426,7 +430,7 @@ def generate_six_split_local_to_global_map(global_vertex_indices: list[int],
                 local_vertex_index, coord, dimension)
 
             global_index: int
-            if (global_vertex_index < 0):
+            if global_vertex_index < 0:
                 global_index = -1
             else:
                 global_index = generate_global_vertex_position_variable_index(
@@ -440,7 +444,7 @@ def generate_six_split_local_to_global_map(global_vertex_indices: list[int],
                 local_index: int = generate_local_vertex_gradient_variable_index(
                     local_vertex_index, row, col, dimension)
                 global_index: int
-                if (global_vertex_index < 0):
+                if global_vertex_index < 0:
                     global_index = -1
                 else:
                     global_index = generate_global_vertex_gradient_variable_index(
@@ -472,8 +476,7 @@ def generate_twelve_split_local_to_global_map(global_vertex_indices: list[int],
 
     # Get index map for the Powell-Sabin shared variables
     dimension: int = 3
-    PLACEHOLDER_INT: int = -1
-    local_to_global_map: list[int] = [PLACEHOLDER_INT for _ in range(36)]
+    local_to_global_map: list[int] = [PLACEHOLDER_VALUE for _ in range(36)]
     six_split_local_to_global_map: list[int] = generate_six_split_local_to_global_map(
         global_vertex_indices, num_variable_vertices)
     assert len(six_split_local_to_global_map) == 27
@@ -487,7 +490,7 @@ def generate_twelve_split_local_to_global_map(global_vertex_indices: list[int],
             local_index: int = generate_local_edge_gradient_variable_index(
                 local_edge_index, coord, dimension)
             global_index: int
-            if (global_edge_index < 0):
+            if global_edge_index < 0:
                 global_index = -1
             else:
                 global_index = generate_global_edge_gradient_variable_index(
@@ -500,7 +503,7 @@ def generate_twelve_split_local_to_global_map(global_vertex_indices: list[int],
 
 
 def update_independent_variable_vector(variable_values: Vector1D,
-                                       variable_vector_ref: SpatialVector,
+                                       variable_vector_ref: SpatialVector1d,
                                        start_index: int) -> None:
     """
     Update variables in a vector from the vector of all variable values from some
@@ -514,13 +517,13 @@ def update_independent_variable_vector(variable_values: Vector1D,
     :param start_index: (in)
     """
     assert variable_values.ndim == 1
-    assert variable_vector_ref.shape == (1, 3)
+    assert variable_vector_ref.shape == (3, )
 
     # TODO: could probably do this with NumPy indexing
     for i in range(variable_vector_ref.size):
         variable_index: int = start_index + i
-        # NOTE: SpatialVector is of shape (1, 3)
-        variable_vector_ref[0][i] = variable_values[variable_index]
+        # NOTE: SpatialVector is of shape (3, )
+        variable_vector_ref[i] = variable_values[variable_index]
 
 
 def update_independent_variable_matrix(variable_values: Vector1D,
@@ -545,7 +548,7 @@ def update_independent_variable_matrix(variable_values: Vector1D,
 
 def update_position_variables(variable_values: Vector1D,
                               variable_vertices: list[int],
-                              vertex_positions_ref: list[SpatialVector]) -> None:
+                              vertex_positions_ref: list[SpatialVector1d]) -> None:
     """
     Used in optimize_spline_surface.py
 
@@ -605,7 +608,7 @@ def update_edge_gradient_variables(variable_values: Vector1D,
                                    variable_edges: list[int],
                                    halfedge: Halfedge,
                                    he_to_corner: list[tuple[Index, Index]],
-                                   edge_gradients_ref: list[list[SpatialVector]]) -> None:
+                                   edge_gradients_ref: list[list[SpatialVector1d]]) -> None:
     """
     Used in optimize_spline_surface.py
 
@@ -717,7 +720,7 @@ def update_energy_quadratic(local_energy: float,
                             local_hessian: TwelveSplitHessian,  # shape (36, 36)
                             local_to_global_map: list[int],
                             energy: float,
-                            derivatives_ref: Vector2D,
+                            derivatives_ref: Vector1D,
                             hessian_entries_ref: list[tuple[int, int, float]]
                             ) -> float:
     """
@@ -737,10 +740,8 @@ def update_energy_quadratic(local_energy: float,
     """
     logger.info("Adding local face energy %s", local_energy)
     logger.info("Local to global map: %s", local_to_global_map)
-    assert derivatives_ref.ndim == 2  # shape (36, 1)
-    assert derivatives_ref.shape[1] == 1
-    assert local_derivatives.ndim == 2
-    assert local_derivatives.shape[1] == 1
+    assert derivatives_ref.ndim == 1  # shape (36, 1)
+    assert local_derivatives.ndim == 1
     assert local_hessian.ndim == 2
 
     # Update energy
@@ -752,8 +753,7 @@ def update_energy_quadratic(local_energy: float,
         global_index: int = local_to_global_map[local_index]
         if global_index < 0:
             continue  # Skip fixed variables with no global index
-        # NOTE: Accessing column 0 because derivatives are 2D shapes with 1 column.
-        derivatives_ref[global_index, 0] += local_derivatives[local_index, 0]
+        derivatives_ref[global_index] += local_derivatives[local_index]
 
     # Update hessian entries
     for local_index_i in range(num_local_indices):

@@ -1,40 +1,47 @@
-# Implementing with pytest!
-from ..core.common import *
-from ..core.polynomial_function import *
+import numpy as np
 import pytest
+
+from src.core.common import Vector1D, float_equal
+from src.core.polynomial_function import (
+    compute_polynomial_mapping_cross_product,
+    compute_polynomial_mapping_derivative, compute_polynomial_mapping_product,
+    evaluate_polynomial, generate_monomials, polynomial_real_roots,
+    quadratic_real_roots)
 
 
 def test_generate_monomials() -> None:
     degree = 2
     t = -1
-    T = generate_monomials(degree, t)
+    T: Vector1D = generate_monomials(degree, t)
 
-    assert T.shape == (1, degree + 1)
-    assert T[0, 0] == 1
-    assert T[0, 1] == -1
-    assert T[0, 2] == 1
+    assert T.shape == (degree + 1, )
+    assert T[0] == 1
+    assert T[1] == -1
+    assert T[2] == 1
 
 
 def test_evaluate_polynomial() -> None:
     degree = 2
     dimension = 1
-    polynomial_coeffs = np.array([[0.], [0.], [0.]])
-    t = -1.0
+    polynomial_coeffs = np.array([0., 0., 0.])
+    t: float = -1.0
 
-    polynomial_evaluation = evaluate_polynomial(
+    polynomial_evaluation: np.ndarray = evaluate_polynomial(
         degree, dimension, polynomial_coeffs, t)
-    assert polynomial_evaluation.shape == (1, dimension)
+    assert polynomial_evaluation.shape == (dimension, )
 
 
 def test_compute_polynomial_mapping_product_one_dimension() -> None:
     """
     Testing ASOC code's implementation with NumPy's .convolve() method.
-    Because we don't need to reimplement everything if NumPy conveniently provides functionality for us.
+    Because we don't need to reimplement everything if NumPy conveniently provides 
+    functionality for us.
     """
-    # NOTE: apparently the dimension is always 1... in the cases that compute_polynomial_mapping_product() is used.
-    first_polynomial_coeffs = np.array([[2], [1]])
-    second_polynomial_coeffs = np.array([[1], [1]])
-    product_polynomial_coeffs = np.ndarray(shape=(3, 1))
+    # NOTE: apparently the dimension is always 1... in the cases that
+    # compute_polynomial_mapping_product() is used.
+    first_polynomial_coeffs = np.array([2, 1])
+    second_polynomial_coeffs = np.array([1, 1])
+    product_polynomial_coeffs = np.ndarray(shape=(3, ))
 
     first_degree = 1
     second_degree = 1
@@ -83,8 +90,8 @@ def test_compute_polynomial_mapping_derivative_with_asoc() -> None:
     # ******************
     degree = 1
     dimension = 1
-    polynomial_coeffs = np.array([[0.0], [0.0]])
-    derivative_polynomial_coeffs = np.array([[0.0]])
+    polynomial_coeffs = np.array([0.0, 0.0])
+    derivative_polynomial_coeffs = np.array([0.0])
 
     # ASOC CODE
     for i in range(1, degree + 1):
@@ -145,16 +152,16 @@ def test_polynomial_mapping_cross_products_elementary_constant_functions():
     # TODO: add section
     # TODO: make this more pytest-esque
     print("Elementary constant functions")
-    A_coeffs = np.array([[1, 0, 0]])
-    B_coeffs = np.array([[0, 1, 0]])
-    cross_product_coeffs = compute_polynomial_mapping_cross_product(0, 0,
-                                                                    A_coeffs, B_coeffs)
+    A_coeffs = np.array([1, 0, 0])
+    B_coeffs = np.array([0, 1, 0])
+    cross_product_coeffs = compute_polynomial_mapping_cross_product(
+        0, 0, A_coeffs, B_coeffs)
 
-    assert cross_product_coeffs.shape == (1, 3)
+    assert cross_product_coeffs.shape == (3, )
 
-    assert float_equal(cross_product_coeffs[0, 0], 0.0)
-    assert float_equal(cross_product_coeffs[0, 1], 0.0)
-    assert float_equal(cross_product_coeffs[0, 2], 1.0)
+    assert float_equal(cross_product_coeffs[0], 0.0)
+    assert float_equal(cross_product_coeffs[1], 0.0)
+    assert float_equal(cross_product_coeffs[2], 1.0)
 
 
 def test_polynomial_mapping_cross_products_elementary_linear_functions():
@@ -176,16 +183,16 @@ def test_polynomial_mapping_cross_products_elementary_linear_functions():
 
 def test_polynomial_mapping_cross_products_general_constant_functions():
     print("General constant functions")
-    A_coeffs = np.array([[1, 2, 3]])
-    B_coeffs = np.array([[4, 5, 6]])
-    cross_product_coeffs = compute_polynomial_mapping_cross_product(0, 0,
-                                                                    A_coeffs, B_coeffs)
+    A_coeffs = np.array([1, 2, 3])
+    B_coeffs = np.array([4, 5, 6])
+    cross_product_coeffs = compute_polynomial_mapping_cross_product(
+        0, 0,  A_coeffs, B_coeffs)
 
-    assert cross_product_coeffs.shape == (1, 3)
+    assert cross_product_coeffs.shape == (3, )
 
-    assert float_equal(cross_product_coeffs[0, 0], -3.0)
-    assert float_equal(cross_product_coeffs[0, 1], 6.0)
-    assert float_equal(cross_product_coeffs[0, 2], -3.0)
+    assert float_equal(cross_product_coeffs[0], -3.0)
+    assert float_equal(cross_product_coeffs[1], 6.0)
+    assert float_equal(cross_product_coeffs[2], -3.0)
 
 
 def test_polynomial_mapping_cross_products_cancelling_linear_functions():

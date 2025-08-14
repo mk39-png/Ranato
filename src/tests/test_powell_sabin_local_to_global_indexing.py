@@ -2,7 +2,8 @@ import numpy as np
 import pytest
 
 from src.core.affine_manifold import AffineManifold
-from src.core.common import (ROWS, Index, Matrix2x3r, SpatialVector, Vector1D,
+from src.core.common import (ROWS, Index, Matrix2x3r, SpatialVector,
+                             SpatialVector1d, Vector1D,
                              compare_eigen_numpy_matrix, float_equal,
                              index_vector_complement,
                              initialize_spot_control_mesh)
@@ -21,6 +22,10 @@ def test_generate_twelve_split_variable_value_vector_spot_mesh():
     Tests generate_twelve_split_variable_value_vector from spot_control
     to make initial_variable_values inside optimize_twelve_split_spline_surface()
     """
+    initialV: np.ndarray
+    uv: np.ndarray
+    F: np.ndarray
+    FT: np.ndarray
     initial_V, uv, F, FT = initialize_spot_control_mesh()
     affine_manifold = initialize_affine_manifold_from_spot_control()
     num_vertices: int = initial_V.shape[ROWS]
@@ -32,12 +37,12 @@ def test_generate_twelve_split_variable_value_vector_spot_mesh():
     num_edges: int = halfedge.num_edges
 
     # Initialize variables to optimize
-    vertex_positions: list[SpatialVector] = []
-    initial_vertex_positions: list[SpatialVector] = []
+    vertex_positions: list[SpatialVector1d] = []
+    initial_vertex_positions: list[SpatialVector1d] = []
     for i in range(num_vertices):
-        assert initial_V[[i], :].shape == (1, 3)
-        vertex_positions.append(initial_V[[i], :])
-        initial_vertex_positions.append(initial_V[[i], :])
+        assert initial_V[i, :].shape == (3, )
+        vertex_positions.append(initial_V[i, :])
+        initial_vertex_positions.append(initial_V[i, :])
     assert len(vertex_positions) == num_vertices
     assert len(initial_vertex_positions) == num_vertices
     vertex_gradients: list[Matrix2x3r] = generate_zero_vertex_gradients(num_vertices)

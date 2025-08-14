@@ -16,111 +16,123 @@ as to not break anything.
 Meaning, vectors treated as (1, n) and (n, 1) rather than (n, )
 """
 
-# TODO: only import the things needed from numpy... that being ndarray.
-# import numpy as np
+import math
+from venv import logger
 
-# https://medium.com/@goldengrisha/using-numpy-typing-for-type-safe-list-handling-in-python-35f8c99c76ac
-from src.core.common import *
-import numpy.typing as npt
+import numpy as np
+
+from src.core.common import (COLS, ROWS, MatrixNx3f, MatrixXf, Vector1D,
+                             Vector2D, Vector2f, Vector3f, float_equal,
+                             float_equal_zero, unimplemented)
 
 
-def remove_polynomial_trailing_coefficients(A_coeffs: np.ndarray):
-    """ Remove any zeros at the end of the polynomial coefficient vector
+def remove_polynomial_trailing_coefficients(A_coeffs_ref: Vector1D) -> Vector1D:
+    """ 
+    Remove any zeros at the end of the polynomial coefficient vector
 
-    Args:
-        A_coeffs [in]
-        reduced_coeffs [out]
-
-    Return: 
-        reference to trimmed A_coeffs with trailing zeros removed
+    :param A_coeffs: [in] polynomal coefficient vector
+    :return reduced_coeffs: copy of A_coeffs with trailing zeros removed
     """
+    assert A_coeffs_ref.ndim == 1
 
-    # TODO: assert that A_coeffs is indeed a vector and NOT a matrix.
-    assert A_coeffs.ndim == 1
-    return np.trim_zeros(A_coeffs, 'b')
+    # Make a copy of A_coeffs_ref as to not modify the original array when trimming zeros
+    reduced_coeffs: Vector1D = np.copy(A_coeffs_ref)
+    np.trim_zeros(reduced_coeffs, 'b')
 
-
-def generate_monomials(degree: int, t: float) -> npt.NDArray[np.float64]:
-    """ Generate the row vector T of n + 1 monomials 1, t, ... , t^n.
-
-    Args:
-        degree (int): maximum monomial degree.
-        t (float): [in] evaluation point for the monomials.
+    return reduced_coeffs
 
 
-    Returns:
-        T (np.ndarray): [out] row vector of monomials of shape (1, degree + 1).
+def generate_monomials(degree: int, t: float) -> Vector2D:
+    """ 
+    Generate the row vector T of n + 1 monomials 1, t, ... , t^n.
+
+    :param int degree: [in] maximum monomial degree.
+    :param float t: [in] evaluation point for the monomials.
+
+    :return T: row vector of monomials of shape (1, degree + 1).
+    :rtype: np.ndarray
     """
-    # assert T.shape == (degree + 1,)
-    T: np.ndarray = np.ndarray(shape=(1, degree + 1))
+    # NOTE: Keep below as 2D vector for use in evaluate_polynomial() where dimension is 1
+    # and we want the behavior to be the same for any number of dimension.
+    # Because if dimension == 1, we want to create a 2D (n, 1) shape rather than a 1D (n, ) shape
+    T: Vector2D = np.ndarray(shape=(1, degree + 1), dtype=np.float64)
 
-    T[0] = 1.0
-
-    # NOTE: In the original ASOC code, T is a Matrix with 1 row and degree + 1 columns.
-    # FIXME: deal with 1D things... You know?
+    T[0][0] = 1.0
     for i in range(1, degree + 1):
-        T[0, i] = T[0, i - 1] * t
+        T[0][i] = T[0][i - 1] * t
 
     return T
 
 
-def evaluate_polynomial(degree: int, dimension: int, polynomial_coeffs: np.ndarray, t: float) -> np.ndarray:
+def evaluate_polynomial(degree: int,
+                        dimension: int,
+                        polynomial_coeffs: Vector2D,
+                        t: float) -> Vector1D:
     """
     Evaluate the polynomial with given coefficients at t. 
     NOTE: this has been modified from the ASOC code to support any dimension.
 
-    Args:
-        degree: maximum monomial degree.
-        dimension (int): polynomial dimension.
-        polynomial_coeffs: [in, const, reference] coefficients of the polynomial.
-        t: [in] evaluation point for the polynomial.
 
-    Returns:
-        polynomial_evaluation: evaluation of the polynomial of shape (1, dimension)
+    :param int degree: [in] maximum monomial degree.
+    :param int dimension: [in] polynomial dimension.
+    :param polynomial_coeffs: [in] coefficients of the polynomial.
+    :param t: [in] evaluation point for the polynomial.
+
+    :return polynomial_evaluation: evaluation of the polynomial of shape (dimension, )
     """
+    assert polynomial_coeffs.shape == (degree + 1, dimension), ("polynomial_coeffs supposed to be "
+                                                                "matrix (i.e. ndim > 1 OR shape != "
+                                                                "(degree+1,))")
 
-    # TODO: change assertions to do NumPy-esque checks.
-    assert polynomial_coeffs.shape == (
-        degree + 1, dimension), "polynomial_coeffs supposed to be matrix (i.e. ndim > 1 OR shape != (degree+1,))"
-
-    T = generate_monomials(degree, t)
+    T: Vector2D = generate_monomials(degree, t)
     assert T.shape == (1, degree + 1)
 
+    # shape (1, dimension) = (1, degree + 1) @ (degree + 1, dimension)
     polynomial_evaluation = T @ polynomial_coeffs
 
-    # HACK: I removed this assertion since it was messing up F_derivative(-1.0)[0] in "test_zero_function()" case...
-    # assert polynomial_evaluation.shape == (1, dimension)
-
-    # XXX: the below is supposed to do matrix multiplication, FYI
-    return polynomial_evaluation
+    assert polynomial_evaluation.shape == (1, dimension)
+    return polynomial_evaluation.flatten()
 
 
-def evaluate_polynomial_mapping(degree: int, dimension: int, polynomial_coeffs: np.ndarray, t: float, polynomial_evaluation: np.ndarray) -> None:
+def evaluate_polynomial_mapping(degree: int,
+                                dimension: int,
+                                polynomial_coeffs: np.ndarray,
+                                t: float,
+                                polynomial_evaluation: np.ndarray) -> None:
+    """
     # NOTE: This function is just here because the C++ has it.
     # NOTE: But, this should be replaced with the more Pythonic version evaluate_polynomial()
-    raise Exception("Deprecated. Use evalute_polynomial() instead.")
-    pass
+    """
+    raise unimplemented("Deprecated. Use evalute_polynomial() instead.")
 
 
-def compute_polynomial_mapping_product(first_degree: int, second_degree: int, dimension: int,
-                                       first_polynomial_coeffs: np.ndarray,
-                                       second_polynomial_coeffs: np.ndarray) -> np.ndarray:
+def compute_polynomial_mapping_product(first_degree: int,
+                                       second_degree: int,
+                                       dimension: int,
+                                       first_polynomial_coeffs_ref: np.ndarray,
+                                       second_polynomial_coeffs_ref: np.ndarray) -> np.ndarray:
     """ 
     Generate the polynomial coefficients for the kronecker product of two
     polynomials of the same dimension.
 
-    Args:
-        first_degree: maximum monomial degree of the first polynomial.
-        second_degree: maximum monomial degree of the second polynomial.
-        dimension: polynomial dimension.
-        first_polynomial_coeffs: [in] coefficients of the first polynomial.
-        second_polynomial_coeffs: [in] coefficients of the second polynomial.
+    :param first_degree:  [in] maximum monomial degree of the first polynomial.
+    :param second_degree: [in] maximum monomial degree of the second polynomial.
+    :param dimension:     [in] polynomial dimension.
+    :param first_polynomial_coeffs:  [in] coefficients of the first polynomial.
+    :param second_polynomial_coeffs: [in] coefficients of the second polynomial.
 
-    Returns:
-        product_polynomial_coeffs: [out] product polynomial coefficients. shape = (first_degree + second_degree + 1, dimension)
+    :return product_polynomial_coeffs: product polynomial coefficients. 
+        shape = (first_degree + second_degree + 1, dimension)
     """
     # TODO: ask about the shape b/c originally I had something like the pseudocode below
     # assert first_polynomial_coeffs.shape == (first_degree + 1, dimension) OR (first_degree + 1,)
+    first_polynomial_coeffs = first_polynomial_coeffs_ref
+    second_polynomial_coeffs = second_polynomial_coeffs_ref
+
+    if dimension == 1:
+        first_polynomial_coeffs = first_polynomial_coeffs_ref.reshape((first_degree + 1, dimension))
+        second_polynomial_coeffs = second_polynomial_coeffs_ref.reshape((second_degree + 1, dimension))
+
     assert first_polynomial_coeffs.shape == (first_degree + 1, dimension)
     assert second_polynomial_coeffs.shape == (second_degree + 1, dimension)
 
@@ -135,8 +147,6 @@ def compute_polynomial_mapping_product(first_degree: int, second_degree: int, di
             first_polynomial_coeffs[:, k],
             second_polynomial_coeffs[:, k]
         )
-    # product_polynomial_coeffs = np.convolve(
-    #     first_polynomial_coeffs, second_polynomial_coeffs)
 
     # TODO: Double checking that the shape is indeed what we expect.
     # XXX: Doesn't work with shape (n,)
@@ -179,8 +189,8 @@ def compute_polynomial_mapping_scalar_product(first_degree: int, second_degree: 
         for j in range(second_degree + 1):
             for k in range(dimension):
                 # XXX: there may be problem with scalar_polynomial_coeffs accessing b/c of shape
-                product_polynomial_coeffs[[i + j],
-                                          k] += scalar_polynomial_coeffs[i] * polynomial_coeffs[j, k]
+                product_polynomial_coeffs[[i + j], k] += (
+                    scalar_polynomial_coeffs[i] * polynomial_coeffs[j, k])
 
     return product_polynomial_coeffs
 
@@ -192,14 +202,12 @@ def compute_polynomial_mapping_cross_product(first_degree: int, second_degree: i
     Generate the polynomial coefficients for the cross product of two
     vector valued polynomial mappings with range R^3.
 
-    Args:
-        first_degree: maximum monomial degree of the first polynomial.
-        second_degree: maximum monomial degree of the second polynomial.
-        first_polynomial_coeffs: coefficients of the first polynomial.
-        second_polynomial_coeffs: coefficients of the second polynomial.
+    :param first_degree: [in] maximum monomial degree of the first polynomial.
+    :param second_degree: [in] maximum monomial degree of the second polynomial.
+    :param first_polynomial_coeffs: [in] coefficients of the first polynomial.
+    :param second_polynomial_coeffs: [in] coefficients of the second polynomial.
 
-    Returns:
-        product_polynomial_coeffs [out]: product vector valued polynomial
+    :return product_polynomial_coeffs: [out] product vector valued polynomial
         mapping coefficients. Shape = (first_degree + second_degree + 1, 3)
     """
     assert np.shape(first_polynomial_coeffs) == (first_degree + 1, 3)
@@ -230,56 +238,36 @@ def compute_polynomial_mapping_cross_product(first_degree: int, second_degree: i
 
     # Assemble the cross product from the terms
     # NOTE: must reshape for broadcasting to convert (3, 1) to (3,)
-    product_polynomial_coeffs = np.ndarray(
-        shape=(first_degree + second_degree + 1, 3))
-    product_polynomial_coeffs[:, 0] = A1B2.reshape(-1) - A2B1.reshape(-1)
-    product_polynomial_coeffs[:, 1] = A2B0.reshape(-1) - A0B2.reshape(-1)
-    product_polynomial_coeffs[:, 2] = A0B1.reshape(-1) - A1B0.reshape(-1)
+    product_polynomial_coeffs: MatrixNx3f = np.zeros(
+        shape=(first_degree + second_degree + 1, 3), dtype=np.float64)
+    product_polynomial_coeffs[:, 0] = A1B2.flatten() - A2B1.flatten()
+    product_polynomial_coeffs[:, 1] = A2B0.flatten() - A0B2.flatten()
+    product_polynomial_coeffs[:, 2] = A0B1.flatten() - A1B0.flatten()
 
     return product_polynomial_coeffs
 
 
-def compute_polynomial_mapping_dot_product(dimension: int, first_degree: int, second_degree: int,
-                                           first_polynomial_coeffs: np.ndarray,
-                                           second_polynomial_coeffs: np.ndarray) -> np.ndarray:
+def compute_polynomial_mapping_dot_product() -> None:
     """
-    Generate the polynomial coefficients for the cross product of two
-    vector valued polynomial mappings with the same range.
-
-    Args:
-        dimension (int): polynomial mapping dimension.
-        first_degree (int): maximum monomial degree of the first polynomial.
-        second_degree (int): maximum monomial degree of the second polynomial.
-        first_polynomial_coeffs (np.ndarray): coefficients of the first polynomial.
-        second_polynomial_coeffs (np.ndarray): coefficients of the second polynomial.
-
-    Returns:
-        product_polynomial_coeffs (np.ndarray): [out] product vector valued polynomial 
-                                                mapping coefficients.
+    Method not used.
     """
-    assert np.shape(first_polynomial_coeffs) == (first_degree + 1, dimension)
-    assert np.shape(second_polynomial_coeffs) == (second_degree + 1, dimension)
-    # assert np.shape(product_polynomial_coeffs) == (
-    #     first_degree + second_degree + 1, 1)
-
-    pass
+    unimplemented()
 
 
-# NOTE: this is used by rational_function.py
 def compute_polynomial_mapping_derivative(degree: int, dimension: int,
-                                          polynomial_coeffs: np.ndarray) -> np.ndarray:
+                                          polynomial_coeffs: MatrixXf) -> MatrixXf:
     """ 
-    Generate the polynomial coefficients for the derivative of a
-    polynomial mapping.
+    Generate the polynomial coefficients for the derivative of a polynomial mapping.
 
-    Args:
-        degree: PLACEHOLDER.
-        dimension: polynomial mapping dimension.
-        polynomial_coeffs: coefficients of the polynomial mapping.
+    NOTE: used by rational_function.py
 
-    Returns:
-        derivative_polynomial_coeffs: [out] derivative polynomial mapping coefficients.
+    :param degree: [in] degree of the polynomial
+    :param dimension: [in] polynomial mapping dimension.
+    :param polynomial_coeffs: [in] coefficients of the polynomial mapping. 
+    polynomial_coeffs shape (degree + 1, dimension)
 
+    :return derivative_polynomial_coeffs: derivative polynomial mapping coefficients.
+    derivative_polynomial_coeffs shape (degree, dimension)
     """
     assert polynomial_coeffs.shape == (degree + 1, dimension)
 
@@ -300,52 +288,52 @@ def compute_polynomial_mapping_derivative(degree: int, dimension: int,
     # print("what")
 
     # Below should be equivalent to whatever is happening above.
-    derivative_polynomial_coeffs = np.apply_along_axis(
+    derivative_polynomial_coeffs: MatrixXf = np.apply_along_axis(
         np.polynomial.polynomial.polyder, axis=0, arr=polynomial_coeffs)
     assert derivative_polynomial_coeffs.shape == (degree, dimension)
 
     return derivative_polynomial_coeffs
 
 
-def quadratic_real_roots(quadratic_coeffs: np.ndarray, eps: float = 1e-10) -> tuple[np.ndarray, int]:
-    """ Compute the real roots of a quadratic polynomial.
+def quadratic_real_roots(quadratic_coeffs: Vector3f,
+                         eps: float = 1e-10) -> tuple[Vector2f, int]:
+    """ 
+    Compute the real roots of a quadratic polynomial.
 
-    Args:
-        quadratic_coeffs: coefficients of the polynomial
-        eps: threshold for zero comparisons
+    :param quadratic_coeffs: [in] coefficients of the polynomial
+    :param eps: [in] threshold for zero comparisons
 
     Return:
         solutions (list): [out] real roots of the polynomial
         num_solutions (int): [out] solution count
     """
-    assert quadratic_coeffs.shape == (3,)
+    assert quadratic_coeffs.shape == (3, )
 
     discriminant: float
-    solutions: np.ndarray = np.ndarray(shape=(2,))
+    solutions: Vector2f = np.ndarray(shape=(2, ))
     num_solutions: int
 
-    if (eps <= abs(quadratic_coeffs[2])):
-        discriminant = -4 * \
-            quadratic_coeffs[0] * quadratic_coeffs[2] + \
-            quadratic_coeffs[1] * quadratic_coeffs[1]
-        if (eps * eps <= discriminant):
-            if (0.0 < quadratic_coeffs[1]):
-                solutions[0] = 2.0 * quadratic_coeffs[0] / \
-                    (-quadratic_coeffs[1] - math.sqrt(discriminant))
-                solutions[1] = (-quadratic_coeffs[1] -
-                                math.sqrt(discriminant)) / (2.0 * quadratic_coeffs[2])
+    if eps <= abs(quadratic_coeffs[2]):
+        discriminant = (-4 * quadratic_coeffs[0] * quadratic_coeffs[2] +
+                        quadratic_coeffs[1] * quadratic_coeffs[1])
+        if eps * eps <= discriminant:
+            if 0.0 < quadratic_coeffs[1]:
+                solutions[0] = (2.0 * quadratic_coeffs[0] /
+                                (-quadratic_coeffs[1] - math.sqrt(discriminant)))
+                solutions[1] = ((-quadratic_coeffs[1] - math.sqrt(discriminant)) /
+                                (2.0 * quadratic_coeffs[2]))
             else:
-                solutions[0] = (-quadratic_coeffs[1] +
-                                math.sqrt(discriminant)) / (2.0 * quadratic_coeffs[2])
-                solutions[1] = 2.0 * quadratic_coeffs[0] / \
-                    (-quadratic_coeffs[1] + math.sqrt(discriminant))
+                solutions[0] = ((-quadratic_coeffs[1] + math.sqrt(discriminant)) /
+                                (2.0 * quadratic_coeffs[2]))
+                solutions[1] = (2.0 * quadratic_coeffs[0] /
+                                (-quadratic_coeffs[1] + math.sqrt(discriminant)))
             num_solutions = 2
-        elif (0.0 <= discriminant):
+        elif 0.0 <= discriminant:
             solutions[0] = -quadratic_coeffs[1] / (2.0 * quadratic_coeffs[2])
             num_solutions = 1
         else:
             num_solutions = 0
-    elif (eps <= abs(quadratic_coeffs[1])):
+    elif eps <= abs(quadratic_coeffs[1]):
         solutions[0] = -quadratic_coeffs[0] / quadratic_coeffs[1]
         num_solutions = 1
     else:
@@ -355,80 +343,62 @@ def quadratic_real_roots(quadratic_coeffs: np.ndarray, eps: float = 1e-10) -> tu
     return (solutions, num_solutions)
 
 
-# TODO: maybe just add a type alias for A_coeffs to be... if that's supported in Python 3.11
-def polynomial_real_roots(A_coeffs: np.ndarray) -> np.ndarray:
+def polynomial_real_roots(A_coeffs: Vector1D) -> Vector1D:
     """ Compute the real roots of a polynomial.
 
-    Args:
-        A_coeffs: coefficients of the polynomial
-
-    Return:
-        real roots of the polynomial
+    :param A_coeffs: [in] coefficients of the polynomial
+    :return: real roots of the polynomial
     """
-    # TODO: check that A_coeffs is 1D vector
-
+    # Ensuring that A_coeffs is (n, ) shape array
+    assert A_coeffs.ndim == 1
     logger.info("Full coefficient vector: %s", A_coeffs)
-
-    # TODO: removes trailing coefficints by refernece... so A_coeffs is the one that has been modified!
-    reduced_coeffs: np.ndarray = remove_polynomial_trailing_coefficients(
-        A_coeffs)
+    reduced_coeffs: Vector1D = remove_polynomial_trailing_coefficients(A_coeffs)
     logger.info("Reduced coefficient vector: %s", reduced_coeffs)
 
-    # TODO: whenever vector<double> used in C++ code... use NumPy ndarray???
-    # roots should be the same size as reduced_coeffs... or at least allocated to have the same space...
-    roots: np.ndarray
-
-    # TODO: fix this by returning NumPy ndarray
-    # check if reduced coeff is 0
-    if (reduced_coeffs.size == 1 and float_equal_zero(reduced_coeffs[0])):
+    # Check if reduced coeff is 0
+    if reduced_coeffs.size == 1 and float_equal_zero(reduced_coeffs[0]):
+        roots: Vector1D = np.ndarray(shape=(0, 0))
         return roots
 
     # Compute the complex roots
-    solver_roots = np.roots(reduced_coeffs)
+    solver_roots: Vector1D = np.roots(reduced_coeffs)
 
     # Find the real roots (in the style of the C++ version)
     # XXX: Involves a floating point threshold test... well... the C++ version did.
     # Should only grab the true parts...
     # https://stackoverflow.com/questions/28081247/print-real-roots-only-in-numpy
-    # TODO: double check w/ prof if it's OK to go about using NumPy's float checker rather than using the float checker in common.py...
-    # Because that would be redundant systems that would add bloat?
     # TODO: utilize the tolerance value inside common.py
-    real_roots = solver_roots.real[abs(solver_roots.imag) < 1e-10]
-
+    real_roots: Vector1D = solver_roots.real[abs(solver_roots.imag) < 1e-10]
     logger.info("Real roots: %s", real_roots)
+
     return real_roots
 
 
 def formatted_monomial(variable: str, degree: int) -> str:
-    """ Construct a formatted string for a variable raised to some power
+    """
+    Construct a formatted string for a variable raised to some power
 
-    Args: 
-        variable: variable
-        degree: power to raise the variable to
-
-    Return:
-        formatted monomial string
+    :param variable: [in] variable
+    :param degree: [in] power to raise the variable to
+    :return: formatted monomial string
     """
     # Handle degree 0 case
-    if (degree < 1):
+    if degree < 1:
         return ""
 
     # Format as "<variable>^<degree>"
-    monomial_string = (variable + "^" + str(degree))
+    monomial_string: str = variable + "^" + str(degree)
     return monomial_string
 
 
 def formatted_term(coefficient: float, variable: str, precision: int = 16) -> str:
-    """ Construct a formatted string for a term with given coefficient
-        and variable.
+    """ 
+    Construct a formatted string for a term with given coefficient and variable.
 
-    Args:
-        coefficient: coefficient of the term
-        variable: variable of the term
-        precision: floating point precision
-
-    Return:
-        formatted term string
+    :param coefficient: [in] coefficient of the term
+    :param variable: [in] variable of the term
+    :param precision: [in] floating point precision
+    :return: formatted term string
     """
     term_string: str = ""
 
@@ -445,23 +415,21 @@ def formatted_term(coefficient: float, variable: str, precision: int = 16) -> st
     return term_string
 
 
-# TODO: can't I put the datatypes inside polynomial_coeffs as well?
-# TODO: just use degree and dimension from polynomial_coeffs shape... where (n, m) degree = n and dimension = m
-def formatted_polynomial(degree: int, dimension: int, polynomial_coeffs: np.ndarray, precision: int = 16) -> str:
-    """ Construct a formatted string for a polynomial with given coefficients
-        TODO: Implement separate method for polynomial mappings
+def formatted_polynomial(degree: int, dimension: int,
+                         polynomial_coeffs: MatrixXf,
+                         precision: int = 16) -> str:
+    """ 
+    Construct a formatted string for a polynomial with given coefficients
+    TODO: Implement separate method for polynomial mappings
 
-    Args:
-        degree:
-        dimension:
-        P_coeffs: coefficients of the polynomial
-        precision: floating point precision
+    :param degree: TODO
+    :param dimension: TODO
+    :param P_coeffs: [in] coefficients of the polynomial
+    :param precision: [in] floating point precision
 
-    Return:
-        formatted polynomial string
+    :return: formatted polynomial string
     """
     assert np.shape(polynomial_coeffs) == (degree + 1, dimension)
-    # assert polynomial_coeffs.dtype = np.float64
 
     # Handle trivial case
     if polynomial_coeffs.shape[1] == 0:
@@ -470,10 +438,10 @@ def formatted_polynomial(degree: int, dimension: int, polynomial_coeffs: np.ndar
     polynomial_string: str = ""
 
     # Going through polynomial_coeffs columns
-    for i in polynomial_coeffs.shape[1]:
+    for i in range(polynomial_coeffs.shape[COLS]):
         polynomial_string += f"{polynomial_coeffs[0, i]}:.{precision}f"
-        for j in polynomial_coeffs.shape[0]:
-            monomial_string = formatted_monomial("t", j)
+        for j in range(polynomial_coeffs.shape[ROWS]):
+            monomial_string: str = formatted_monomial("t", j)
             polynomial_string += formatted_term(
                 polynomial_coeffs[j, i], monomial_string, precision)
         polynomial_string += "\n"
@@ -481,22 +449,8 @@ def formatted_polynomial(degree: int, dimension: int, polynomial_coeffs: np.ndar
     return polynomial_string
 
 
-# TODO: this doesn't appear anywhere else...
-def substitute_polynomial(A_coeffs: np.ndarray, t) -> any:
-    """ Substitute some variable value that supports addition,
-        multiplication, and double multiplication into a polynomial.
-
-        Abstractly, this represents the polynomial evaluation homomorphism between
-        R[X] and some R-Algebra S.
-
-    Args:  
-        VariableType: any sort of input... TODO: fix the translation from C++ to Python w/ this variable...
-        A_coeffs: coefficients of the polynomial function
-        t: evaluation point
-
-    Return:
-        evaluated polynomial value
+def substitute_polynomial() -> None:
+    """ 
+    Method not used.
     """
-    # TODO: assert that A_coeffs is a vector (i.e. is 1D)
-
-    pass
+    unimplemented()

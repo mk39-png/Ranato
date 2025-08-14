@@ -40,6 +40,7 @@ PlanarPoint = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (1, 2)
 # PlanarPoint1d = np.ndarray[tuple[int], np.dtype[np.float64]]  # shape (2, )
 PlanarPoint1d = np.ndarray  # shape (2, )
 SpatialVector = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (1, 3)
+SpatialVector1d = np.ndarray  # shape (3, )
 Index = int
 FaceIndex = int
 VertexIndex = int
@@ -50,13 +51,17 @@ NodeIndex = int
 SegmentIndex = int
 
 # NOTE: Since NumPu does not have typing, it has been done so as below for readability reasons.
+Vector3i = np.ndarray
 Vector2f = np.ndarray
 Vector3f = np.ndarray
 Vector6f = np.ndarray
+Vector12f = np.ndarray
+Vector36f = np.ndarray
 VectorX = np.ndarray  # shape (n, )... sometimes. Oftentimes it's shape (n, 1) or (1, n)...
 # shape (1, n) (or sometimes shape (n, 1) as in the case of optimize_spline_surface)... might just be easier to flatten and use Vector1D... I don't see the point of having Vector2D if it will just be more confusing.
 Vector2D = np.ndarray
 Vector1D = np.ndarray  # shape (n, )
+MatrixNx2f = np.ndarray
 MatrixNx3 = np.ndarray[tuple[int, int], np.dtype[np.float64]]
 Matrix3x6r = np.ndarray
 # Matrix2x2r = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (2, 2)
@@ -88,6 +93,7 @@ Matrix6x6r = np.ndarray
 Matrix6x12f = np.ndarray
 Matrix12x3f = np.ndarray
 Matrix12x12r = np.ndarray
+Matrix36x36f = np.ndarray
 TwelveSplitGradient = np.ndarray  # shape (36, 1)
 TwelveSplitHessian = np.ndarray  # shape (36, 36)
 
@@ -98,8 +104,8 @@ MatrixXr = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (n, m)
 
 # NOTE: N denotes any arbitrary number of rows.
 # This is not suggesting that MatrixNx3f and MatrixNx3i has the same number of rows.
-MatrixNx3f = np.ndarray[tuple[int, int], np.dtype[np.float64]]
-MatrixNx3i = np.ndarray[tuple[int, int], np.dtype[np.int64]]
+MatrixNx3f = np.ndarray  # np.ndarray[tuple[int, int], np.dtype[np.float64]]
+MatrixNx3i = np.ndarray  # np.ndarray[tuple[int, int], np.dtype[np.int64]]
 
 # Used for accessing numpy shape for clarity sake
 ROWS = 0
@@ -126,13 +132,19 @@ def initialize_spot_control_mesh() -> tuple[npty.ArrayLike, npty.ArrayLike, npty
     filename: str = "spot_control_mesh-cleaned_conf_simplified_with_uv.obj"
     filepath: str = os.path.abspath(f"src\\tests\\spot_control\\{filename}")
 
-    V: npty.ArrayLike
-    uv: npty.ArrayLike
-    N: npty.ArrayLike
-    F: npty.ArrayLike  # int
-    FT: npty.ArrayLike  # int
-    FN: npty.ArrayLike  # int
-    V, uv, N, F, FT, FN = igl.readOBJ(filepath)
+    V_temp: npty.ArrayLike
+    uv_temp: npty.ArrayLike
+    N_temp: npty.ArrayLike
+    F_temp: npty.ArrayLike  # int
+    FT_temp: npty.ArrayLike  # int
+    FN_temp: npty.ArrayLike  # int
+    V_temp, uv_temp, N_temp, F_temp, FT_temp, FN_temp = igl.readOBJ(filepath)
+
+    # Wrapping inside np.array for typing
+    V: np.ndarray = np.array(V_temp)
+    uv: np.ndarray = np.array(uv_temp)
+    F: np.ndarray = np.array(F_temp)
+    FT: np.ndarray = np.array(FT_temp)
 
     return V, uv, F, FT
 
@@ -376,31 +388,29 @@ def dot_product() -> None:
     todo()
 
 
-def cross_product(v_ref: Matrix3x1r, w_ref: Matrix3x1r) -> Matrix3x1r:
+def cross_product(v: Vector3f, w: Vector3f) -> Vector3f:
     """
-    @brief  Compute the cross product of two vectors of arbitrary scalars.
-    @tparam Scalar: scalar field (must support addition and multiplication)
-    @param[in] v: first vector to cross product
-    @param[in] w: second vector to cross product
-    @return cross product v x w in shape (3, 1)
+    Compute the cross product of two vectors of arbitrary scalars.
+    Dedicated method to check for NumPy shapes before cross product calculation.
+
+    :param v: [in] first vector to cross product
+    :param w: [in] second vector to cross product
+    :return: cross product v x w in shape (3, )
     """
-    # Flatten (1, 3) or (3, 1) matrices into (3, ) arrays
-    v: Vector1D = v_ref.flatten()
-    w: Vector1D = w_ref.flatten()
+    # TODO: make this 1D only.
+    assert v.shape == (3, )
+    assert w.shape == (3, )
     assert v.size == 3
     assert w.size == 3
 
-    # TODO: make these 2D matrices act like Eigen matrices with shape (n, 1)
-    # where they can be accessed like vectors and whatnot
     # TODO: use NumPy's version of cross products
-    n: Matrix3x1r = np.array([
-        [v[1] * w[2] - v[2] * w[1]],
-        [-(v[0] * w[2] - v[2] * w[0])],
-        [v[0] * w[1] - v[1] * w[0]]],
+    n: Vector3f = np.array([
+        (v[1] * w[2] - v[2] * w[1]),
+        (-(v[0] * w[2] - v[2] * w[0])),
+        (v[0] * w[1] - v[1] * w[0])],
         dtype=np.float64)
+    assert n.shape == (3, )
 
-    # TODO: decide on flattening n to shape (3, ) or keep as shape (3, 1)
-    assert n.shape == (3, 1)
     return n
 
 
@@ -416,17 +426,15 @@ def elementary_basis_vector():
     todo()
 
 
-def reflect_across_x_axis(vector: PlanarPoint) -> PlanarPoint:
+def reflect_across_x_axis(vector: PlanarPoint1d) -> PlanarPoint1d:
     """
     @brief  Reflect a vector in the plane across the x-axis.
 
     @param[in] vector: vector to reflect
     @return reflected vector of shape (1, 2)
     """
-    reflected_vector = PlanarPoint(shape=(1, 2))
-    # FIXME maybe problem with index accessing
-    reflected_vector[0][0] = vector[0][0]
-    reflected_vector[0][1] = -vector[0][1]
+    assert vector.shape == (2, )
+    reflected_vector: PlanarPoint1d = np.array([vector[0], -vector[1]], dtype=np.float64)
     return reflected_vector
 
 
@@ -566,7 +574,7 @@ def copy_to_spatial_vector():
 # TODO: don't think we need this since Python prints out vectors just fine.... maybe
 # Unless there's an extra fancy vector type in the C++ code like vector<RationalFunction>
 #  or something like that.
-def formatted_vector(vec: list[np.float64], delim: str = "\n") -> str:
+def formatted_vector(vec: list, delim: str = "\n") -> str:
     # raise Exception(
     # "formatted_vector() is not implmemented. Print out object as-is instead.")
     vector_string: str = ""
@@ -803,23 +811,20 @@ def angle_from_length(edge_length_opposite_corner: float,
     return math.acos(min(max(ijk / (2.0 * l1 * l2), -1.0), 1.0))
 
 
-def angle_from_positions(angle_corner_position: np.ndarray,
-                         second_corner_position: np.ndarray,
-                         third_corner_position: np.ndarray) -> float:
+def angle_from_positions(angle_corner_position: Vector2f,
+                         second_corner_position: Vector2f,
+                         third_corner_position: Vector2f) -> float:
     """
-    @brief Compute the angle of a triangle corner with given positions
+    Compute the angle of a triangle corner with given positions
 
-    @param[in] angle_corner_position: position of the corner to compute the
-    angle for
-    @param[in] second_corner_position: position of one of the other two corners
-    of the triangle
-    @param[in] third_corner_position: position of the final corner of the
-    triangle
-    @return angle of the corner
+    :param angle_corner_position:  [in] position of the corner to compute the angle for
+    :param second_corner_position: [in] position of one of the other two corners of the triangle
+    :param third_corner_position:  [in] position of the final corner of the triangle
+    :return angle of the corner
     """
-    assert angle_corner_position.shape == (1, 2)
-    assert second_corner_position.shape == (1, 2)
-    assert third_corner_position.shape == (1, 2)
+    assert angle_corner_position.shape == (2, )
+    assert second_corner_position.shape == (2, )
+    assert third_corner_position.shape == (2, )
 
     # TODO: double check that the below are going to be floats...
     # FIXME: really silly error was here
@@ -857,7 +862,7 @@ def interval_lerp(t_min_0: float,
     return t_1
 
 
-def compute_point_cloud_bounding_box(points: MatrixNx3f) -> tuple[SpatialVector, SpatialVector]:
+def compute_point_cloud_bounding_box(points: MatrixNx3f) -> tuple[SpatialVector1d, SpatialVector1d]:
     """ Compute the bounding box for a matrix of points in R^n.
     The points are assumed to be the rows of the points matrix.
 
@@ -880,24 +885,23 @@ def compute_point_cloud_bounding_box(points: MatrixNx3f) -> tuple[SpatialVector,
     # Get minimum and maximum coordinates for the points
     # TODO: test this with NumPy, and also maybe mathutils
     # Get minimum and maximum coordinates for the points
-    min_point: SpatialVector = points[[0], :]
-    max_point: SpatialVector = points[[0], :]
+    min_point: SpatialVector1d = points[0, :]
+    max_point: SpatialVector1d = points[0, :]
     # NOTE: asserting (1, 3) since these points must be SpatialVectors
-    assert min_point.shape == (1, 3)
-    assert max_point.shape == (1, 3)
+    assert min_point.shape == (3, )
+    assert max_point.shape == (3, )
 
     for pi in range(num_points):
         for j in range(dimension):
-            min_point[0][j] = min(min_point[0][j], points[pi, j])
-            max_point[0][j] = max(max_point[0][j], points[pi, j])
+            min_point[j] = min(min_point[j], points[pi, j])
+            max_point[j] = max(max_point[j], points[pi, j])
 
-    # NOTE: returning "Vector", which is just shape (1, 3) iirc
     return min_point, max_point
 
 
 def remove_mesh_faces(V: MatrixNx3f,
                       F: MatrixNx3i,
-                      faces_to_remove: list[FaceIndex]) -> tuple[np.ndarray, np.ndarray]:
+                      faces_to_remove: list[FaceIndex]) -> tuple[MatrixNx3f, MatrixNx3i]:
     """
     Using igl to remove unreferenced vertices from V using faces_to_remove and updating F accordingly.
 
@@ -986,9 +990,9 @@ def matrix_contains_nan(mat: np.ndarray) -> bool:
     return np.isnan(mat).any()
 
 
-def vector_contains_nan(vec: np.ndarray) -> bool:
-    assert vec.shape[0] == 1
-
+def vector_contains_nan(vec: Vector1D) -> bool:
+    # assert vec.shape[0] == 1
+    assert vec.ndim == 1
     # TODO: add test case to check this function with ASOC code version
     return np.isnan(vec).any()
 

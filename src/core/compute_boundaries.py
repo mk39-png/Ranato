@@ -1,12 +1,10 @@
 """
 Methods to compute the boundaries of a mesh
 """
-
-# from ..core.quadratic_spline_surface import *
 import numpy as np
 
-from src.core.common import *
-from src.core.halfedge import *
+from src.core.common import Index, convert_boolean_array_to_index_vector
+from src.core.halfedge import Halfedge
 
 
 def compute_face_boundary_edges(F: np.ndarray) -> list[tuple[int, int]]:
@@ -30,7 +28,7 @@ def compute_face_boundary_edges(F: np.ndarray) -> list[tuple[int, int]]:
     he_to_corner = halfedge.he_to_corner
 
     # Get boundary halfedges
-    boundary_halfedges: list[Index] = halfedge.build_boundary_halfedge_list
+    boundary_halfedges: list[Index] = halfedge.build_boundary_halfedge_list()
 
     # Get boundary face corners opposite halfedge
     face_boundary_edges: list[tuple[int, int]] = [] * len(boundary_halfedges)
@@ -68,7 +66,7 @@ def compute_boundary_vertices(F: np.ndarray) -> list[int]:
         is_boundary_vertex[F[face_index, (face_vertex_index + 2) % 3]] = True
 
     # Convert boolean array to index vector
-    boundary_vertices = convert_boolean_array_to_index_vector(
+    boundary_vertices: list[int] = convert_boolean_array_to_index_vector(
         is_boundary_vertex)
 
     # TODO: maybe get rid of the function below? Aren't boundaries already signed? At least how the implementation is in Python?

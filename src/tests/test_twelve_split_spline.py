@@ -14,8 +14,8 @@ from src.core.affine_manifold import AffineManifold, ParametricAffineManifold
 from src.core.bivariate_quadratic_function import evaluate_quadratic_mapping
 from src.core.common import (DISCRETIZATION_LEVEL, SKY_BLUE, Matrix3x2f,
                              Matrix6x3r, MatrixNx3f, MatrixXf, MatrixXi,
-                             PlanarPoint, SpatialVector,
-                             compare_eigen_numpy_matrix,
+                             PlanarPoint, PlanarPoint1d, SpatialVector,
+                             SpatialVector1d, compare_eigen_numpy_matrix,
                              initialize_spot_control_mesh, logger,
                              vector_equal)
 from src.core.convex_polygon import ConvexPolygon
@@ -157,6 +157,7 @@ def test_face_patch_indices_spot_mesh() -> None:
     midpoint_data: dict[int, dict[int, TriangleMidpointData]] = defaultdict(dict)
     face_to_patch_indices: list[list[int]]
     patch_to_face_indices: list[int]
+    patches: list[QuadraticSplineSurfacePatch]
 
     # Generate normals
     N: MatrixNx3f = TwelveSplitSplineSurface.generate_face_normals(V, affine_manifold)
@@ -192,7 +193,7 @@ def test_face_patch_indices_spot_mesh() -> None:
     is_cone_corner: list[list[bool]] = affine_manifold.compute_cone_corners()
     split_spline = TwelveSplitSplineSurface
     # Initialize position data and patches.
-    face_to_patch_indices, patch_to_face_indices, _ = split_spline.build_twelve_split_patches(
+    face_to_patch_indices, patch_to_face_indices, patches = split_spline.build_twelve_split_patches(
         corner_data,
         midpoint_data,
         is_cone_corner)
@@ -223,7 +224,7 @@ def test_patch_boundaries_spot_mesh() -> None:
     patch_boundaries: list[list[np.ndarray]] = generate_twelve_split_spline_patch_patch_boundaries()
     assert len(patch_boundaries) == 12
     assert len(patch_boundaries[0]) == 3
-    assert patch_boundaries[0][0].shape == (3, 1)
+    assert patch_boundaries[0][0].shape == (3, )  # lazy shape checking
     filepath: str = "spot_control\\12_split_spline\\init_twelve_split_patches\\patch_boundaries.csv"
     compare_eigen_numpy_matrix(filepath,
                                np.array(patch_boundaries).squeeze(),
@@ -379,10 +380,10 @@ def twelve_split_quadratic_reproduction(
         midpoint_data[0])  # length 12 list
     assert len(surface_mappings) == 12
 
-    domain_point: PlanarPoint = np.array([[0.2, 0.3]])
-    assert domain_point.shape == (1, 2)
+    domain_point: PlanarPoint1d = np.array([0.2, 0.3])
+    assert domain_point.shape == (2, )
     q: SpatialVector = evaluate_quadratic_mapping(3, surface_mappings[0], domain_point)
-    assert q.shape == (1, 3)
+    assert q.shape == (3, )
 
     if len(surface_mappings) != 12:
         return False
@@ -399,10 +400,10 @@ def twelve_split_quadratic_reproduction(
 
 def test_twelve_split_spline_constant_surface():
     # Build constant function triangle data
-    p: SpatialVector = np.array([[1.0, 2.0, 3.0]], dtype=np.float64)
-    zero: SpatialVector = np.array([[0.0, 0.0, 0.0]], dtype=np.float64)
-    assert p.shape == (1, 3)
-    assert zero.shape == (1, 3)
+    p: SpatialVector1d = np.array([1.0, 2.0, 3.0], dtype=np.float64)
+    zero: SpatialVector1d = np.array([0.0, 0.0, 0.0], dtype=np.float64)
+    assert p.shape == (3,)
+    assert zero.shape == (3,)
 
     corner_data: dict[int, TriangleCornerData] = {
         0: TriangleCornerData(p, zero, zero),
@@ -421,7 +422,7 @@ def test_twelve_split_spline_constant_surface():
         corner_data,
         midpoint_data)
 
-    domain_point: PlanarPoint = np.array([[0.25, 0.25]], dtype=np.float64)
+    domain_point: PlanarPoint1d = np.array([0.25, 0.25], dtype=np.float64)
     q: SpatialVector = evaluate_quadratic_mapping(3, surface_mappings[0], domain_point)
 
     assert len(surface_mappings) == 12

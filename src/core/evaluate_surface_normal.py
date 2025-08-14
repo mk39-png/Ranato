@@ -2,9 +2,11 @@
 Methods to evaluate normals to a quadratic surface with Zwart-Powell basis
 coefficients.
 """
-from src.core.bivariate_quadratic_function import u_derivative_matrix, v_derivative_matrix, compute_quadratic_cross_product
-from src.core.common import Matrix6x3r, Matrix3x6r, Matrix3x3r
 import numpy as np
+
+from src.core.bivariate_quadratic_function import (
+    compute_quadratic_cross_product, u_derivative_matrix, v_derivative_matrix)
+from src.core.common import Matrix3x3r, Matrix3x6r, Matrix6x3r
 
 
 def generate_quadratic_surface_normal_coeffs(surface_mapping_coeffs: Matrix6x3r) -> Matrix6x3r:
