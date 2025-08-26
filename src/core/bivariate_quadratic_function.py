@@ -102,9 +102,8 @@ def generate_linear_monomials(domain_point: PlanarPoint1d) -> SpatialVector1d:
     return w
 
 
-def evaluate_quadratic_mapping(dimension: int,
-                               quadratic_coeffs: MatrixXf,
-                               domain_point: PlanarPoint) -> Vector2D:
+def evaluate_quadratic_mapping(quadratic_coeffs: Matrix6x3f,
+                               domain_point: PlanarPoint) -> SpatialVector1d:
     """
     Evaluate a quadratic bivariate equation with scalar coefficients.
     Dimension can be greater than 1, as seen in quadratic_spline_surface_patch.py
@@ -118,14 +117,14 @@ def evaluate_quadratic_mapping(dimension: int,
     :return: quadratic_evaluation: quadratic function evaluation
     """
 
-    assert quadratic_coeffs.shape == (6, dimension)
+    assert quadratic_coeffs.shape == (6, 3)
     assert domain_point.shape == (2, )
     w: Vector6f = generate_quadratic_monomials(domain_point)
     assert w.shape == (6, )
 
-    # shapes: (6, ) @ (6, dimension)
-    quadratic_evaluation: np.ndarray = w @ quadratic_coeffs
-    assert quadratic_evaluation.shape == (dimension, )
+    # shapes: (6, ) @ (6, 3)
+    quadratic_evaluation: Vector3f = w @ quadratic_coeffs
+    assert quadratic_evaluation.shape == (3, )
 
     return quadratic_evaluation
 
@@ -238,7 +237,6 @@ def u_derivative_matrix() -> Matrix3x6r:
     return D_u
 
 
-# XXX: made static method. double check logic.
 @staticmethod
 def v_derivative_matrix() -> Matrix3x6r:
     """

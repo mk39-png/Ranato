@@ -82,7 +82,7 @@ def generate_affine_manifold_chart_corner_data(
     update_positions() in twelve_split_spline.py to update m_corner_data of the 
     TwelveSplitSplineSurface class.
     Which means that since this updating the pre-existing corner_data, we do not want to overwrite
-    all of pre-existing data inside corner_data by creating a new list[list[TriangleCornerData]]
+    all of pre-existing data inside corner_data by creating a new dict[int, dict[int, TriangleCornerData]]
 
     :param V: vertices
     :type V: np.ndarray of float64
@@ -94,7 +94,7 @@ def generate_affine_manifold_chart_corner_data(
     :type gradient: Matrix2x3r
     :param corner_data_ref: [out] corner data for given chart with list[TriangleCornerData] 
     of length 3.
-    :type corner_data_ref: list[list[TriangleCornerData]]
+    :type corner_data_ref: dict[int, dict[int, TriangleCornerData]]
     """
 
     #  Build position data for the corners adjacent to the given vertex

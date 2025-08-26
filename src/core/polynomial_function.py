@@ -81,9 +81,7 @@ def evaluate_polynomial(degree: int,
     """
     # Since evaluate_polynomial used for dimensions other than 1, need to convert
     # polynomial_coeffs to 2D vector if not done so already
-    polynomial_coeffs: Vector1D | Vector2D = np.copy(polynomial_coeffs_ref)
-    if dimension == 1 or polynomial_coeffs_ref.ndim == 1:
-        polynomial_coeffs = polynomial_coeffs_ref.reshape(degree + 1, dimension)
+    polynomial_coeffs: Vector2D = polynomial_coeffs_ref.reshape(degree + 1, dimension)
     assert polynomial_coeffs.shape == (degree + 1, dimension), ("polynomial_coeffs supposed to be "
                                                                 "shape (degree + 1, dimension)")
 
@@ -152,6 +150,7 @@ def compute_polynomial_mapping_scalar_product(first_degree: int, second_degree: 
     :param polynomial_coeffs: [in] coefficients of the vector valued polynomial.
     :return product_polynomial_coeffs: [out] product vector valued polynomial mapping coefficients.
     """
+    # NOTE: do not reshape coeffs because array index acccessing will become weird.
     assert np.shape(scalar_polynomial_coeffs) == (first_degree + 1, )
     assert np.shape(polynomial_coeffs) == (second_degree + 1, dimension)
 
@@ -186,16 +185,6 @@ def compute_polynomial_mapping_cross_product(first_degree: int, second_degree: i
     # For case where 1D arrays are passed in
     first_polynomial_coeffs: Vector2D = first_polynomial_coeffs_ref.reshape(first_degree + 1, 3)
     second_polynomial_coeffs: Vector2D = second_polynomial_coeffs_ref.reshape(second_degree + 1, 3)
-
-    if first_degree == 0 and first_polynomial_coeffs_ref.ndim == 1:
-        first_polynomial_coeffs = first_polynomial_coeffs_ref.reshape(first_degree + 1, 3)
-    else:
-        first_polynomial_coeffs = np.array(first_polynomial_coeffs_ref)
-
-    if second_degree == 0 and second_polynomial_coeffs_ref.ndim == 1:
-        second_polynomial_coeffs = second_polynomial_coeffs_ref.reshape(second_degree + 1, 3)
-    else:
-        second_polynomial_coeffs = np.array(second_polynomial_coeffs_ref)
 
     assert np.shape(first_polynomial_coeffs) == (first_degree + 1, 3), (
         f"first_degree + 1 {first_degree} does not match shape "
@@ -317,7 +306,7 @@ def quadratic_real_roots(quadratic_coeffs: Vector3f,
     return (solutions, num_solutions)
 
 
-def polynomial_real_roots(A_coeffs: Vector1D) -> Vector1D:
+def polynomial_real_roots(A_coeffs: Vector1D, imag_tolerance=1e-10) -> Vector1D:
     """ Compute the real roots of a polynomial.
 
     :param A_coeffs: [in] coefficients of the polynomial
@@ -342,7 +331,8 @@ def polynomial_real_roots(A_coeffs: Vector1D) -> Vector1D:
     # Should only grab the true parts...
     # https://stackoverflow.com/questions/28081247/print-real-roots-only-in-numpy
     # TODO: utilize the tolerance value inside common.py
-    real_roots: Vector1D = solver_roots.real[abs(solver_roots.imag) < 1e-10]
+    # real_roots: Vector1D = solver_roots.real[abs(solver_roots.imag) < 1e-10]
+    real_roots: Vector1D = solver_roots.real[abs(solver_roots.imag) < imag_tolerance]
     logger.info("Real roots: %s", real_roots)
 
     return real_roots

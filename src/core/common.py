@@ -50,12 +50,18 @@ PatchIndex = int
 NodeIndex = int
 SegmentIndex = int
 
+
 # NOTE: Since NumPu does not have typing, it has been done so as below for readability reasons.
+Color = tuple[float, float, float, float]
 Vector3i = np.ndarray
 Vector2f = np.ndarray
 Vector3f = np.ndarray
+Vector4f = np.ndarray
+Vector5f = np.ndarray
 Vector6f = np.ndarray
+Vector9f = np.ndarray
 Vector12f = np.ndarray
+Vector13f = np.ndarray
 Vector36f = np.ndarray
 VectorX = np.ndarray  # shape (n, )... sometimes. Oftentimes it's shape (n, 1) or (1, n)...
 # shape (1, n) (or sometimes shape (n, 1) as in the case of optimize_spline_surface)... might just be easier to flatten and use Vector1D... I don't see the point of having Vector2D if it will just be more confusing.
@@ -88,12 +94,23 @@ Matrix3x2r = np.ndarray  # shape (3, 2)
 Matrix3x2f = np.ndarray
 Matrix3x3r = np.ndarray  # shape (3, 3)
 Matrix3x3f = np.ndarray
+
+Matrix4x2f = np.ndarray
+
+Matrix5x2f = np.ndarray
+Matrix5x3f = np.ndarray
+Matrix5x5f = np.ndarray
+
 Matrix6x3r = np.ndarray  # shape (6, 3)
 Matrix6x3f = np.ndarray  # shape (6, 3)
 Matrix6x6r = np.ndarray
 Matrix6x12f = np.ndarray
 Matrix12x3f = np.ndarray
 Matrix12x12r = np.ndarray
+
+Matrix9x3f = np.ndarray
+Matrix13x3f = np.ndarray
+
 Matrix36x36f = np.ndarray
 TwelveSplitGradient = np.ndarray  # shape (36, 1)
 TwelveSplitHessian = np.ndarray  # shape (36, 36)
@@ -116,9 +133,13 @@ PLACEHOLDER_INDEX = -1
 PLACEHOLDER_BOOL = False
 
 
+# Algebraic constrained values
+MAX_PATCH_RAY_INTERSECTIONS = 4
+
 # **********************
 # Debug/Helper Methods (keep here for now, especially when comparing later contours code)
 # **********************
+
 
 def initialize_spot_control_mesh() -> tuple[npty.ArrayLike, npty.ArrayLike, npty.ArrayLike, npty.ArrayLike]:
     """ 
@@ -385,8 +406,16 @@ def compute_discriminant(a: float, b: float, c: float) -> float:
     return (b * b) - (4.0 * a * c)
 
 
-def dot_product() -> None:
-    todo()
+def dot_product(v: Vector1D, w: Vector1D) -> float:
+    """
+    Compute the dot product of two vectors of arbitrary scalars.
+
+    :param v: [in] first vector to dot product
+    :param w: [in] second vector to dot product
+    :return: dot product of v and w
+    """
+
+    return v.dot(w)
 
 
 def cross_product(v: Vector3f, w: Vector3f) -> Vector3f:
@@ -597,8 +626,15 @@ def append():
     todo()
 
 
-def nested_vector_size():
-    todo()
+def nested_vector_size(v: list[list]) -> int:
+    """
+    """
+    count: int = 0
+
+    for inner_v in v:
+        count += len(inner_v)
+
+    return count
 
 
 def convert_nested_vector_to_matrix(vec: list[Vector2D]) -> np.ndarray:
@@ -658,6 +694,7 @@ def generate_linspace(t_0: float, t_1: float, num_points: int) -> Vector1D:
 
 def arange(size: int) -> list:
     """Equivalent to Python's range."""
+    # TODO: compare this with Python's range method
     arange_vec: list = []
 
     for i in range(size):

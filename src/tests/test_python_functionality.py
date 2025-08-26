@@ -1,9 +1,12 @@
 import os
+from datetime import timedelta
+from numbers import Number
 
 import igl
 import mathutils
 import numpy as np
 import scipy as sp
+import svg
 from cholespy import CholeskySolverD, MatrixType
 from scipy.sparse import coo_matrix, csr_matrix
 
@@ -278,22 +281,78 @@ def main():
     # V[num_patch_vertices * patch_index: num_patch_vertices * (patch_index + 1),
     #   0: V.shape[1]]
 
-    num_patches = 10
-    patch_boundary_contour_map: list[list[int]] = [[-1, -1, -1] for _ in range(num_patches)]
-    patch_boundary_contour_map[0][0] = 39
-    print(patch_boundary_contour_map)
+    # num_patches = 10
+    # patch_boundary_contour_map: list[list[int]] = [[-1, -1, -1] for _ in range(num_patches)]
+    # patch_boundary_contour_map[0][0] = 39
+    # print(patch_boundary_contour_map)
 
-    is_boundary_patch: list[bool] = [False] * num_patches
-    is_boundary_patch[0] = True
-    print(is_boundary_patch)
+    # is_boundary_patch: list[bool] = [False] * num_patches
+    # is_boundary_patch[0] = True
+    # print(is_boundary_patch)
 
-    print(np.array([1]).flatten())
+    # print(np.array([1]).flatten())
 
-    a = np.array([0, 0, 0, 1, 1, 1])
-    b = np.trim_zeros(np.copy(a))
-    b[0] = 39
-    print(a)
-    print(b)
+    # a = np.array([0, 0, 0, 1, 1, 1])
+    # b = np.trim_zeros(np.copy(a))
+    # b[0] = 39
+    # print(a)
+    # print(b)
+
+    # block = np.arange(1, 17)
+    # block.resize((4, 4))
+    # print(block)
+    # print(block[0:2, 0:3])
+
+    # test = np.ndarray(shape=(2, 3))
+    # print(test)
+    # print(test[:, 0])
+    # print(test[0:1, 0:2])
+    print(np.arange(3))
+    print(np.arange(3) @ np.arange(3))
+    vector_line: list[Number] = [np.float64(10), np.float64(10),
+                                 np.float64(50), np.float64(50),
+                                 np.float64(100), np.float64(120),]
+    point_2d = [40, 100]
+    point_2d_2 = [0, 43]
+    color = (1, 1, 255, 1)
+    svg_elements = [
+        svg.Polyline(points=vector_line,
+                     stroke="black",
+                     fill="transparent",
+                     stroke_width=1.0),
+        svg.Circle(cx=point_2d[0], cy=point_2d[1], r=10, fill=f"rgba{color}"),
+        svg.Circle(cx=point_2d_2[0], cy=point_2d_2[1], r=10, fill=f"rgba{color}")
+    ]
+
+    # svg_elements.append(svg.Circle(cx=point_2d[0], cy=point_2d[1], r=10, fill=f"rgba{color}"))
+    # svg_elements.append(svg.Circle(cx=point_2d[0], cy=point_2d[1], r=10, fill=f"rgba{color}"))
+    test_svg = svg.SVG(x=0, y=0, width=120, height=120, elements=svg_elements)
+    filename = "svg_testing.svg"
+    filepath = os.path.abspath(f"src\\tests\\{filename}")
+    print(test_svg.as_str())
+    with open(filepath, 'w', encoding='utf-8') as output_file:
+        output_file.write(test_svg.as_str())
+
+    lister = []
+    lister.extend((1, 2, 3))
+    print(lister)
+
+    # print(svg.SVG(
+    #     # x=0, y=0,
+    #     viewBox=svg.ViewBoxSpec(0, 0, 120, 120),
+    #     # width=120, height=120,
+    #     elements=[svg.Polygon(
+    #         points=[60, 30, 90, 90, 30, 90],
+    #         elements=[svg.AnimateTransform(
+    #             attributeName="transform",
+    #             type="rotate",
+    #             from_="0 60 70",
+    #             to="360 60 70",
+    #             dur=timedelta(seconds=10),
+    #             repeatCount="indefinite",
+    #         )]
+    #     )]
+    # ))
 
 
 if __name__ == "__main__":

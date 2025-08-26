@@ -2,8 +2,6 @@
 File for intersection data.
 """
 
-from dataclasses import dataclass
-
 from src.core.common import float_equal
 from src.core.interval import Interval
 

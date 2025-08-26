@@ -8,7 +8,7 @@ import numpy as np
 from src.core.bivariate_quadratic_function import \
     formatted_bivariate_quadratic_mapping
 from src.core.common import (Matrix2x2f, Matrix3x2f, Matrix6xNi, PlanarPoint1d,
-                             Vector2D, Vector3f, logger)
+                             Vector1D, Vector2D, Vector3f, logger)
 from src.core.interval import Interval
 from src.core.polynomial_function import (compute_polynomial_mapping_product,
                                           formatted_polynomial)
@@ -83,14 +83,11 @@ class Conic(RationalFunction):
         self.numerators = P_rot_coeffs
 
     def pullback_quadratic_function(self, dimension: int,
-                                    F_coeffs_ref: Matrix6xNi) -> RationalFunction:
+                                    F_coeffs_ref: Vector1D | Matrix6xNi) -> RationalFunction:
         """
 
         """
-        F_coeffs: Matrix6xNi = copy.deepcopy(F_coeffs_ref)
-        if dimension == 1:
-            F_coeffs = F_coeffs.reshape((6, dimension))
-
+        F_coeffs: Matrix6xNi = F_coeffs_ref.reshape((6, dimension))
         assert F_coeffs.shape == (6, dimension)
         assert F_coeffs.dtype == np.float64
 
@@ -116,12 +113,12 @@ class Conic(RationalFunction):
         # formatted_polynomial(self.get_degree, self.get_dimension, Q_coeffs))
 
         # Compute (homogenized) polynomial coefficients for the quadratic terms
-        QQ_coeffs: Vector2D = np.ndarray(shape=(5, 1))
-        Qu_coeffs: Vector2D = np.ndarray(shape=(5, 1))
-        Qv_coeffs: Vector2D = np.ndarray(shape=(5, 1))
-        uv_coeffs: Vector2D = np.ndarray(shape=(5, 1))
-        uu_coeffs: Vector2D = np.ndarray(shape=(5, 1))
-        vv_coeffs: Vector2D = np.ndarray(shape=(5, 1))
+        QQ_coeffs: Vector1D = np.ndarray(shape=(5, ))
+        Qu_coeffs: Vector1D = np.ndarray(shape=(5, ))
+        Qv_coeffs: Vector1D = np.ndarray(shape=(5, ))
+        uv_coeffs: Vector1D = np.ndarray(shape=(5, ))
+        uu_coeffs: Vector1D = np.ndarray(shape=(5, ))
+        vv_coeffs: Vector1D = np.ndarray(shape=(5, ))
 
         # TODO: change the  function below to reemove the dimension parameter... maybe...
         QQ_coeffs = compute_polynomial_mapping_product(

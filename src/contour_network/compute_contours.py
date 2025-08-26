@@ -9,7 +9,7 @@ from src.contour_network.intersection_data import IntersectionData
 from src.contour_network.validity import (is_valid_frame,
                                           is_valid_spatial_mapping)
 from src.core.common import (Matrix3x2f, Matrix3x3f, Matrix6x3f, PatchIndex,
-                             PlanarPoint1d, Vector3f, Vector6f, logger, todo)
+                             PlanarPoint1d, Vector3f, Vector6f, logger)
 from src.core.conic import Conic
 from src.core.convex_polygon import ConvexPolygon
 from src.core.intersect_conic import (
@@ -82,62 +82,80 @@ def compute_contour_equation(normal_mapping_coeffs: Matrix6x3f,
     return contour_equation_coeffs
 
 
-def compute_spline_surface_patch_contours(spline_surface_patch: QuadraticSplineSurfacePatch,
-                                          frame: Matrix3x3f) -> tuple[list[Conic],
-                                                                      list[RationalFunction],
-                                                                      list[tuple[int, int]]]:
+def _compute_spline_surface_patch_contours(spline_surface_patch: QuadraticSplineSurfacePatch,
+                                           frame: Matrix3x3f) -> tuple[list[Conic],
+                                                                       list[RationalFunction],
+                                                                       list[tuple[int, int]]]:
     """
     Get all contour segments for a spline surface patch
 
-    :return contour_domain_curve_segments:
-    :return contour_segments:
-    :return line_intersection_indices:
+    :param spline_surface_patch: [in] quadratic spline surface patch
+    :param frame: [in] 3x3 matrix defining the projection
+
+    :return contour_domain_curve_segments: local parametric domain contour segments
+    :return contour_segments: surface contour segments
+    :return line_intersection_indices: indices of the bounding polygon edges
     """
-    logger.info("Computing contours for spline surface patch")
+    logger.debug("Computing contours for spline surface patch")
     contour_domain_curve_segments: list[Conic] = []
     contour_segments: list[RationalFunction] = []
     line_intersection_indices: list[tuple[int, int]] = []
 
     # Get surface mapping
     surface_mapping_coeffs: Matrix6x3f = spline_surface_patch.surface_mapping
-    logger.info("Patch surface mapping coefficients: %s", surface_mapping_coeffs)
+    logger.debug("Patch surface mapping coefficients: %s", surface_mapping_coeffs)
 
     # Get surface normal mapping
     normal_mapping_coeffs: Matrix6x3f = spline_surface_patch.normal_mapping
-    logger.info("Patch normal mapping coefficients: %s",
-                normal_mapping_coeffs)
+    logger.debug("Patch normal mapping coefficients: %s",
+                 normal_mapping_coeffs)
 
-    #   // Get implicit contour equation
+    # Get implicit contour equation
     contour_equation_coeffs: Vector6f
     contour_equation_coeffs = compute_contour_equation(normal_mapping_coeffs, frame)
-    logger.info("Patch contour equation coefficients: %s", contour_equation_coeffs)
+    logger.debug("Patch contour equation coefficients: %s", contour_equation_coeffs)
 
     # Get full quadratic contours
-    logger.info("Parametrizing patch contour domain curves")
+    logger.debug("Parametrizing patch contour domain curves")
     contour_domain_curves: list[Conic]
     contour_domain_curves = parametrize_conic(contour_equation_coeffs)
-    logger.info("Domain curves: %s", contour_domain_curves)
+    logger.debug("Domain curves: %s", contour_domain_curves)
 
     # Intersect contour domain curves with patch boundaries
-    logger.info("Intersecting domain curves with patch domain boundary")
+    logger.debug("Intersecting domain curves with patch domain boundary")
     domain: ConvexPolygon = spline_surface_patch.domain
-    for i, current_contour_domain_curve in enumerate(contour_domain_curves):
+    for current_contour_domain_curve in contour_domain_curves:
         current_contour_domain_curve_segments: list[Conic]
         current_contour_line_intersection_indices: list[tuple[int, int]]
-
         (current_contour_domain_curve_segments,
          current_contour_line_intersection_indices) = intersect_conic_with_convex_polygon(
             current_contour_domain_curve,
             domain)
+        contour_domain_curve_segments.extend(current_contour_domain_curve_segments)
+        line_intersection_indices.extend(current_contour_line_intersection_indices)
+        logger.debug("Contour domain curve split into %s segments",
+                     len(current_contour_domain_curve_segments))
 
-    todo()
+    # Lift contour domain curves to the surface
+    logger.debug("Lifting domain curves to the surface")
+    for contour_domain_curve_segment in contour_domain_curve_segments:
+        contour_segment: RationalFunction = (
+            contour_domain_curve_segment.pullback_quadratic_function(3, surface_mapping_coeffs))
+        assert (contour_segment.degree, contour_segment.dimension) == (4, 3)
+        contour_segments.append(contour_segment)
+        logger.debug("Domain curve %s lifted to %s",
+                     contour_domain_curve_segment,
+                     contour_segment)
+
+    assert are_contained_in_patch_heuristic(contour_domain_curve_segments, spline_surface_patch)
+    return contour_domain_curve_segments, contour_segments, line_intersection_indices
 
 
-def compute_spline_surface_cone_patch_contours(spline_surface_patch: QuadraticSplineSurfacePatch,
-                                               frame: Matrix3x3f
-                                               ) -> tuple[list[Conic],
-                                                          list[RationalFunction],  # <4, 3>
-                                                          list[tuple[int, int]]]:
+def _compute_spline_surface_cone_patch_contours(spline_surface_patch: QuadraticSplineSurfacePatch,
+                                                frame: Matrix3x3f
+                                                ) -> tuple[list[Conic],
+                                                           list[RationalFunction],  # <4, 3>
+                                                           list[tuple[int, int]]]:
     """
     Get all contour segments for a spline surface patch
     """
@@ -261,13 +279,13 @@ def compute_spline_surface_contours(spline_surface: QuadraticSplineSurface,
             logger.info("Parametrizing cone patch %s", patch_index)
             (patch_contour_domain_curve_segments,
              patch_contour_segments,
-             patch_line_intersection_indices) = compute_spline_surface_cone_patch_contours(
+             patch_line_intersection_indices) = _compute_spline_surface_cone_patch_contours(
                 spline_surface_patch,
                 frame)
         else:
             (patch_contour_domain_curve_segments,
              patch_contour_segments,
-             patch_line_intersection_indices) = compute_spline_surface_patch_contours(
+             patch_line_intersection_indices) = _compute_spline_surface_patch_contours(
                 spline_surface_patch,
                 frame)
 
@@ -391,8 +409,7 @@ def compute_spline_surface_boundary_intersections(spline_surface: QuadraticSplin
     # Compute intersections for contours with intersections on the boundary
     for i, _ in enumerate(contour_domain_curve_segments):
         patch_index: int = contour_patch_indices[i]
-        # FIXME This +1 is from an indexing inconsistency somewhere that should be
-        # fixed
+        # FIXME (ASOC) This +1 is from an indexing inconsistency somewhere that should be fixed
         start_line_intersection_index: PatchIndex = (line_intersection_indices[i][0] + 1) % 3
         end_line_intersection_index: PatchIndex = (line_intersection_indices[i][1] + 1) % 3
         if is_boundary_patch[patch_index]:
@@ -409,8 +426,8 @@ def compute_spline_surface_boundary_intersections(spline_surface: QuadraticSplin
 
         # Handle start point
         if start_line_intersection_index >= 0:
-            start_boundary_contour: int = patch_boundary_contour_map[patch_index
-                                                                     ][start_line_intersection_index]
+            start_boundary_contour: int = (
+                patch_boundary_contour_map[patch_index][start_line_intersection_index])
             if start_boundary_contour >= 0:
                 logger.debug("Start point intersection for interior contour %s in "
                              "patch %s with boundary contour %s on patch line %s",
@@ -537,16 +554,13 @@ def compute_spline_surface_contours_and_boundaries(spline_surface: QuadraticSpli
 
     :param spline_surface: [in] quadratic spline surface
     :param frame: [in] 3x3 matrix defining the projection
-    :param patch_boundary_edges: [in] TODO description
+    :param patch_boundary_edges: [in] edges of the patch triangle domains that are boundaries
 
-    :return contour_domain_curve_segments: local parametric domain contour
-    segments
+    :return contour_domain_curve_segments: local parametric domain contour segments
     :return contour_segments: surface contour segments
-    :return contour_patch_indices: spline surface patch indices for the
-    contour segments
+    :return contour_patch_indices: spline surface patch indices for the contour segments
     :return contour_is_boundary: true iff the patch is a boundary contour
-    :return intersection_data: data for the intersections of the contours
-    and boundaries
+    :return intersection_data: data for the intersections of the contours and boundaries
     :return num_intersections: number of intersections
     """
     num_intersections: int = 0
@@ -599,7 +613,7 @@ def compute_spline_surface_contours_and_boundaries(spline_surface: QuadraticSpli
 def pad_contours(contour_domain_curve_segments_ref: list[Conic],
                  contour_segments_ref: list[RationalFunction],  # <4, 3>
                  planar_contour_segments_ref: list[RationalFunction],  # <4, 2>
-                 pad_amount=0.0) -> None:
+                 pad_amount: float = 0.0) -> None:
     """
     Pad contour domains by some given amount in the parametric domain
 

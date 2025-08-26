@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 from src.core.affine_manifold import *
 from src.core.common import *
 from src.quadratic_spline_surface.optimize_spline_surface import (
@@ -119,7 +121,7 @@ def generate_parametric_affine_manifold_edge_gradients():
 def generate_parametric_affine_manifold_corner_data(position_func: QuadraticPositionFunction,
                                                     gradient_func: QuadraticGradientFunction,
                                                     parametric_affine_manifold: ParametricAffineManifold
-                                                    ) -> list[list[TriangleCornerData]]:
+                                                    ) -> dict[int, dict[int, TriangleCornerData]]:
     """
     Used in twelve_split_spline testing.
     FIXME: Generalize to any position function
@@ -127,7 +129,9 @@ def generate_parametric_affine_manifold_corner_data(position_func: QuadraticPosi
     :return: corner_data of list of list of length 3
     """
     num_faces: int = parametric_affine_manifold.num_faces
-    corner_data: list[list[TriangleCornerData]] = [[] for _ in range(num_faces)]
+    # corner_data: list[list[TriangleCornerData]] = [[] for _ in range(num_faces)]
+
+    corner_data: dict[int, dict[int, TriangleCornerData]] = defaultdict(dict)
 
     for face_index in range(num_faces):
         # Get face vertex indices
@@ -171,14 +175,16 @@ def generate_parametric_affine_manifold_corner_data(position_func: QuadraticPosi
         third_corner_data = TriangleCornerData(input_function_value=vk,
                                                input_first_edge_derivative=dki @ Gk,
                                                input_second_edge_derivative=dkj @ Gk)
-        corner_data[face_index] = [first_corner_data, second_corner_data, third_corner_data]
+        corner_data[face_index][0] = first_corner_data
+        corner_data[face_index][1] = second_corner_data
+        corner_data[face_index][2] = third_corner_data
 
     return corner_data
 
 
 def generate_parametric_affine_manifold_midpoint_data(gradient_func: QuadraticGradientFunction,
                                                       parametric_affine_manifold: ParametricAffineManifold,
-                                                      ) -> list[list[TriangleMidpointData]]:
+                                                      ) -> dict[int, dict[int, TriangleMidpointData]]:
     """
     Used in twelve_split_spline testing.
 
@@ -186,7 +192,8 @@ def generate_parametric_affine_manifold_midpoint_data(gradient_func: QuadraticGr
     """
     num_faces: int = parametric_affine_manifold.num_faces
 
-    midpoint_data: list[list[TriangleMidpointData]] = [[] for _ in range(num_faces)]
+    # midpoint_data: list[list[TriangleMidpointData]] = [[] for _ in range(num_faces)]
+    midpoint_data: dict[int, dict[int, TriangleMidpointData]] = defaultdict(dict)
 
     for face_index in range(num_faces):
         # Get face vertex indices
@@ -217,8 +224,8 @@ def generate_parametric_affine_manifold_midpoint_data(gradient_func: QuadraticGr
         nki: PlanarPoint = uvj - uvki
 
         # Build midpoint normals (indexed opposite the edge)
-        midpoint_data[face_index] = [TriangleMidpointData(njk @ Gjk),
-                                     TriangleMidpointData(nki @ Gki),
-                                     TriangleMidpointData(nij @ Gij)]
+        midpoint_data[face_index][0] = TriangleMidpointData(njk @ Gjk)
+        midpoint_data[face_index][1] = TriangleMidpointData(nki @ Gki)
+        midpoint_data[face_index][2] = TriangleMidpointData(nij @ Gij)
 
     return midpoint_data

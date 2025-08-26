@@ -88,7 +88,7 @@ class QuadraticSplineSurfacePatch:
         self.m_max_point: SpatialVector1d = np.zeros(shape=(3, ))
 
         # Compute derived mapping information from the surface mapping and domain
-        self.m_normal_mapping_coeffs = (
+        self.m_normal_mapping_coeffs: Matrix6x3f = (
             generate_quadratic_surface_normal_coeffs(surface_mapping_coeffs))
         self.m_normalized_surface_mapping_coeffs = (
             compute_normalized_surface_mapping(surface_mapping_coeffs, domain))
@@ -316,14 +316,16 @@ class QuadraticSplineSurfacePatch:
         :return: corresponding point in the domain triangle
         :rtype: PlanarPoint
         """
-        # Replace with actual logic
-        todo()
+        assert normalized_domain_point.shape == (2, )
+
         # Get domain triangle vertices
-        __domain_ref: ConvexPolygon = self.domain
-        domain_vertices: Matrix3x2r = __domain_ref.vertices
+        domain_ref: ConvexPolygon = self.domain
+        domain_vertices: Matrix3x2r = domain_ref.vertices
         v0: PlanarPoint1d = domain_vertices[0, :]
         v1: PlanarPoint1d = domain_vertices[1, :]
         v2: PlanarPoint1d = domain_vertices[2, :]
+        assert domain_vertices.shape == (3, 2)
+        assert v0.shape == (2, )
 
         # Generate affine transformation mapping the standard triangle to the domain triangle
         # FIXME: double check implementation with C++ code...
@@ -347,8 +349,8 @@ class QuadraticSplineSurfacePatch:
         :rtype: SpatialVector
         """
         assert domain_point.shape == (2, )
-        surface_point: SpatialVector1d = evaluate_quadratic_mapping(
-            3, self.m_surface_mapping_coeffs, domain_point)
+        surface_point: SpatialVector1d = evaluate_quadratic_mapping(self.m_surface_mapping_coeffs,
+                                                                    domain_point)
         assert surface_point.shape == (3, )
         return surface_point
 
@@ -363,8 +365,8 @@ class QuadraticSplineSurfacePatch:
         :rtype: SpatialVector
         """
         assert domain_point.shape == (2, )
-        surface_normal: SpatialVector1d = evaluate_quadratic_mapping(
-            3, self.m_normal_mapping_coeffs, domain_point)
+        surface_normal: SpatialVector1d = evaluate_quadratic_mapping(self.m_normal_mapping_coeffs,
+                                                                     domain_point)
         assert surface_normal.shape == (3, )
         return surface_normal
 

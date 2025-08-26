@@ -1,0 +1,532 @@
+import copy
+import math
+
+import numpy as np
+from svg import Matrix
+
+from src.core.common import (Matrix5x3f, SpatialVector1d, Vector2f, Vector3f,
+                             Vector5f, float_equal, todo)
+
+MAX_PRECISION = 1e-8
+MIN_CLIPPED_SIZE_THRESHOLD = 0.8
+
+
+class Interval_ink:
+    """
+
+    """
+
+    def __init__(self, a: float, b: float) -> None:
+        self.begin: float = a
+        self.end: float = b
+
+    def extent(self) -> float:
+        return self.end - self.begin
+
+    def max(self) -> float:
+        return self.end
+
+    def min(self) -> float:
+        return self.begin
+
+    def middle(self) -> float:
+        return (self.begin + self.end) / 2
+
+    def setEnds(self, a: float, b: float) -> None:
+        if a <= b:
+            self.begin = a
+            self.end = b
+        else:
+            self.begin = b
+            self.end = a
+
+    def valueAt(self, t: float) -> float:
+        return (1 - t) * self.begin + t * self.end
+
+
+def _map_to(J: Interval_ink, I: Interval_ink) -> None:
+    """ 
+    Maps I onto J
+    """
+    J.setEnds(J.valueAt(I.min()), J.valueAt(I.max()))
+
+
+def _point_equal(a: SpatialVector1d, b: SpatialVector1d, eps: float = 1e-6) -> bool:
+    aa: Vector2f = np.array([a[0] / a[2], a[1] / a[2]])
+    bb: Vector2f = np.array([b[0] / b[2], b[1] / b[2]])
+    if np.linalg.norm(aa - bb) < eps:
+        return True
+    return False
+
+
+def _lerp(t: float, a: SpatialVector1d, b: SpatialVector1d) -> SpatialVector1d:
+    return (1 - t) * a + t * b
+
+
+def _middle_point(p1: SpatialVector1d, p2: SpatialVector1d) -> SpatialVector1d:
+    """
+
+    """
+    p1s: SpatialVector1d = np.array([p1[0] / p1[2], p1[1] / p1[2], 1])
+    p2s: SpatialVector1d = np.array([p2[0] / p2[2], p2[1] / p2[2], 1])
+    return _lerp(0.5, p1s, p2s)
+
+
+def _is_constant(A: np.ndarray, precision: float = 1e-6) -> bool:
+    """
+    Uses numpy
+    """
+    A = np.asarray(A)
+    return np.allclose(A, A[0], atol=precision)
+
+
+def _is_constant_list(A: list[SpatialVector1d], precision: float = 1e-6) -> bool:
+    """
+    Uses numpy
+    """
+    # A = np.asarray(A)
+    for a in A[1:]:
+
+        # FIXME: checking that NumPy implementation and C++ translation are both correct
+        assert np.allclose(a, a[0], atol=precision) == _point_equal(a, a[0], precision)
+
+        if not np.allclose(a, A[0], atol=precision):
+            return False
+    return True
+
+
+def check_split_criteria(q: list[SpatialVector1d]) -> bool:
+    """
+    Split rational curve
+    """
+    assert len(q) == 5
+
+    degree_sum: float = 0.0
+    p: list[SpatialVector1d] = [np.zeros((3, )),
+                                np.zeros((3, )),
+                                np.zeros((3, )),
+                                np.zeros((3, )),
+                                np.zeros((3, ))]
+
+    for i in range(5):
+        # Standardize to w = 1
+        p[i] = q[i] / q[i][2]
+    for i in range(3):
+        v1: SpatialVector1d = p[i + 1] - p[i]
+        v2: SpatialVector1d = p[i + 2] - p[i + 1]
+
+        # FIXME: double check C++ translation
+        v1 = v1 / np.linalg.norm(v1)
+        v2 = v2 / np.linalg.norm(v2)
+        degree_sum += math.acos(v1.dot(v2))
+
+    if degree_sum > math.pi:
+        return False
+    return True
+
+
+def _get_solutions(A: list[SpatialVector1d],
+                   B: list[SpatialVector1d],
+                   precision: float) -> list[tuple[float, float]]:
+    """
+
+    """
+    domsA: list[Interval_ink] = []
+    domsB: list[Interval_ink] = []
+    unit_interval_1 = Interval_ink(0, 1)
+    unit_interval_2 = Interval_ink(0, 1)
+    counter = 0
+    iterate(domsA, domsB, A, B, unit_interval_1, unit_interval_2, precision, counter)
+
+    if len(domsA) != len(domsB):
+        assert len(domsA) == len(domsB)
+
+    xs: list[tuple[float, float]] = []
+    for i, _ in enumerate(domsA):
+        xs.append((domsA[i].middle(), domsB[i].middle()))
+
+    return xs
+
+
+def _left_portion(t: float, B: list[SpatialVector1d]) -> None:
+    """
+    """
+    n: int = len(B)
+    for i in range(1, n):
+        # FIXME: ensure proper translation between Python and C++ for loop
+        for j in range(n - 1, i - 1, -1):
+            B[j] = _lerp(t, B[j - 1], B[j])
+
+
+def _right_portion(t: float, B: list[SpatialVector1d]) -> None:
+    """
+    """
+    n: int = len(B)
+    for i in range(1, n):
+        # FIXME ensure proper translation of C++ code
+        for j in range(n - 1):
+            B[j] = _lerp(t, B[j], B[j + 1])
+
+
+def _portion(B: list[SpatialVector1d], I: Interval_ink) -> None:
+    """
+    Modifies B
+    """
+    if float_equal(I.min(), 0.0):
+        if float_equal(I.max(), 1.0):
+            return
+        _left_portion(I.max(), B)
+        return
+    _right_portion(I.min(), B)
+    if float_equal(I.max(), 1.0):
+        return
+    t: float = I.extent() / (1 - I.min())
+    _left_portion(t, B)
+
+
+# Clip fatline
+
+def _fatline(Q: Matrix5x3f,
+             L_min: Vector3f,
+             L_max: Vector3f) -> None:
+    """
+    """
+    assert Q.shape == (5, 3)
+    assert L_min.shape == (3, )
+    assert L_max.shape == (3, )
+
+    nQ: int = 5
+    L: Vector3f = np.zeros(shape=(3, ))
+    # TODO: ensure the below cross works same as cross3 in C++ code
+    L = np.cross(Q[0], Q[nQ - 1])
+    assert L.shape == (3, )
+    cmin: float = L[2]
+    cmax: float = L[2]
+    for i in range(2, nQ + 1):
+        c = -Q[i - 1][0] * L[0] - Q[i - 1][1] * L[1]
+        cmin = min(cmin, c)
+        cmax = max(cmax, c)
+    L_min[0] = -L[0]
+    L_min[1] = -L[1]
+    L_min[2] = -cmin
+    L_max[0] = L[0]
+    L_max[1] = L[1]
+    L_max[2] = cmax
+
+
+def _clipline(P: Matrix5x3f,
+              L: Vector3f,
+              clip_range: Vector2f) -> None:
+    """
+    FIXME: blackbox code
+    """
+    nP: int = 5
+    nPf: float = float(nP - 1)
+
+    E0: Vector3f = np.array([0,  np.dot(L, P[0]), 1])
+    En: Vector3f = np.array([1, np.dot(L, P[nP - 1]), 1])
+    Ei: Vector3f = np.ndarray(shape=(3, ))
+    L0i: Vector3f = np.zeros((3, ))
+    Lni: Vector3f = np.zeros((3, ))
+    V0i: Vector3f = np.zeros((3, ))
+    Vni: Vector3f = np.zeros((3, ))
+    v0x: Vector5f = np.zeros((5, ))
+    vnx: Vector5f = np.zeros((5, ))
+    ey: Vector3f = np.array([0, 1, 0])
+    t1: float
+    t2: float
+
+    for i in range(1, nP + 1):
+        Ei[0] = (i - 1) / nPf
+        Ei[1] = np.dot(L, P[i - 1])
+        Ei[2] = 1
+        L0i = np.cross(E0, Ei)
+        Lni = np.cross(En, Ei)
+
+        if 1 < i:
+            V0i = np.cross(L0i, ey)
+            v0x[i - 1] = V0i[0] / V0i[2]
+        if i < nP:
+            Vni = np.cross(Lni, ey)
+            vnx[i - 1] = Vni[0] / Vni[2]
+
+    if 0.0 <= E0[1]:
+        t1 = 0
+    else:
+        t1 = 0.1e1
+        for j in range(2, nP + 1):
+            if 0.0 < v0x[j - 1]:
+                t1 = min(t1, v0x[j - 1])
+
+    if 0.0 <= En[1]:
+        t2 = 0.1e1
+    else:
+        t2 = 0.0
+        for j in range(1, nP):
+            if vnx[j - 1] < 0.1e1:
+                t2 = max(t2, vnx[j - 1])
+
+    if t2 <= t1:
+        clip_range[0] = -0.1e1
+        clip_range[1] = -0.1e1
+    else:
+        clip_range[0] = t1
+        clip_range[1] = t2
+
+
+def _clipfatline(P: Matrix5x3f,
+                 Q: Matrix5x3f,
+                 clip_range: Vector2f,
+                 precision: float = 1e-8) -> None:
+    """
+    """
+    assert P.shape == (5, 3)
+    assert Q.shape == (5, 3)
+    assert clip_range.shape == (2, )
+
+    for i in range(5):
+        Q[i][0] /= Q[i][2]
+        Q[i][1] /= Q[i][2]
+        Q[i][2] = 1
+    L_min: Vector3f = np.zeros(shape=(3, ))
+    L_max: Vector3f = np.zeros(shape=(3, ))
+    t_min: Vector2f = np.zeros(shape=(2, ))
+    t_max: Vector2f = np.zeros(shape=(2, ))
+
+    if _is_constant(Q, precision):
+        if _is_constant(P, precision):
+            clip_range[0] = 0
+            clip_range[1] = 1
+            return
+        else:
+            direction: Vector2f = np.array([-(P[4][1] / P[4][2] - P[0][1] / P[0][2]),
+                                            P[4][0] / P[4][2] - P[0][0] / P[0][2]])
+            # FIXME: potentially bad translation? normalizing direcction.
+            direction /= np.linalg.norm(direction)
+            L_min[0] = direction[1]
+            L_min[1] = -direction[0]
+            L_min[2] = (-direction[1] * (Q[0][0] + Q[4][0]) / 2 +
+                        direction[0] * (Q[0][1] + Q[4][1]) / 2)
+            L_max[0] = -direction[1]
+            L_max[1] = direction[0]
+            L_max[2] = (direction[1] * (Q[0][0] + Q[4][0]) / 2 -
+                        direction[0] * (Q[0][1] + Q[4][1]) / 2)
+    else:
+        _fatline(Q, L_min, L_max)
+
+    _clipline(P, L_min, t_min)
+    _clipline(P, L_min, t_min)
+    if t_min[0] == -0.1e1 or t_max[0] == -0.1e1:
+        clip_range[0] = -1
+        clip_range[1] = -1
+    else:
+        clip_range[0] = max(t_max[0], t_min[0])
+        clip_range[1] = min(t_min[1], t_max[1])
+
+
+def iterate(domsA: list[Interval_ink],
+            domsB: list[Interval_ink],
+            A: list[SpatialVector1d],
+            B: list[SpatialVector1d],
+            domA: Interval_ink,
+            domB: Interval_ink,
+            precision: float,
+            counter: float) -> float:
+    """
+    Inkscope code
+    NOTE: function runs recursively.
+    # FIXME potential problem with translation of C++ pointers
+    Passes and returns precision to caller method 
+
+    :param domsA: [in, out]
+    :param domsB: [in, out]
+    :param A: [in]
+    :param B: [in]
+    :param domA: [in]
+    :param domB: [in]
+    :param precision: [in]
+    :param counter: [in, out]
+
+    :return counter:
+    """
+    # Base case in order to limit recursion
+    if (float_equal(domA.extent(), 1.0) and float_equal(domB.extent(), 1.0)):
+        counter = 0
+    counter += 1
+    if counter > 100:
+        return counter
+
+    if precision < 1e-8:
+        precision = 1e-8
+
+    pA: list[SpatialVector1d] = copy.deepcopy(A)
+    pB: list[SpatialVector1d] = copy.deepcopy(B)
+    C1: list[SpatialVector1d] = pA
+    C2: list[SpatialVector1d] = pB
+    dompA: Interval_ink = copy.deepcopy(domA)
+    dompB: Interval_ink = copy.deepcopy(domB)
+    dom1: Interval_ink = dompA
+    dom2: Interval_ink = dompB
+
+    if _is_constant_list(A, precision) and _is_constant_list(B, precision):
+        m1: SpatialVector1d = _middle_point(C1[0], C1[-1])
+        m2: SpatialVector1d = _middle_point(C2[0], C2[-1])
+        if _point_equal(m1, m2):
+            domsA.append(domA)
+            domsB.append(domB)
+        return counter
+
+    iteration = 0
+    while (iteration + 1) < 100 and (dompA.extent() >= precision or dompB.extent() >= precision):
+        iteration += 1
+
+        # Convert list[SpatialVector] to Matrix5x3f
+        # TODO: can't I just use np.array(A) and np.array(B) for P and Q, respectively?
+        P: Matrix5x3f = np.zeros((5, 3), dtype=np.float64)
+        Q: Matrix5x3f = np.zeros((5, 3), dtype=np.float64)
+        clip_range: Vector2f = np.zeros((2, ), dtype=np.float64)
+        assert len(C1) == 5
+        assert len(C2) == 5
+        for i in range(5):
+            P[i][0] = C1[i][0]
+            P[i][1] = C1[i][1]
+            P[i][2] = C1[i][2]
+            Q[i][0] = C2[i][0]
+            Q[i][1] = C2[i][1]
+            Q[i][2] = C2[i][2]
+
+        _clipfatline(Q, P, clip_range, precision)
+
+        # FIXME: potentially bad translation...
+        dom: Interval_ink = Interval_ink(clip_range[0], clip_range[1])
+
+        if (float_equal(dom.max(), -1) and float_equal(dom.min(), -1)):
+            return counter
+
+        # All other cases where dom[0] > dom[1] are invalid
+        assert dom.min() <= dom.max()
+
+        _map_to(dom2, dom)
+        _portion(C2, dom)
+
+        if _is_constant_list(C2, precision) and _is_constant_list(C1, precision):
+            m1: SpatialVector1d = _middle_point(C1[0], C1[-1])
+            m2: SpatialVector1d = _middle_point(C2[0], C2[-1])
+
+            if _point_equal(m1, m2):
+                break  # append the new interval
+            else:
+                return counter  # exit without appending any new interval
+
+        # if we have clipped less than 20% than we need to subdive the curve
+        # with the largest domain into two sub-curves
+        H1_INTERVAL = Interval_ink(0, 0.5)
+        H2_INTERVAL = Interval_ink(np.nextafter(0.5, 1.0), 1.0)
+        if dom.extent() > MIN_CLIPPED_SIZE_THRESHOLD:
+            pC1: list[SpatialVector1d]
+            pC2: list[SpatialVector1d]
+            dompC1: Interval_ink
+            dompC2: Interval_ink
+            if dompA.extent() > dompB.extent():
+                pC1 = copy.deepcopy(pA)
+                pC2 = copy.deepcopy(pA)
+                _portion(pC1, H1_INTERVAL)
+                _portion(pC2, H2_INTERVAL)
+                dompC1 = copy.deepcopy(dompA)
+                dompC2 = copy.deepcopy(dompA)
+                _map_to(dompC1, H1_INTERVAL)
+                _map_to(dompC2, H2_INTERVAL)
+                counter = iterate(domsA, domsB, pC1, pB, dompC1, dompB, precision, counter)
+                counter = iterate(domsA, domsB, pC2, pB, dompC2, dompB, precision, counter)
+            else:
+                pC1 = copy.deepcopy(pB)
+                pC2 = copy.deepcopy(pB)
+                _portion(pC1, H1_INTERVAL)
+                _portion(pC2, H2_INTERVAL)
+                dompC1 = copy.deepcopy(dompB)
+                dompC2 = copy.deepcopy(dompB)
+                _map_to(dompC1, H1_INTERVAL)
+                _map_to(dompC2, H2_INTERVAL)
+                counter = iterate(domsB, domsA, pC1, pA, dompC1, dompA, precision, counter)
+                counter = iterate(domsB, domsA, pC2, pA, dompC2, dompA, precision, counter)
+            return counter
+
+        C1, C2 = C2, C1
+        dom1, dom2 = dom2, dom1
+
+    domsA.append(dompB)
+    domsB.append(dompB)
+    return counter
+
+
+def find_intersections_bezier_clipping(
+        A: list[SpatialVector1d],
+        B: list[SpatialVector1d],
+        precision: float) -> list[tuple[float, float]]:
+    """
+    Split rational bezier curves into 2
+    """
+    xs: list[tuple[float, float]] = _get_solutions(A, B, precision)
+    return xs
+
+
+def _split_bezier_curve(p: list[SpatialVector1d], t: float) -> tuple[list[SpatialVector1d],
+                                                                     list[SpatialVector1d]]:
+    """
+
+    """
+    q: list[SpatialVector1d] = [np.zeros((3, )),
+                                np.zeros((3, )),
+                                np.zeros((3, )),
+                                np.zeros((3, )),
+                                np.zeros((3, ))]
+
+    r: list[SpatialVector1d] = [np.zeros((3, )),
+                                np.zeros((3, )),
+                                np.zeros((3, )),
+                                np.zeros((3, )),
+                                np.zeros((3, ))]
+
+    # De Casteljau's Algo
+    # 5th level
+    q[0] = p[0]
+    r[4] = p[4]
+    # 4th level
+    q[1] = (1 - t) * p[0] + t * p[1]
+    m1: SpatialVector1d = (1 - t) * p[1] + t * p[2]
+    m2: SpatialVector1d = (1 - t) * p[2] + t * p[3]
+    r[3] = (1 - t) * p[3] + t * p[4]
+    # 3rd level
+    q[2] = (1 - t) * q[1] + t * m1
+    m3: SpatialVector1d = (1 - t) * m1 + t * m2
+    r[2] = (1 - t) * m2 + t * r[3]
+    # 2nd level
+    q[3] = (1 - t) * q[2] + t * m3
+    r[1] = (1 - t) * m3 + t * r[2]
+    # 1st level
+    q[4] = (1 - t) * q[3] + t * r[1]
+    r[0] = q[4]
+
+    return q, r
+
+
+def split_bezier_curve_no_self_intersection(p: list[SpatialVector1d],
+                                            start: float,
+                                            end: float,
+                                            split_point_params_ref: list[float]) -> None:
+    """
+    Recursive function.
+    """
+    if check_split_criteria(p):
+        return
+    if float_equal(start, end):
+        raise ValueError("Split until interval length zero")
+
+    q: list[SpatialVector1d]
+    r: list[SpatialVector1d]
+    q, r = _split_bezier_curve(p, 0.5)
+    split_point_params_ref.append((start + end) / 2.0)
+    split_bezier_curve_no_self_intersection(
+        q, start, (start + end) / 2.0, split_point_params_ref)
+    split_bezier_curve_no_self_intersection(
+        r, (start + end) / 2.0, end, split_point_params_ref)

@@ -366,12 +366,12 @@ def twelve_split_quadratic_reproduction(
     gradient_func = QuadraticGradientFunction(uv_coeff, uu_coeff, vv_coeff)
 
     # Generate function data
-    corner_data: list[list[TriangleCornerData]] = generate_parametric_affine_manifold_corner_data(
+    corner_data: dict[int, dict[int, TriangleCornerData]] = generate_parametric_affine_manifold_corner_data(
         position_func,
         gradient_func,
         parametric_affine_manifold)
 
-    midpoint_data: list[list[TriangleMidpointData]] = generate_parametric_affine_manifold_midpoint_data(
+    midpoint_data: dict[int, dict[int, TriangleMidpointData]] = generate_parametric_affine_manifold_midpoint_data(
         gradient_func,
         parametric_affine_manifold)
 
@@ -382,7 +382,7 @@ def twelve_split_quadratic_reproduction(
 
     domain_point: PlanarPoint1d = np.array([0.2, 0.3])
     assert domain_point.shape == (2, )
-    q: SpatialVector = evaluate_quadratic_mapping(3, surface_mappings[0], domain_point)
+    q: SpatialVector = evaluate_quadratic_mapping(surface_mappings[0], domain_point)
     assert q.shape == (3, )
 
     if len(surface_mappings) != 12:
@@ -423,7 +423,7 @@ def test_twelve_split_spline_constant_surface():
         midpoint_data)
 
     domain_point: PlanarPoint1d = np.array([0.25, 0.25], dtype=np.float64)
-    q: SpatialVector = evaluate_quadratic_mapping(3, surface_mappings[0], domain_point)
+    q: SpatialVector = evaluate_quadratic_mapping(surface_mappings[0], domain_point)
 
     assert len(surface_mappings) == 12
     assert vector_equal(q, p)

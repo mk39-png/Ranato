@@ -11,12 +11,10 @@ from src.core.common import Matrix3x3r, Matrix3x6r, Matrix6x3r
 
 def generate_quadratic_surface_normal_coeffs(surface_mapping_coeffs: Matrix6x3r) -> Matrix6x3r:
     """
-    Compute the quadratic coefficients of the normal vector to a quadratic
-    surface.
+    Compute the quadratic coefficients of the normal vector to a quadratic surface.
 
-    @param[in] surface_mapping_coeffs: coefficients for the quadratic surface
-
-    @return Coefficients for the quadratic polynomial defining the normal vector
+    :param surface_mapping_coeffs: [in] coefficients for the quadratic surface
+    :return: Coefficients for the quadratic polynomial defining the normal vector
     on the surface
     """
     # Get directional derivatives

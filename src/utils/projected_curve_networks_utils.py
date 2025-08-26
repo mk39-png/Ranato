@@ -1,5 +1,5 @@
 """
-File separate from project_curve_networks that holds helper classes and methods with the 
+File separate from project_curve_networks that holds helper classes and methods with the
 aim to shorten the length of the original file.
 """
 
@@ -7,8 +7,6 @@ from collections import defaultdict
 from enum import Enum
 
 from src.contour_network.intersection_data import IntersectionData
-# from src.contour_network.projected_curve_network import ProjectedCurveNetwork
-# from src.contour_network.projected_curve_network import ProjectedCurveNetwork
 from src.core.abstract_curve_network import AbstractCurveNetwork
 from src.core.common import (NodeIndex, SegmentIndex, arange, logger,
                              vector_equal)
@@ -20,19 +18,37 @@ from src.core.rational_function import RationalFunction
 # **************
 
 
+class SVGOutputMode(Enum):
+    """
+    Enum for SVG output mode types.
+    """
+    UNIFORM_SEGMENTS = 1            # All contours in uniform color
+    UNIFORM_VISIBLE_SEGMENTS = 2    # Visible contours in uniform color
+    CONTRAST_INVISIBLE_SEGMENTS = 3  # Visible and invisible segments in a different color
+    RANDOM_CHAINS = 4               # Chains in random colors
+    UNIFORM_CHAINS = 5              # Chains in uniform color
+    UNIFORM_VISIBLE_CHAINS = 6      # Visible chains in uniform color
+    UNIFORM_VISIBLE_CURVES = 7      # Visible curves with no breaks at special points
+    UNIFORM_CLOSED_CURVES = 8       # All closed curves with no breaks at special points
+    UNIFORM_SIMPLIFIED_VISIBLE_CURVES = 9  # All visible closed curves with simplification
+
+
 class SegmentGeometry():
-    """Geometry at segment"""
+    """
+    Geometry at segment
+    """
 
     def __init__(self,
                  parameter_curve: Conic,
-                 spatial_curve: RationalFunction,  # <4, 3>
-                 planar_curve: RationalFunction,  # <4, 2>
+                 spatial_curve: RationalFunction,
+                 planar_curve: RationalFunction,
                  segment_labels: dict[str, int]) -> None:
-        """Constructor for SegmentGeometry"""
-        assert spatial_curve.degree == 4
-        assert spatial_curve.dimension == 3
-        assert planar_curve.degree == 4
-        assert planar_curve.dimension == 2
+        """
+        Constructor for SegmentGeometry
+        """
+        assert (parameter_curve.degree, parameter_curve.dimension) == (2, 2)
+        assert (spatial_curve.degree, spatial_curve.dimension) == (4, 3)
+        assert (planar_curve.degree, planar_curve.dimension) == (4, 2)
 
         self.__planar_curve: RationalFunction = planar_curve
         self.__spatial_curve: RationalFunction = spatial_curve
@@ -49,25 +65,38 @@ class SegmentGeometry():
 
     @property
     def parameter_curve(self) -> Conic:
-        """Retrieves parameter curve of type Conic"""
+        """
+        Retrieves parameter curve of type Conic. degree = 2, dimension = 2
+        """
+        assert (self.__parameter_curve.degree, self.__parameter_curve.dimension) == (2, 2)
         return self.__parameter_curve
 
     @property
     def spatial_curve(self) -> RationalFunction:
-        """Retrieves spatial curve of type RationalFunction. degree = 4, dimension = 3"""
+        """
+        Retrieves spatial curve of type RationalFunction. degree = 4, dimension = 3
+        """
+        assert (self.__spatial_curve.degree, self.__spatial_curve.dimension) == (4, 3)
         return self.__spatial_curve
 
     @property
     def planar_curve(self) -> RationalFunction:
-        """Retrieves planar curve. degree = 4, dimension = 3"""
+        """
+        Retrieves planar curve. degree = 4, dimension = 2
+        """
+        assert (self.__planar_curve.degree, self.__planar_curve.dimension) == (4, 2)
         return self.__planar_curve
 
     def set_segment_label(self, label_name: str, new_segment_label: int) -> None:
-        """Sets segment_label at key label_name with value new_segment_label"""
+        """
+        Sets segment_label at key label_name with value new_segment_label
+        """
         self.__segment_labels[label_name] = new_segment_label
 
     def get_segment_label(self, label_name: str) -> NodeIndex:
-        """Retrives segment label at label_name key. Raises value error if key does not exist"""
+        """
+        Retrives segment label at label_name key. Raises value error if key does not exist
+        """
         segment_label: NodeIndex | None = self.__segment_labels.get(label_name)
         if segment_label is None:
             raise ValueError(f"{label_name} does not exist in segment_labels")
@@ -76,12 +105,16 @@ class SegmentGeometry():
 
     @property
     def quantitative_invisibility(self) -> NodeIndex:
-        """Retrieves quantitative invisibility"""
+        """
+        Retrieves quantitative invisibility
+        """
         return self.__quantitative_invisibility
 
     @quantitative_invisibility.setter
-    def set_quantitative_invisibility(self, new_quantitative_invisibility: int) -> None:
-        """Sets quantitative_invisibility"""
+    def quantitative_invisibility(self, new_quantitative_invisibility: int) -> None:
+        """
+        Sets quantitative_invisibility. Raises value error if given negative QI.
+        """
         if new_quantitative_invisibility < 0:
             raise ValueError("Cannot set negative segment Q1")
         self.__quantitative_invisibility: NodeIndex = new_quantitative_invisibility
@@ -89,13 +122,13 @@ class SegmentGeometry():
     # ****************
     # Utility methods
     # ***************
-    def split_at_knot(self,
-                      knot: float) -> tuple["SegmentGeometry", "SegmentGeometry"]:
+    def split_at_knot(self, knot: float) -> tuple["SegmentGeometry", "SegmentGeometry"]:
         """
-        Split segment into two new segments at a given knot value
+        Split segment into two new segments at a given knot value.
 
         :param knot: knot value to split at
         :type knot: float
+
         :return lower_segment: lower segment from split curve at knot
         :return upper_segment: upper segment from split curve at knot
         """
@@ -109,8 +142,16 @@ class SegmentGeometry():
 
         # TODO: fix typing issue below since Conic inherits split_at_knot() from RationalFunction
         lower_parameter_curve, upper_parameter_curve = self.parameter_curve.split_at_knot(knot)
+        assert (lower_parameter_curve.degree, lower_parameter_curve.dimension) == (2, 2)
+        assert (upper_parameter_curve.degree, upper_parameter_curve.dimension) == (2, 2)
+
         lower_planar_curve, upper_planar_curve = self.planar_curve.split_at_knot(knot)
+        assert (lower_planar_curve.degree, lower_planar_curve.dimension) == (4, 2)
+        assert (upper_planar_curve.degree, upper_planar_curve.dimension) == (4, 2)
+
         lower_spatial_curve, upper_spatial_curve = self.spatial_curve.split_at_knot(knot)
+        assert (lower_spatial_curve.degree, lower_spatial_curve.dimension) == (4, 3)
+        assert (upper_spatial_curve.degree, upper_spatial_curve.dimension) == (4, 3)
 
         # Build new segments from the split curves
         lower_segment = SegmentGeometry(lower_parameter_curve,
@@ -137,9 +178,11 @@ class SegmentGeometry():
         return string_print
 
     def __is_valid_segment_geometry(self) -> bool:
-        """Verifies validity of segment geometry"""
-        t0: float = self.planar_curve.domain.lower_bound
-        t1: float = self.planar_curve.domain.upper_bound
+        """
+        Verifies validity of segment geometry
+        """
+        t0: float = self.__planar_curve.domain.lower_bound
+        t1: float = self.__planar_curve.domain.upper_bound
 
         if self.spatial_curve.domain.lower_bound != t0:
             logger.error("Lower bound error")
@@ -158,8 +201,10 @@ class SegmentGeometry():
 
 
 class GeometricData(Enum):
-    """Used by NodeGeometry class"""
-    # TODO boundary and interior cusps are no longer clear in the general
+    """
+    Used by NodeGeometry class
+    """
+    # TODO (ASOC) boundary and interior cusps are no longer clear in the general
     # context. Should rename to something more general like C1 cusp and C0
     # cusp, etc.
     KNOT = 0
@@ -172,10 +217,14 @@ class GeometricData(Enum):
 
 
 class NodeGeometry():
-    """Geometry at node"""
+    """
+    Geometry at node
+    """
 
     def __init__(self) -> None:
-        """Constructor for NodeGeometry"""
+        """
+        Constructor for NodeGeometry
+        """
         self.__node_type: GeometricData = GeometricData.KNOT
         self.__quantitative_invisibility: int = -1
         self.__qi_set = False
@@ -242,7 +291,7 @@ class NodeGeometry():
         return self.__quantitative_invisibility
 
     @quantitative_invisibility.setter
-    def set_quantitative_invisibility(self, new_quantitative_invisibility: int) -> None:
+    def quantitative_invisibility(self, new_quantitative_invisibility: int) -> None:
         """Sets quantitative_invisibility"""
         self.__qi_set = True
         if new_quantitative_invisibility < 0:
@@ -277,40 +326,13 @@ class NodeGeometry():
             return "unknown"
 
 
-# class SegmentChainIterator():
-#     """
-#     Iterator over contour segment chains until FIXME is found.
-#     """
-
-#     def __init__(self, parent: ProjectedCurveNetwork, segment_index: SegmentIndex) -> None:
-#         """
-#         Constructor for SegmentChainIterator
-#         """
-#         self.__parent: ProjectedCurveNetwork = parent
-#         self.__current_segment_index: SegmentIndex = segment_index
-#         self.__is_end_of_chain = False
-#         self.__is_reverse_end_of_chain = False
-#         logger.info("Iterator initialized to segment %s", self.__current_segment_index)
-
-
-#     def get_segment_chain_iterator(self, segment_index: SegmentIndex):
-#         """
-#         Build a segment chain iterator from some starting segment index.
-#         @param segment_index: index to start the chain iterator at
-#         @return chain iterator for the given starting segment
-#         """
-#         assert self.
-
-
 # ***************
 # Helper Function
 # ***************
 
 
 def build_projected_curve_network_without_intersections(parameter_segments: list[Conic],
-                                                        # RationalFunction<4, 3>
                                                         spatial_segments: list[RationalFunction],
-                                                        # RationalFunction<4, 2>
                                                         planar_segments: list[RationalFunction],
                                                         segment_labels: list[dict[str, int]],
                                                         chains: list[list[int]],
@@ -322,13 +344,18 @@ def build_projected_curve_network_without_intersections(parameter_segments: list
     """
     Initialize the curve network without intersections directly from the input
     curve data, marking cusps between boundaries.
-    FIXME Rename to indicate no cusps either
+    FIXME (ASOC) Rename to indicate no cusps either
 
     :return: to_array
     :return: out_array
     :return: segments
     :return: nodes
     """
+    # Lazy checks
+    assert (parameter_segments[0].degree, parameter_segments[0].dimension) == (2, 2)
+    assert (spatial_segments[0].degree, spatial_segments[0].dimension) == (4, 3)
+    assert (planar_segments[0].degree, planar_segments[0].dimension) == (4, 2)
+
     num_segments: int = len(spatial_segments)
     to_array: list[NodeIndex] = []
     out_array: list[SegmentIndex] = []
@@ -397,6 +424,9 @@ def remove_redundant_intersections(to_array: list[NodeIndex],
             intersection_id: int = intersection_data_ref[i][j].id
             intersection_segments[intersection_id][j] = (i, j)
 
+    # FIXME: is below the correct assertion to make?
+    assert len(intersection_segments) == num_intersections
+
     for i, _ in enumerate(intersection_segments):
         if len(intersection_segments[i]) != 2:
             raise ValueError("Should have two intersections per id")
@@ -414,7 +444,7 @@ def remove_redundant_intersections(to_array: list[NodeIndex],
         first_segment_data = intersection_data_ref[first_segment_index][first_intersection_index]
         second_segment_data = intersection_data_ref[second_segment_index][second_intersection_index]
 
-        #  Don't process intersections already marked as redundant
+        # Don't process intersections already marked as redundant
         if intersection_data_ref[first_segment_index][first_intersection_index].is_redundant:
             continue
         if intersection_data_ref[second_segment_index][second_intersection_index].is_redundant:
@@ -479,8 +509,6 @@ def split_segment_at_knot(original_segment_index: SegmentIndex,
     FIXME: Make method more Pythonic since it returns values but also modifies parameters
     by reference.
 
-    Right now this modifies 
-
     :param original_segment_index: [in]
     :param knot: [in]
     :param to_array_ref: [out] to_array modified by reference
@@ -541,22 +569,15 @@ def split_segments_at_intersections(intersection_data: list[list[IntersectionDat
                                     segments: list[SegmentGeometry],
                                     nodes: list[NodeGeometry]
                                     ) -> tuple[list[int], list[list[int]], list[list[int]]]:
-    # ) -> tuple[list[SegmentIndex],
-    #    dict[int, dict[int, SegmentIndex]],
-    #    dict[int, dict[int, NodeIndex]]]:
     """
     Split segments at all of the intersection points, and create maps from the
     new segments to their original indices and from the original indices to their
     corresponding split segment indices
     """
     logger.info("Splitting segments at intersections")
-
     num_segments: int = len(segments)
     num_nodes: int = len(nodes)
-
-    # split_segment_indices: dict[int, dict[int, SegmentIndex]] = defaultdict(dict)
-    # intersection_nodes: dict[int, dict[int, NodeIndex]] = defaultdict(dict)
-    split_segment_indices: list[list[SegmentIndex]] = [[] for _ in range(num_segments)]
+    split_segment_indices: list[list[SegmentIndex]] = []
     intersection_nodes: list[list[NodeIndex]] = [[] for _ in range(num_intersections)]
 
     # Check segment validity
@@ -568,17 +589,14 @@ def split_segments_at_intersections(intersection_data: list[list[IntersectionDat
         raise ValueError("Node geometry and topology mismatch")
 
     # Initially the map is the identity
-    # FIXME: potentially incompatible C++ translation below
     original_segment_indices: list[SegmentIndex] = arange(num_segments)
     for i in range(num_segments):
+        split_segment_indices.append([])
         split_segment_indices[i].append(i)
 
     # Mark all base nodes before modifying connectivity
-    from_array: list[NodeIndex]
-    from_array = AbstractCurveNetwork.build_from_array(to_array, out_array)
-    for segment_index, _ in enumerate(intersection_data):
-        # segment: SegmentGeometry = segments[segment_index]
-        segment_intersection_data: list[IntersectionData] = intersection_data[segment_index]
+    from_array: list[NodeIndex] = AbstractCurveNetwork.build_from_array(to_array, out_array)
+    for segment_index, segment_intersection_data in enumerate(intersection_data):
 
         for j, _ in enumerate(segment_intersection_data):
             # Skip redundant information
@@ -599,7 +617,6 @@ def split_segments_at_intersections(intersection_data: list[list[IntersectionDat
         # TODO: check that the below sorts by reference.
         segment_intersection_data.sort(key=lambda data: data.knot)
 
-        # split_segment_indices[segment_index]
         for j, _ in enumerate(segment_intersection_data):
             # Skip redundant intersections
             if segment_intersection_data[j].is_redundant:
@@ -657,29 +674,30 @@ def split_segments_at_intersections(intersection_data: list[list[IntersectionDat
     return original_segment_indices, split_segment_indices, intersection_nodes
 
 
-def connect_segment_intersections(segments: list[SegmentGeometry],
-                                  intersection_data: list[list[IntersectionData]],
-                                  intersection_nodes: list[list[NodeIndex]],
-                                  to_array: list[NodeIndex],
-                                  out_array: list[SegmentIndex],
-                                  split_segment_indices: list[list[SegmentIndex]],
-                                  intersection_array: list[NodeIndex],
-                                  nodes: list[NodeGeometry]
-                                  ) -> None:
+def connect_segment_intersections(
+    # segments: list[SegmentGeometry],
+        #   intersection_data: list[list[IntersectionData]],
+        intersection_nodes: list[list[NodeIndex]],
+        #   to_array: list[NodeIndex],
+    #   out_array: list[SegmentIndex],
+    #   split_segment_indices: list[list[SegmentIndex]],
+        intersection_array_ref: list[NodeIndex],
+        nodes_ref: list[NodeGeometry]
+) -> None:
     """
     Create a map from nodes to their corresponding intersection point if they are
     an intersection node and -1 otherwise.
 
+    :param intersection_nodes: [in]
     :param intersection_array_ref: [out]
     :param nodes_ref: [out]
     """
     logger.info("Connecting segments intersections")
 
-    # use_combinatorial_data = True
-    # if use_combinatorial_data:
     for i, _ in enumerate(intersection_nodes):
         if len(intersection_nodes[i]) == 0:
             continue
+
         if len(intersection_nodes[i]) != 2:
             raise ValueError("Node intersection is not a pair")
 
@@ -687,15 +705,15 @@ def connect_segment_intersections(segments: list[SegmentGeometry],
         second_intersection_node: NodeIndex = intersection_nodes[i][1]
 
         # Ignore intersections that already exist
-        if intersection_array[first_intersection_node] >= 0:
+        if intersection_array_ref[first_intersection_node] >= 0:
             continue
-        elif intersection_array[second_intersection_node] >= 0:
+        elif intersection_array_ref[second_intersection_node] >= 0:
             continue
         else:
-            intersection_array[first_intersection_node] = second_intersection_node
-            intersection_array[second_intersection_node] = first_intersection_node
-            nodes[first_intersection_node].mark_as_intersection()
-            nodes[second_intersection_node].mark_as_intersection()
+            intersection_array_ref[first_intersection_node] = second_intersection_node
+            intersection_array_ref[second_intersection_node] = first_intersection_node
+            nodes_ref[first_intersection_node].mark_as_intersection()
+            nodes_ref[second_intersection_node].mark_as_intersection()
 
     # FIXME: below still had a couple more lines of code that were not doing anything...
 
@@ -707,13 +725,14 @@ def split_segments_at_cusps(interior_cusps: list[list[float]],
                             out_array_ref: list[SegmentIndex],
                             intersection_array_ref: list[NodeIndex],
                             segments_ref: list[SegmentGeometry],
-                            nodes_ref: list[NodeGeometry]):
+                            nodes_ref: list[NodeGeometry]) -> None:
     """
     Split segments at all of the cusp points, and create maps from the new
     segments to their original indices and from the original indices to their
     corresponding split segment indices
     """
     logger.info("Splitting segments at cusps")
+
     num_segments: int = len(segments_ref)
     num_nodes: int = len(nodes_ref)
     num_original_segments: int = len(interior_cusps)
@@ -772,3 +791,34 @@ def split_segments_at_cusps(interior_cusps: list[list[float]],
                  num_nodes,
                  len(segments_ref),
                  len(nodes_ref))
+
+    # Check consistency of out and intersection arrays
+    if len(out_array_ref) != len(intersection_array_ref):
+        logger.error("Inconsistent number of intersections and nodes after cusps are split")
+        return
+
+
+def is_valid_next_prev_pair(next_: list[int], prev: list[int]) -> bool:
+    """
+    Check if next/prev are consistent
+    """
+    next_size: int = len(next_)
+    prev_size: int = len(prev)
+
+    #  Check for consistent sizes
+    if next_size != prev_size:
+        logger.error("Inconsistent prev/next sizes")
+        return False
+
+    for i in range(next_size):
+        #  Check prev[next] is the identity where it is defined
+        if (next_[i] != -1) and (prev[next_[i]] != i):
+            logger.error("prev[next] is not the identity")
+            return False
+
+        # Check next[prev] is the identity where it is defined
+        if (prev[i] != -1) and (next_[prev[i]] != i):
+            logger.error("next[prev] is not the identity")
+            return False
+
+    return True

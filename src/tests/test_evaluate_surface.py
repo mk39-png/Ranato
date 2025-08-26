@@ -7,7 +7,7 @@ from ..core.bivariate_quadratic_function import *
 from ..core.common import *
 
 
-def test_patch_monomials():
+def test_patch_monomials() -> None:
     print("Patch monomials are computed at (0,0)")
     w = generate_quadratic_monomials(np.array([0, 0]))
     assert (w.shape == (6, ))

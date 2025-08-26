@@ -103,6 +103,13 @@ class QuadraticSplineSurface:
         """
         return len(self._patches)
 
+    @property
+    def hash_table(self) -> dict[int, dict[int, list[int]]]:
+        """
+        Get the hash table of the surface
+        """
+        return self._hash_table
+
     def get_patch(self, patch_index: PatchIndex) -> QuadraticSplineSurfacePatch:
         """
         Get a reference to a spline patch at patch_index
@@ -226,9 +233,12 @@ class QuadraticSplineSurface:
         patch_index += 1
 
         # Set the patch 0 inside V, F, and N of the surface.
-        V_tri: np.ndarray = np.zeros(shape=(num_patch_vertices * self.num_patches, 3), dtype=np.float64)
-        F_tri: np.ndarray = np.zeros(shape=(num_patch_faces * self.num_patches, 3), dtype=np.int64)
-        N_tri: np.ndarray = np.zeros(shape=(num_patch_vertices * self.num_patches, 3), dtype=np.float64)
+        V_tri: np.ndarray = np.zeros(shape=(num_patch_vertices * self.num_patches, 3),
+                                     dtype=np.float64)
+        F_tri: np.ndarray = np.zeros(shape=(num_patch_faces * self.num_patches, 3),
+                                     dtype=np.int64)
+        N_tri: np.ndarray = np.zeros(shape=(num_patch_vertices * self.num_patches, 3),
+                                     dtype=np.float64)
         V_tri[:num_patch_vertices, :] = V_patch_0
         F_tri[:num_patch_faces, :] = F_patch_0
         N_tri[:num_patch_vertices, :] = N_patch_0
@@ -247,9 +257,11 @@ class QuadraticSplineSurface:
                   : V_tri.shape[COLS]] = V_patch
 
             F_tri[num_patch_faces * patch_index: num_patch_faces * (patch_index + 1),
-                  : F_tri.shape[COLS]] = F_patch + np.full(shape=(num_patch_faces, F_tri.shape[COLS]),
-                                                           fill_value=num_patch_vertices * patch_index,
-                                                           dtype=np.int64)
+                  : F_tri.shape[COLS]] = (
+                F_patch + np.full(shape=(num_patch_faces, F_tri.shape[COLS]),
+                                  fill_value=num_patch_vertices * patch_index,
+                                  dtype=np.int64))
+
             N_tri[num_patch_vertices * patch_index: num_patch_vertices * (patch_index + 1),
                   : N_tri.shape[COLS]] = N_patch
 
@@ -267,6 +279,18 @@ class QuadraticSplineSurface:
         Discretize all patch boundaries as polylines.
         NOTE: This also appears in contour_network folder in discretize.py, 
         but is here for convenience and also for organization purposes.
+
+
+        TODO: MOVE FUNCTION OUTSIDE OF CLASS AND ACCEPT QUADRATICSPLINESURFACE AS
+        ARGUMENT. MAKES LIFE EEASIER FOR US AS WE DONT NEED TO REIMPLEMENT THIS FUNCTION
+        INSIDE OF DISCRETIZE...
+        ACTUALLY, JUST MOVE THIS FUNCTION INTO DISCRETIZE FOR OUR CONVENIENCE... YEAH
+        OR JUST KEEP IT HERE.... ACTUALLY... JUST KEEP IT HERE...
+        MAYBE?
+        THIS HAS MUCH MORE TO DO WITH THE 12 SPLIT SPLINE PRINTING AND THE SURFACE THAN
+        WITH THE POLYLINES ITSELF, I FEEL LIKE.
+
+
 
         :return points: list of polyline points.
         :rtype points: list[SpatialVector]

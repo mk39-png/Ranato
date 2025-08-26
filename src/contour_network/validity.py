@@ -1,4 +1,6 @@
 """
+validity.py
+
 File for methods validating specific objects related to contours
 """
 
@@ -10,10 +12,14 @@ from src.core.rational_function import RationalFunction
 
 def is_valid_spatial_mapping(spatial_mapping_coeffs: Matrix6x3f) -> bool:
     """
-    Checks that spatial mapping maps to R^3
+    Checks that spatial mapping maps to R^3 and is of valid shape.
     """
     # Must map to R3
     if spatial_mapping_coeffs.shape[COLS] != 3:
+        return False
+
+    # Must be shape (6, 3)
+    if spatial_mapping_coeffs.shape != (6, 3):
         return False
 
     return True
@@ -21,11 +27,11 @@ def is_valid_spatial_mapping(spatial_mapping_coeffs: Matrix6x3f) -> bool:
 
 def is_valid_frame(frame: Matrix3x3f) -> bool:
     """
-    Checks if frame has determinant 1
+    Checks if frame has determinant 1 and is of valid shape.
     """
     # Must be a 3x3 matrix
-    # if frame.rows() != 3) return False
-    # if frame.cols() != 3) return False
+    if frame.shape != (3, 3):
+        return False
 
     # Must have determinant 1
     if not float_equal(np.linalg.det(frame), 1.0):
@@ -34,11 +40,12 @@ def is_valid_frame(frame: Matrix3x3f) -> bool:
     return True
 
 
-def are_valid_contour_segments(contour_segments: list[RationalFunction]  # <4, 3>
-                               ) -> bool:
+def are_valid_contour_segments(contour_segments: list[RationalFunction]) -> bool:
     """
     Checks if domain of contour segments are both finite and compact.
     """
+    assert (contour_segments[0].degree, contour_segments[0].dimension) == (4, 3)  # lazy check
+
     for i, _ in enumerate(contour_segments):
         if not contour_segments[i].domain.is_finite():
             return False
