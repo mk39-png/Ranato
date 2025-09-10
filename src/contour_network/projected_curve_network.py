@@ -4,9 +4,11 @@ soup.
 """
 import copy
 import logging
+import os
 
 import numpy as np
 import polyscope
+import svg
 
 from src.contour_network.discretize import discretize_curve_segments
 from src.contour_network.intersection_data import IntersectionData
@@ -50,7 +52,7 @@ class SegmentChainIterator():
         self.__current_segment_index: SegmentIndex = segment_index
         self.__is_end_of_chain: bool = False
         self.__is_reverse_end_of_chain: bool = False
-        logger.info("Iterator initialized to segment %s", self.__current_segment_index)
+        logger.debug("Iterator initialized to segment %s", self.__current_segment_index)
 
     def increment(self) -> None:
         """
@@ -69,7 +71,7 @@ class SegmentChainIterator():
         else:
             self.__current_segment_index = self.__parent.next(self.__current_segment_index)
 
-        logger.info("Iterator moved to segment %s", self.__current_segment_index)
+        logger.debug("Iterator moved to segment %s", self.__current_segment_index)
 
     def decrement(self) -> None:
         """
@@ -84,14 +86,12 @@ class SegmentChainIterator():
         from_node: NodeIndex = self.__parent.from_(self.__current_segment_index)
 
         if not self.__parent.is_knot_node(from_node):
-            # TODO: use getter and setter within function?
-            # Or leave as direct access?
             self.__current_segment_index = -1
             self.__is_reverse_end_of_chain = True
         else:
             self.__current_segment_index = self.__parent.prev(self.__current_segment_index)
 
-        logger.info("Iterator moved to segment %s", self.__current_segment_index)
+        logger.debug("Iterator moved to segment %s", self.__current_segment_index)
 
     @property
     def at_end_of_chain(self) -> bool:
@@ -176,9 +176,9 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
         if logger.getEffectiveLevel() == logging.DEBUG:
             # TODO: is the below protected or private?
             # NOTE: do not need to call the below because it's called upon super().__init__(...)
-            # if not self._is_valid_abstract_curve_network():
-            #     logger.error("Invalid abstract curve network made")
-            #     raise RuntimeError("Invalid abstract curve network made")
+            if not self._is_valid_abstract_curve_network():
+                logger.error("Invalid abstract curve network made")
+                raise RuntimeError("Invalid abstract curve network made")
 
             if not self._is_valid_projected_curve_network():
                 logger.error("Invalid projected curve network made")
@@ -224,10 +224,10 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
     # Segment geometry
     # ****************
 
-    def segment_parameter_curve(self) -> None:
-        """
-        """
-        unimplemented()
+    # def segment_parameter_curve(self) -> None:
+    #     """
+    #     """
+    #     unimplemented()
 
     def segment_planar_curve(self, segment_index: SegmentIndex) -> RationalFunction:
         """
@@ -270,10 +270,10 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
             return
         self.segments[segment_index].quantitative_invisibility = new_quantitative_invisibility
 
-    def enumerate_parameter_curves(self) -> None:
-        """
-        """
-        unimplemented()
+    # def enumerate_parameter_curves(self) -> None:
+    #     """
+    #     """
+    #     unimplemented()
 
     def enumerate_spatial_curves(self) -> list[RationalFunction]:
         """
@@ -422,10 +422,12 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
                                                        list[SpatialVector1d],
                                                        list[SpatialVector1d]]:
         """
-        :return spatial_interior_cusp_in_tangents: 
-        :return spatial_interior_cusp_out_tangents:
-        :return spatial_boundary_cusp_in_tangents: 
-        :return spatial_boundary_cusp_out_tangents:
+        Returns cusp spatial tangents.
+
+        :return spatial_interior_cusp_in_tangents:  cusp spatial tangents
+        :return spatial_interior_cusp_out_tangents: cusp spatial tangents
+        :return spatial_boundary_cusp_in_tangents:  cusp spatial tangents
+        :return spatial_boundary_cusp_out_tangents: cusp spatial tangents
         """
         spatial_interior_cusp_in_tangents:  list[SpatialVector1d] = []
         spatial_interior_cusp_out_tangents: list[SpatialVector1d] = []
@@ -437,12 +439,12 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
             if self.is_interior_cusp_node(ni):
                 spatial_in_tangent: SpatialVector1d = self.node_spatial_in_tangent(ni)
                 spatial_out_tangent: SpatialVector1d = self.node_spatial_out_tangent(ni)
-                spatial_interior_cusp_in_tangents. append(spatial_in_tangent)
+                spatial_interior_cusp_in_tangents.append(spatial_in_tangent)
                 spatial_interior_cusp_out_tangents.append(spatial_out_tangent)
             elif self.is_boundary_cusp_node(ni):
                 spatial_in_tangent: SpatialVector1d = self.node_spatial_in_tangent(ni)
                 spatial_out_tangent: SpatialVector1d = self.node_spatial_out_tangent(ni)
-                spatial_boundary_cusp_in_tangents. append(spatial_in_tangent)
+                spatial_boundary_cusp_in_tangents.append(spatial_in_tangent)
                 spatial_boundary_cusp_out_tangents.append(spatial_out_tangent)
 
         return (spatial_interior_cusp_in_tangents,
@@ -638,6 +640,8 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
 
     def node_planar_tangent(self, node_index: NodeIndex) -> PlanarPoint1d:
         """
+        Return either node planar in tangent or node planar out tangent
+        depending on whether segment is invalid for node index in or node index out.
         """
         if self._is_valid_segment_index(self.in_(node_index)):
             planar_tangent: PlanarPoint1d = self.node_planar_in_tangent(node_index)
@@ -705,7 +709,6 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
         :param color_mode:  [in] choice of segment coloring
         :param show_nodes:  [in] show nodes iff true
         """
-        color: tuple[int, int, int, int] = (0, 0, 0, 1)
         viewport = svg.ViewBoxSpec(0, 0, 800, 800)
         svg_elements: list[svg.Element] = []
 
@@ -747,7 +750,13 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
                         node_point, svg_elements, 800, 400, (0.227, 0.420, 0.208, 1))  # Green
 
         # Write SVG
-        print(svg.SVG(x=0, y=0, height=800, width=800, elements=svg_elements))
+        svg_writer = svg.SVG(viewBox=viewport, elements=svg_elements)
+        # file_path: str = os.path.relpath(output_path)
+        if not os.path.isfile(output_path):
+            raise OSError(f"Output path is invalid: {output_path}.")
+        with open(output_path, 'w', encoding='utf-8') as output_file:
+            output_file.write(svg_writer.as_str())
+            output_file.close()
 
     def serialize_closed_curves(self, filename: str) -> None:
         """
@@ -1031,8 +1040,7 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
             to_array,
             out_array,
             self.__segments,
-            self.__nodes,
-        )
+            self.__nodes)
 
         assert self._is_valid_curve_data(to_array, out_array)
 
@@ -1044,7 +1052,6 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
                                intersection_nodes[i])
 
         # Link intersection nodes
-
         # Initialize all intersection indices to -1
         num_nodes: int = len(out_array)
         intersection_array: list[NodeIndex] = [-1] * num_nodes

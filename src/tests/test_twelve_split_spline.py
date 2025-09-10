@@ -8,7 +8,7 @@ import numpy as np
 import numpy.testing as npt
 import pytest
 from cholespy import CholeskySolverD
-from scipy.sparse import coo_matrix
+from scipy.sparse import coo_matrix, csr_matrix
 
 from src.core.affine_manifold import AffineManifold, ParametricAffineManifold
 from src.core.bivariate_quadratic_function import evaluate_quadratic_mapping
@@ -163,7 +163,7 @@ def test_face_patch_indices_spot_mesh() -> None:
     N: MatrixNx3f = TwelveSplitSplineSurface.generate_face_normals(V, affine_manifold)
 
     # Generate fit matrix by setting the parametrized quadratic surface mapping factor to zero
-    fit_matrix: coo_matrix
+    fit_matrix: csr_matrix
     # Make a deep since we don't want the same parameters between Fit vs Non-fit 12-split-splines
     optimization_params_fit: OptimizationParameters = copy.deepcopy(optimization_params)
     optimization_params_fit.parametrized_quadratic_surface_mapping_factor = 0.0

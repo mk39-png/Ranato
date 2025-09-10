@@ -9,6 +9,23 @@ from src.core.halfedge import Halfedge
 # *******************
 
 
+def test_compute_point_cloud_bounding_box_spot_mesh() -> None:
+    """
+
+    """
+    V, uv, F, FT = initialize_spot_control_mesh()
+    min_point_test: Vector3f
+    max_point_test: Vector3f
+    min_point_test, max_point_test = compute_point_cloud_bounding_box(V)
+
+    # Values from testing with spot_control_mesh-cleaned_conf_simplified_with_uv.obj
+    # and printing to terminal to get control points
+    min_point_control: Vector3f = np.array([-0.585967, -0.871576, -0.865963])
+    max_point_control: Vector3f = np.array([0.509437, 0.866886, 0.810781])
+    npt.assert_allclose(min_point_test, min_point_control, atol=1e-7)
+    npt.assert_allclose(max_point_test, max_point_control, atol=1e-7)
+
+
 def test_index_vector_complement_spot_mesh() -> None:
     """
     Tests index_vector_complement() to initialize variable_vertices and variable_edges 
@@ -50,13 +67,12 @@ def test_convert_nested_vector_to_matrix() -> None:
     """
     Seeing if this is equivalent to numpy operation...
     """
-    boundary_points: list[SpatialVector] = [np.array([[0, 1, 2]], dtype=np.float64),
-                                            np.array([[3, 4, 5]], dtype=np.float64),
-                                            np.array([[6, 7, 8]], dtype=np.float64)]
-    matrix = convert_nested_vector_to_matrix(boundary_points)
+    boundary_points: list[SpatialVector1d] = [np.array([0, 1, 2], dtype=np.float64),
+                                              np.array([3, 4, 5], dtype=np.float64),
+                                              np.array([6, 7, 8], dtype=np.float64)]
+    matrix_test: Matrix3x3f = convert_nested_vector_to_matrix(boundary_points)
+    matrix_control: Matrix3x3f = np.asarray(boundary_points)
+    assert matrix_test.shape == (3, 3)
+    assert matrix_control.shape == (3, 3)
 
-    matrix_np = np.asarray(boundary_points)
-    matrix_np = matrix_np.squeeze()
-    print(matrix_np)
-
-    np.testing.assert_allclose(matrix, matrix_np)
+    np.testing.assert_allclose(matrix_test, matrix_control)

@@ -14,7 +14,8 @@ from src.core.common import (COLS, MatrixXf, Vector1D, Vector2D,
 from src.core.interval import Interval
 from src.core.polynomial_function import (
     compute_polynomial_mapping_derivative, compute_polynomial_mapping_product,
-    compute_polynomial_mapping_scalar_product, evaluate_polynomial)
+    compute_polynomial_mapping_scalar_product, evaluate_polynomial,
+    formatted_polynomial)
 
 
 @dataclass
@@ -33,6 +34,8 @@ class RationalFunction:
     # ************
     # Constructors
     # ************
+    # FIXME: is there ever a scenario where the default RationalFunction constructor is NOT used?
+    # AS in,
 
     def __init__(self,
                  degree: int,
@@ -276,7 +279,7 @@ class RationalFunction:
         :rtype: np.ndarray of dimension (self.dimension, )
         """
         # Return the default constructor point if the domain is not bounded below
-        if self.domain.is_bounded_below():
+        if not self.domain.is_bounded_below():
             return np.zeros(shape=(self.dimension, ), dtype=np.float64)
             # return np.zeros(shape=(1, self.dimension), dtype=np.float64)
 
@@ -308,7 +311,7 @@ class RationalFunction:
         :rtype: np.ndarray of dimension (self.dimension, )
         """
         # Return the default constructor point if the domain is not bounded below
-        if self.domain.is_bounded_above():
+        if not self.domain.is_bounded_above():
             return np.zeros(shape=(self.dimension, ), dtype=np.float64)
 
         t1: float = self.domain.upper_bound
@@ -519,22 +522,20 @@ class RationalFunction:
         assert point.shape == (self.dimension, )
         return point
 
-    # TODO: turn "formatted_rational_function" into a __repr__ for when the rational function
-    # is printed in the interpreter
     # TODO: finish a lot of these things for PolynomialFunction and Interval classes
 
-    def __repr__(self):
-        rational_function_string: str = "RationalFunction 1/()"
-        # rational_function_string += formatted_polynomial < degree, 1 > (
-        #     m_denominator_coeffs, 17)
+    def __repr__(self) -> str:
+        rational_function_string: str = "1/("
+        rational_function_string += (
+            formatted_polynomial(self.m_degree, 1, self.m_denominator_coeffs, 17))
         rational_function_string += ") [\n  "
 
         # for each column in m_numerator_coeffs
-        for i in range(self.m_numerator_coeffs.shape[1]):
-            # rational_function_string += formatted_polynomial < degree, 1 > (
-            #     m_numerator_coeffs.col(i), 17)
+        for i in range(self.m_numerator_coeffs.shape[COLS]):
+            rational_function_string += (
+                formatted_polynomial(self.m_degree, 1, self.m_numerator_coeffs[:, i], 17))
             rational_function_string += ",\n  "
 
-        # rational_function_string += "], t in " + self.m_domain.formatted_interval()
+        rational_function_string += "], t in " + self.m_domain.formatted_interval()
 
         return rational_function_string

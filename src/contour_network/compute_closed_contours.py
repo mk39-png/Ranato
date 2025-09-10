@@ -3,8 +3,12 @@ compute_closed_contours.py
 Methods to chain contour segments into closed contours.
 """
 
+import numpy as np
+import numpy.testing as npt
 
-from src.core.common import SpatialVector1d, float_equal_zero, logger, todo
+from src.core.common import (PLACEHOLDER_VALUE, SpatialVector1d,
+                             compare_eigen_numpy_matrix, float_equal_zero,
+                             logger, todo)
 from src.core.rational_function import RationalFunction
 
 # *******
@@ -92,7 +96,8 @@ def _is_valid_contours(contours: list[list[int]],
     """
     # Check contour segments are contiguous
     for i, _ in enumerate(contours):
-        for j, _ in enumerate(contours[i], start=1):
+        # for j, _ in enumerate(contours[i], start=1): # FIXME: for some reason, enumerate is not working as expected. goes to index j == 10 rather than stopping at 9
+        for j in range(1, len(contours[i])):
             if not _are_overlapping_points(contour_end_points[contours[i][j - 1]],
                                            contour_start_points[contours[i][j]]):
                 logger.error("Segment %s in contour %s not adjacent to segment %s", j - 1, i, j)
@@ -256,27 +261,32 @@ def compute_closed_contours(contour_segments: list[RationalFunction]) -> tuple[l
 
     FIXME: potential bad C++ translation. Maybe pass in params to modify by reference.
 
-    :param contour_segments: [in] surface contour segments
+    :param contour_segments: [in] surface contour segments (degree 4, dimension 3)
     :return contours: list of indices of segments for complete surface contours
     :return contour_labels: index of the contour corresponding to each segment
     """
     # lazy check
-    assert contour_segments[0].degree == 4
-    assert contour_segments[0].dimension == 3
-
+    assert (contour_segments[0].degree, contour_segments[0].dimension) == (4, 3)
     contours: list[list[int]] = []
-    contour_labels: list[int] = []
+    contour_labels: list[int] = [PLACEHOLDER_VALUE for _ in enumerate(contour_segments)]
 
     used_segments: list[bool] = [False] * len(contour_segments)
     contour_start_points: list[SpatialVector1d] = []
     contour_end_points: list[SpatialVector1d] = []
-    for contour_segment in contour_segments:
-        # FIXME: testing shape temporarily to make sure every "vector" is 1D
-        assert contour_segment.start_point().shape == (3, )
-        assert contour_segment.end_point().shape == (3, )
 
+    for contour_segment in contour_segments:
         contour_start_points.append(contour_segment.start_point())
         contour_end_points  .append(contour_segment.end_point())
+        assert contour_start_points[-1].shape == (3, )
+        assert contour_end_points[-1].shape == (3, )
+
+    # TESTING
+    compare_eigen_numpy_matrix(
+        "spot_control\\contour_network\\compute_closed_contours\\compute_closed_contours\\contour_start_points.csv",
+        np.array(contour_start_points))
+    compare_eigen_numpy_matrix(
+        "spot_control\\contour_network\\compute_closed_contours\\compute_closed_contours\\contour_end_points.csv",
+        np.array(contour_end_points))
 
     while True:
         # Get next starting contour segment to process or return if none left
@@ -291,6 +301,14 @@ def compute_closed_contours(contour_segments: list[RationalFunction]) -> tuple[l
 
         # Traverse forward until the contour is closed or no new contour is found
         closed_contour: bool = True  # Assume closed until proven otherwise
+
+        # FIXME WHILE LOOP BELOW IS BAD
+        # FIXME WHILE LOOP BELOW IS BAD
+        # FIXME WHILE LOOP BELOW IS BAD
+        # FIXME WHILE LOOP BELOW IS BAD
+        # BELOW METHOD ISNT MAKING THE CORRECT AMOUNT OF CONTOURS!!
+        # ALSO, CONTOUR_START_POINTS AND CONTOUR_END_POINTS SHOULD HAVE NONZERO VALUES of... FLOATS
+        # So then, it must be some thing abofe then, right? The one where its appending the start and end points.
         while not _is_closed_contour(current_contour, contour_start_points, contour_end_points):
             adjacent_segment_found: bool = _add_next_contour_segment(contour_segments,
                                                                      current_contour,

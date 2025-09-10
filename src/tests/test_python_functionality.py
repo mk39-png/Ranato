@@ -10,6 +10,11 @@ import svg
 from cholespy import CholeskySolverD, MatrixType
 from scipy.sparse import coo_matrix, csr_matrix
 
+from src.core.common import initialize_spot_control_mesh
+
+# from src.contour_network.intersection_data import IntersectionData
+# from src.core.common import Matrix4x4f
+
 # #
 # V_coeffs = np.array([[0, 1, 2], [3, 4, 5], [6, 7, 8]])
 # assert V_coeffs.shape == (3, 3)
@@ -307,35 +312,36 @@ def main():
     # print(test)
     # print(test[:, 0])
     # print(test[0:1, 0:2])
-    print(np.arange(3))
-    print(np.arange(3) @ np.arange(3))
-    vector_line: list[Number] = [np.float64(10), np.float64(10),
-                                 np.float64(50), np.float64(50),
-                                 np.float64(100), np.float64(120),]
-    point_2d = [40, 100]
-    point_2d_2 = [0, 43]
-    color = (1, 1, 255, 1)
-    svg_elements = [
-        svg.Polyline(points=vector_line,
-                     stroke="black",
-                     fill="transparent",
-                     stroke_width=1.0),
-        svg.Circle(cx=point_2d[0], cy=point_2d[1], r=10, fill=f"rgba{color}"),
-        svg.Circle(cx=point_2d_2[0], cy=point_2d_2[1], r=10, fill=f"rgba{color}")
-    ]
+    # print(np.arange(3))
+    # print(np.arange(3) @ np.arange(3))
+    # vector_line: list[Number] = [np.float64(10), np.float64(10),
+    #                              np.float64(50), np.float64(50),
+    #                              np.float64(100), np.float64(120),]
+    # point_2d = [40, 100]
+    # point_2d_2 = [0, 43]
+    # color = (1, 1, 255, 1)
+    # svg_elements = [
+    #     svg.Polyline(points=vector_line,
+    #                  stroke="black",
+    #                  fill="transparent",
+    #                  stroke_width=1.0),
+    #     svg.Circle(cx=point_2d[0], cy=point_2d[1], r=10, fill=f"rgba{color}"),
+    #     svg.Circle(cx=point_2d_2[0], cy=point_2d_2[1], r=10, fill=f"rgba{color}")
+    # ]
 
-    # svg_elements.append(svg.Circle(cx=point_2d[0], cy=point_2d[1], r=10, fill=f"rgba{color}"))
-    # svg_elements.append(svg.Circle(cx=point_2d[0], cy=point_2d[1], r=10, fill=f"rgba{color}"))
-    test_svg = svg.SVG(x=0, y=0, width=120, height=120, elements=svg_elements)
-    filename = "svg_testing.svg"
-    filepath = os.path.abspath(f"src\\tests\\{filename}")
-    print(test_svg.as_str())
-    with open(filepath, 'w', encoding='utf-8') as output_file:
-        output_file.write(test_svg.as_str())
+    # # svg_elements.append(svg.Circle(cx=point_2d[0], cy=point_2d[1], r=10, fill=f"rgba{color}"))
+    # # svg_elements.append(svg.Circle(cx=point_2d[0], cy=point_2d[1], r=10, fill=f"rgba{color}"))
+    # test_svg = svg.SVG(x=0, y=0, width=120, height=120, elements=svg_elements)
+    # filename = "svg_testing.svg"
+    # filepath = os.path.abspath(f"src\\tests\\{filename}")
+    # print(test_svg.as_str())
 
-    lister = []
-    lister.extend((1, 2, 3))
-    print(lister)
+    # with open(filepath, 'w', encoding='utf-8') as output_file:
+    #     output_file.write(test_svg.as_str())
+
+    # lister = []
+    # lister.extend((1, 2, 3))
+    # print(lister)
 
     # print(svg.SVG(
     #     # x=0, y=0,
@@ -354,6 +360,51 @@ def main():
     #     )]
     # ))
 
+    # # Initialize matrix to the identity
+    # translation = np.array([3, 4, 5])
+    # translation_matrix: Matrix4x4f = np.identity(4, dtype=np.float64)
+    # assert translation_matrix.shape == (4, 4)
 
+    # # Add translation using homogeneous coordinates
+    # print(translation_matrix)
+    # translation_matrix[:3, 3:4] = translation.reshape((3, 1))
+    # print(translation_matrix)
+
+    frame = np.arange(0, 9)
+    frame.resize((3, 3))
+    print(frame.T)
+
+    rotation_matrix: Matrix4x4f = np.zeros(shape=(4, 4), dtype=np.float64)
+    print(rotation_matrix)
+
+    # The desired rotation is the transpose of the frame
+    rotation_matrix[0:3, 0:3] = frame.T
+
+    # No homoegeneous scaling for the rotation
+    rotation_matrix[3, 3] = 1
+    print(rotation_matrix)
+
+    point = np.array([2, 3, 4])
+    homogeneous_coords: Vector4f = np.ones(shape=(4, ), dtype=np.float64)
+    homogeneous_coords[:3] = point
+    print(homogeneous_coords)
+
+
+# def test_segment():
+#     segment_intersection_data: list[IntersectionData] = []
+#     print()
+#     for i in range(10):
+#         segment_intersection_data.append(IntersectionData(i, i, i, i))
+
+#     for i in range(10):
+#         # segment_intersection_data.append(IntersectionData(i, i, i, i))
+#         print(segment_intersection_data[i].knot)
+
+#     segment_intersection_data.sort(key=lambda data: data.knot)
+
+#     print("----------------")
+#     for i in range(10):
+#         # segment_intersection_data.append(IntersectionData(i, i, i, i))
+#         print(segment_intersection_data[i].knot)
 if __name__ == "__main__":
     main()

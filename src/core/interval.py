@@ -242,6 +242,7 @@ class Interval:
 
     def formatted_interval(self) -> str:
         """Formatted Interval for printing."""
+
         interval_string: str = ""
         # Unbounded cases
         if (not self.is_bounded_above()) and (not self.is_bounded_below()):

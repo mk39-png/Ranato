@@ -346,10 +346,10 @@ def build_projected_curve_network_without_intersections(parameter_segments: list
     curve data, marking cusps between boundaries.
     FIXME (ASOC) Rename to indicate no cusps either
 
-    :return: to_array
-    :return: out_array
-    :return: segments
-    :return: nodes
+    :return: to_array: array mapping segments to their endpoints
+    :return: out_array: array mapping nodes to their outgoing segment
+    :return: segments: TODO description
+    :return: nodes: TODO description
     """
     # Lazy checks
     assert (parameter_segments[0].degree, parameter_segments[0].dimension) == (2, 2)
@@ -471,9 +471,8 @@ def remove_redundant_intersections(to_array: list[NodeIndex],
             for j, _ in enumerate(intersection_data_ref[second_segment_index]):
                 if intersection_data_ref[second_segment_index][j].is_redundant:
                     continue
-                third_segment_index: SegmentIndex
-                third_segment_index = (intersection_data_ref[second_segment_index][j]
-                                       ).intersection_index
+                third_segment_index: SegmentIndex = (intersection_data_ref[second_segment_index][j]
+                                                     ).intersection_index
 
                 if out_array[to_array[first_segment_index]] == third_segment_index:
                     (intersection_data_ref[first_segment_index][first_intersection_index]
@@ -484,9 +483,8 @@ def remove_redundant_intersections(to_array: list[NodeIndex],
             for j, _ in enumerate(intersection_data_ref[first_segment_index]):
                 if intersection_data_ref[first_segment_index][j].is_redundant:
                     continue
-                third_segment_index: SegmentIndex
-                third_segment_index = (intersection_data_ref[first_segment_index][j]
-                                       ).intersection_index
+                third_segment_index: SegmentIndex = (intersection_data_ref[first_segment_index][j]
+                                                     ).intersection_index
 
                 if out_array[to_array[second_segment_index]] == third_segment_index:
                     (intersection_data_ref[first_segment_index][first_intersection_index]
@@ -509,8 +507,10 @@ def split_segment_at_knot(original_segment_index: SegmentIndex,
     FIXME: Make method more Pythonic since it returns values but also modifies parameters
     by reference.
 
-    :param original_segment_index: [in]
-    :param knot: [in]
+    :param original_segment_index: [in] index to start at
+    :type original_segment_index: SegmentIndex
+    :param knot: [in] point in the domain
+    :type knot: float
     :param to_array_ref: [out] to_array modified by reference
     :type to_array_ref: list[NodeIndex]
     :param out_array_ref: [out] out_array modified by reference
@@ -564,28 +564,39 @@ def split_segment_at_knot(original_segment_index: SegmentIndex,
 
 def split_segments_at_intersections(intersection_data: list[list[IntersectionData]],
                                     num_intersections: int,
-                                    to_array: list[NodeIndex],
-                                    out_array: list[SegmentIndex],
-                                    segments: list[SegmentGeometry],
-                                    nodes: list[NodeGeometry]
+                                    to_array_ref: list[NodeIndex],
+                                    out_array_ref: list[SegmentIndex],
+                                    segments_ref: list[SegmentGeometry],
+                                    nodes_ref: list[NodeGeometry]
                                     ) -> tuple[list[int], list[list[int]], list[list[int]]]:
     """
     Split segments at all of the intersection points, and create maps from the
     new segments to their original indices and from the original indices to their
-    corresponding split segment indices
+    corresponding split segment indices.
+
+    :param intersection_data: [in]
+    :param num_intersections: [in]
+    :param to_array_ref: [out]
+    :param out_array_ref: [out]
+    :param segments_ref: [out]
+    :param nodes_ref: [out]
+
+    :return original_segment_indices:
+    :return split_segment_indices: 
+    :return intersection_nodes:
     """
     logger.info("Splitting segments at intersections")
-    num_segments: int = len(segments)
-    num_nodes: int = len(nodes)
+    num_segments: int = len(segments_ref)
+    num_nodes: int = len(nodes_ref)
     split_segment_indices: list[list[SegmentIndex]] = []
     intersection_nodes: list[list[NodeIndex]] = [[] for _ in range(num_intersections)]
 
     # Check segment validity
-    if len(to_array) != len(segments):
+    if len(to_array_ref) != len(segments_ref):
         raise ValueError("Segment geometry and topology mismatch")
 
     # Check node validity
-    if len(out_array) != len(nodes):
+    if len(out_array_ref) != len(nodes_ref):
         raise ValueError("Node geometry and topology mismatch")
 
     # Initially the map is the identity
@@ -595,7 +606,7 @@ def split_segments_at_intersections(intersection_data: list[list[IntersectionDat
         split_segment_indices[i].append(i)
 
     # Mark all base nodes before modifying connectivity
-    from_array: list[NodeIndex] = AbstractCurveNetwork.build_from_array(to_array, out_array)
+    from_array: list[NodeIndex] = AbstractCurveNetwork.build_from_array(to_array_ref, out_array_ref)
     for segment_index, segment_intersection_data in enumerate(intersection_data):
 
         for j, _ in enumerate(segment_intersection_data):
@@ -614,7 +625,6 @@ def split_segments_at_intersections(intersection_data: list[list[IntersectionDat
         # Get segment i and sorted intersections
         segment_index: SegmentIndex = i
         segment_intersection_data: list[IntersectionData] = intersection_data[segment_index]
-        # TODO: check that the below sorts by reference.
         segment_intersection_data.sort(key=lambda data: data.knot)
 
         for j, _ in enumerate(segment_intersection_data):
@@ -629,13 +639,13 @@ def split_segments_at_intersections(intersection_data: list[list[IntersectionDat
             # Mark intersections at the tip of the contour
             if segment_intersection_data[j].is_tip:
                 # Mark base as intersection
-                intersection_node_index: NodeIndex = to_array[segment_index]
+                intersection_node_index: NodeIndex = to_array_ref[segment_index]
 
                 # Add node to global registry
                 intersection_id: int = segment_intersection_data[j].id
                 intersection_nodes[intersection_id].append(intersection_node_index)
             else:
-                # FIXME (from ASOC) The base is currently not tracked and can't be removed
+                # FIXME (ASOC) The base is currently not tracked and can't be removed
                 # As a hack, length zero intersections are removed
                 intersection: float = segment_intersection_data[j].knot
                 lower_segment_index: SegmentIndex
@@ -646,10 +656,10 @@ def split_segments_at_intersections(intersection_data: list[list[IntersectionDat
                  intersection_node_index) = split_segment_at_knot(
                     segment_index,
                     intersection,
-                    to_array,
-                    out_array,
-                    segments,
-                    nodes)
+                    to_array_ref,
+                    out_array_ref,
+                    segments_ref,
+                    nodes_ref)
 
                 # Add node to global registry
                 intersection_id = segment_intersection_data[j].id
@@ -668,8 +678,8 @@ def split_segments_at_intersections(intersection_data: list[list[IntersectionDat
     logger.debug("Split %s segments with %s nodes into %s segments with %s nodes",
                  num_segments,
                  num_nodes,
-                 len(segments),
-                 len(nodes))
+                 len(segments_ref),
+                 len(nodes_ref))
 
     return original_segment_indices, split_segment_indices, intersection_nodes
 

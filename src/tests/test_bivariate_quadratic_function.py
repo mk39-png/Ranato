@@ -3,11 +3,12 @@ import pytest
 
 from src.core.bivariate_quadratic_function import \
     compute_quadratic_cross_product
+from src.core.common import Matrix3x3f
 
 
 def test_compute_quadratic_cross_product() -> None:
-    V_coeffs = np.array([[0, 1, 2], [3, 4, 5], [7, 8, 9]])
-    W_coeffs = np.array([[0, 1, 2], [3, 4, 5], [7, 8, 9]])
+    V_coeffs: Matrix3x3f = np.array([[0, 1, 2], [3, 4, 5], [7, 8, 9]], dtype=np.float64)
+    W_coeffs: Matrix3x3f = np.array([[0, 1, 2], [3, 4, 5], [7, 8, 9]], dtype=np.float64)
     assert V_coeffs.shape == (3, 3)
     assert W_coeffs.shape == (3, 3)
 

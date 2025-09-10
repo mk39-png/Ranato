@@ -77,7 +77,7 @@ def _is_valid_bounding_box(planar_curve: RationalFunction,
     Check if the bounding box contains the curve over interval
     WARNING: May have false positives
     """
-    assert (planar_curve.degree, planar_curve.dimension) == (4, 3)
+    assert (planar_curve.degree, planar_curve.dimension) == (4, 2)
     assert lower_left_point.shape == (2, )
     assert upper_right_point.shape == (2, )
 
@@ -88,13 +88,13 @@ def _is_valid_bounding_box(planar_curve: RationalFunction,
     test_point_2: PlanarPoint1d = planar_curve(t_avg)
     test_point_3: PlanarPoint1d = planar_curve(t_max - 1e-6)
 
-    logger.info("Testing points on curve at %s, %s, %s: %s, %s, %s",
-                t_min,
-                t_avg,
-                t_max,
-                test_point_1,
-                test_point_2,
-                test_point_3)
+    logger.debug("Testing points on curve at %s, %s, %s: %s, %s, %s",
+                 t_min,
+                 t_avg,
+                 t_max,
+                 test_point_1,
+                 test_point_2,
+                 test_point_3)
 
     # Check all points
     if not is_in_bounding_box(test_point_1, lower_left_point, upper_right_point):
@@ -158,9 +158,9 @@ def _compute_homogeneous_bezier_points_from_matrix(planar_curve: RationalFunctio
     assert w_coeffs.shape == (5, )
 
     # Compute bezier homogeneous points
-    bezier_points: Matrix5x3f = np.array([monomial_to_bezier_matrix @ x_coeffs,
-                                          monomial_to_bezier_matrix @ y_coeffs,
-                                          monomial_to_bezier_matrix @ w_coeffs])
+    bezier_points: Matrix5x3f = np.column_stack([monomial_to_bezier_matrix @ x_coeffs,
+                                                 monomial_to_bezier_matrix @ y_coeffs,
+                                                 monomial_to_bezier_matrix @ w_coeffs])
     assert bezier_points.shape == (5, 3)
     return bezier_points
 
@@ -577,7 +577,7 @@ def compute_bounding_box_hash_table(bounding_boxes: list[tuple[PlanarPoint1d, Pl
     segments_bbox_x_max: float = bounding_boxes[0][SECOND][0]
     segments_bbox_y_max: float = bounding_boxes[0][SECOND][1]
 
-    for i in range(num_segments):
+    for i in range(1, num_segments):
         if segments_bbox_x_min > bounding_boxes[i][FIRST][0]:
             segments_bbox_x_min = bounding_boxes[i][FIRST][0]
         if segments_bbox_y_min > bounding_boxes[i][FIRST][1]:
@@ -592,10 +592,12 @@ def compute_bounding_box_hash_table(bounding_boxes: list[tuple[PlanarPoint1d, Pl
     eps: float = PLANAR_BOUNDING_BOX_PRECISION
 
     for i in range(num_segments):
-        left_x: int = (bounding_boxes[i][FIRST][0] - eps - segments_bbox_x_min) / x_interval
+        left_x: int = int(
+            (bounding_boxes[i][FIRST][0] - eps - segments_bbox_x_min) / x_interval)
         right_x: int = num_interval - int(
             (segments_bbox_x_max - eps - bounding_boxes[i][SECOND][0]) / x_interval) - 1
-        left_y: int = (bounding_boxes[i][FIRST][1] - eps - segments_bbox_y_min) / y_interval
+        left_y: int = int(
+            (bounding_boxes[i][FIRST][1] - eps - segments_bbox_y_min) / y_interval)
         right_y: int = num_interval - int(
             (segments_bbox_y_max - eps - bounding_boxes[i][SECOND][1]) / y_interval) - 1
 

@@ -1,5 +1,5 @@
 import bpy
-from bpy.types import Panel
+from bpy.types import Panel, Scene, UILayout
 
 # https://blender.stackexchange.com/questions/202570/multi-files-to-addon
 # Setting up addon with multiple files
@@ -19,12 +19,12 @@ class RanatoPanel(Panel):
     bl_region_type = 'WINDOW'
     bl_context = "render"
 
-    COMPAT_ENGINES = {'RANATO'}
+    COMPAT_ENGINES: set[str] = {'RANATO'}
 
     # def __del__(self):
     #     print("What")
 
-    def draw(self, context):
+    def draw(self, context) -> None:
         # Objects also include non-meshes
 
         # https://docs.blender.org/api/current/bpy.data.html
@@ -34,8 +34,8 @@ class RanatoPanel(Panel):
         # Then for visible meshes... oh wait... we dont want to apply to ALL visible meshes
         # WE need to know which ones overlap...
 
-        layout = self.layout
-        scene = context.scene
+        layout: UILayout | None = self.layout
+        scene: Scene | None = context.scene
 
         # TODO: a panel that inputs a mesh
         # TODO: panel to UV unwrap
@@ -50,7 +50,7 @@ class RanatoPanel(Panel):
         # Select frame to render
         # Create an row where the buttons are aligned to each other.
         layout.label(text="Frames Render")
-        row = layout.row(align=True)
+        row: UILayout = layout.row(align=True)
         row.prop(scene, "frame_start")
         row.prop(scene, "frame_end")
 
@@ -98,7 +98,7 @@ class RanatoPanel(Panel):
         # row.operator("render.render")
 
 
-classes = [RanatoPanel]
+classes: list[type[RanatoPanel]] = [RanatoPanel]
 
 register, unregister = bpy.utils.register_classes_factory(classes)
 

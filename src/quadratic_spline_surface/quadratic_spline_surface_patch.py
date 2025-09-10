@@ -1,6 +1,7 @@
 """
 Representation for quadratic surface patches with convex domains.
 """
+import os
 from typing import TextIO
 
 import numpy as np
@@ -12,7 +13,7 @@ from src.core.bivariate_quadratic_function import (
 from src.core.common import (ROWS, Matrix2x2f, Matrix3x2r, Matrix6x3f,
                              Matrix6x3r, Matrix6x6r, MatrixNx2f, PlanarPoint1d,
                              SpatialVector, SpatialVector1d,
-                             compute_point_cloud_bounding_box, todo,
+                             compute_point_cloud_bounding_box, logger, todo,
                              unimplemented)
 from src.core.convex_polygon import ConvexPolygon
 from src.core.evaluate_surface_normal import \
@@ -98,7 +99,7 @@ class QuadraticSplineSurfacePatch:
 
         # -- Additional cone marker to handle degenerate configurations --
         # NOTE: Do not mark a cone by default
-        self.m_cone_index: int = -1
+        self.__cone_index: int = -1
 
     @property
     def dimension(self) -> int:
@@ -114,7 +115,7 @@ class QuadraticSplineSurfacePatch:
 
         :param cone_index: index of the cone in the triangle
         """
-        self.m_cone_index = cone_index
+        self.__cone_index = cone_index
 
     def has_cone(self) -> bool:
         """ Determine if the patch has a cone
@@ -122,16 +123,17 @@ class QuadraticSplineSurfacePatch:
         :return: true iff the patch has a cone
         :rtype: bool
         """
-        return ((self.m_cone_index >= 0) and (self.m_cone_index < 3))
+        return ((self.__cone_index >= 0) and (self.__cone_index < 3))
 
-    def get_cone(self) -> int:
+    @property
+    def cone_index(self) -> int:
         """
         Get the cone index, or -1 if none exists.
 
         :return: true iff the patch has a cone
         :rtype: int
         """
-        return self.m_cone_index
+        return self.__cone_index
 
     @property
     def surface_mapping(self) -> Matrix6x3f:
@@ -485,32 +487,39 @@ class QuadraticSplineSurfacePatch:
 
         # Serialize domain boundary
         vertices: Matrix3x2r = self.m_domain.vertices
-        if self.get_cone() == 0:
+        if self.__cone_index == 0:
             output_file.write("cp1 ")
         else:
             output_file.write("p1 ")
         output_file.write(f"{vertices[0, 0]:.{precision}f} {vertices[0, 1]:.{precision}f}\n")
 
-        if self.get_cone() == 1:
+        if self.__cone_index == 1:
             output_file.write("cp2 ")
         else:
             output_file.write("p2 ")
         output_file.write(f"{vertices[1, 0]:.{precision}f} {vertices[1, 1]:.{precision}f}\n")
 
-        if self.get_cone() == 2:
+        if self.__cone_index == 2:
             output_file.write("cp3 ")
         else:
             output_file.write("p3 ")
         output_file.write(f"{vertices[2, 0]:.{precision}f} {vertices[2, 1]:.{precision}f}\n")
 
-    def write_patch(self) -> None:
+    def write_patch(self, filepath: str) -> None:
         """
         Write patch to file.
-        :param filename: file to write serialized patch to.
-        :type filename: str
+
+        :param filepath: file path to write serialized patch to.
+        :type filepath: str
         """
-        unimplemented("this is only used to check a singular individual patch rather than "
-                      "an entire surface")
+        logger.info("Writing spline patch to %s", filepath)
+
+        if os.path.isfile(filepath):
+            logger.warning("Overwriting file at %s.", filepath)
+
+        with open(filepath, 'w', encoding='utf-8') as output_file:
+            self.serialize(output_file)
+            output_file.close()
 
     # ***************
     # Private methods

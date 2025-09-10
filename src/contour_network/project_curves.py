@@ -54,6 +54,7 @@ def project_curves(spatial_curves: list[RationalFunction],
 
     :param spatial_curves: [in] curves in R^3 to project (i.e. degree 4, dimension 3)
     :param frame: [in] 3x3 matrix defining the projection
+
     :return planar_curves: projected planar curves in R^2 (i.e. degree 4, dimension 2)
     """
     assert is_valid_frame(frame)
@@ -63,8 +64,7 @@ def project_curves(spatial_curves: list[RationalFunction],
 
     for i in range(num_curves):
         planar_curve: RationalFunction = _project_curve(spatial_curves[i], frame)
-        assert planar_curve.degree == 4
-        assert planar_curve.dimension == 2
+        assert (planar_curve.degree, planar_curve.dimension) == (4, 2)
         planar_curves.append(planar_curve)
 
     return planar_curves

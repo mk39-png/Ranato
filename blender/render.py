@@ -1,15 +1,14 @@
-import bpy
 import array
-from bpy.types import Object
-import gpu
-
-
 # Utilized for the shader.
 from random import random
-from mathutils import Vector
+
+import bpy
+import gpu
+import numpy as np
+from bpy.types import Object, Region, Scene
 from gpu_extras.batch import batch_for_shader
 from gpu_extras.presets import draw_texture_2d
-import numpy as np
+from mathutils import Vector
 
 
 # https://docs.blender.org/api/current/bpy.types.RenderEngine.html
@@ -32,7 +31,7 @@ class RanatoRenderEngine(bpy.types.RenderEngine):
     # Note the generic arguments signature, and the call to the parent class
     # `__init__` methods, which are required for Blender to create the underlying
     # `RenderEngine` data.
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.scene_data = None
         self.draw_data = None
@@ -46,7 +45,7 @@ class RanatoRenderEngine(bpy.types.RenderEngine):
     # This is the method called by Blender for both final renders (F12) and
     # small preview for materials, world and lights.
 
-    def render(self, depsgraph):
+    def render(self, depsgraph) -> None:
         scene = depsgraph.scene
         scale = scene.render.resolution_percentage / 100.0
         self.size_x = int(scene.render.resolution_x * scale)
@@ -77,7 +76,7 @@ class RanatoRenderEngine(bpy.types.RenderEngine):
         rect = [color] * pixel_count
 
         # Here we write the pixel values to the RenderResult
-        result = self.begzin_result(0, 0, self.size_x, self.size_y)
+        result = self.begin_result(0, 0, self.size_x, self.size_y)
         layer = result.layers[0].passes["Combined"]
         layer.rect = rect
         self.end_result(result)
@@ -86,7 +85,7 @@ class RanatoRenderEngine(bpy.types.RenderEngine):
     # whenever the scene or 3D viewport changes. This method is where data
     # should be read from Blender in the same thread. Typically a render
     # thread will be started to do the work while keeping Blender responsive.
-    def view_update(self, context, depsgraph):
+    def view_update(self, context, depsgraph) -> None:
         region = context.region
         view3d = context.space_data
         scene = depsgraph.scene
@@ -142,14 +141,14 @@ class RanatoRenderEngine(bpy.types.RenderEngine):
     # with OpenGL, and not perform other expensive work.
     # Blender will draw overlays for selection and editing on top of the
     # rendered image automatically.
-    def view_draw(self, context, depsgraph):
+    def view_draw(self, context, depsgraph) -> None:
         # Lazily import GPU module, so that the render engine works in
         # background mode where the GPU module can't be imported by default.
-        region = context.region
-        scene = depsgraph.scene
+        region: Region | None = context.region
+        scene: Scene | None = depsgraph.scene
 
         # Get viewport dimensions
-        dimensions = region.width, region.height
+        dimensions: tuple[int, int] = region.width, region.height
 
         # Bind shader that converts from scene linear to display space,
         gpu.state.blend_set('ALPHA_PREMULT')
@@ -206,7 +205,7 @@ class RanatoRenderEngine(bpy.types.RenderEngine):
 # TODO: also, make sure that the viewport render is also what we get when using 'F12' render.
 class CustomDrawData:
     # Need the depsgraph for scene meshes to render.
-    def __init__(self, dimensions, depsgraph):
+    def __init__(self, dimensions, depsgraph) -> None:
         # Generate dummy float image buffer
         self.dimensions = dimensions
         width, height = dimensions

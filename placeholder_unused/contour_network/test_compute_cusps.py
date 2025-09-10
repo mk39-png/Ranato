@@ -10,7 +10,7 @@ import numpy.testing as npt
 from src.contour_network.compute_intersections import (
     IntersectionParameters, compute_planar_curve_intersections)
 from src.contour_network.intersection_heuristics import IntersectionStats
-from src.core.common import Matrix3x2f, Matrix6x3f
+from src.core.common import Matrix3x2f, Matrix6x3f, float_equal
 from src.core.rational_function import RationalFunction
 from src.quadratic_spline_surface.quadratic_spline_surface import \
     QuadraticSplineSurface
@@ -18,7 +18,7 @@ from src.quadratic_spline_surface.quadratic_spline_surface_patch import \
     QuadraticSplineSurfacePatch
 
 
-def test_compute_intesections_simple_linear_functions():
+def test_compute_intersections_simple_linear_functions():
     """
     Simple Linear Functions.
     """
@@ -31,14 +31,20 @@ def test_compute_intesections_simple_linear_functions():
                                             [0, 0]])
     second_Q_coeffs: np.ndarray = np.array([1])
     intersections: list[float] = []
+    first_curve_intersections: list[float] = []
+    second_curve_intersections: list[float] = []
     intersection_stats: IntersectionStats = IntersectionStats()
     intersection_params: IntersectionParameters = IntersectionParameters()
 
     first_image_segment = RationalFunction(4, 2, first_P_coeffs, first_Q_coeffs)
     second_image_segment = RationalFunction(4, 2, second_P_coeffs, second_Q_coeffs)
     compute_planar_curve_intersections(first_image_segment, second_image_segment,
-                                       intersection_params, intersections, intersection_stats)
+                                       intersection_params,
+                                       first_curve_intersections, second_curve_intersections,
+                                       intersection_stats)
     assert len(intersections) == 1
+    float_equal(first_curve_intersections[0], 0.0)
+    float_equal(second_curve_intersections[0], 0.0)
 
 # def test_tangent_x():
 #     """

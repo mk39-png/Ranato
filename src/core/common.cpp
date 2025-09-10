@@ -22,3 +22,4 @@ inline void serialize_eigen_matrix_f(std::string filename, Eigen::MatrixXf M) {
 
     output_file.close();
 }
+

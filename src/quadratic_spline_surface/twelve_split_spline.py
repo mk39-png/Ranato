@@ -10,13 +10,13 @@ import igl
 import numpy as np
 import polyscope as ps
 from cholespy import CholeskySolverD
-from scipy.sparse import coo_matrix
+from scipy.sparse import coo_matrix, csr_matrix
 
 from src.core.affine_manifold import AffineManifold, VertexManifoldChart
 from src.core.common import (COLS, DISCRETIZATION_LEVEL, ROWS, SKY_BLUE, Index,
-                             Matrix3x1r, Matrix6x3f, Matrix6x12f, Matrix12x3f,
-                             MatrixNx3f, MatrixXf, MatrixXi, PlanarPoint,
-                             Vector1D, Vector3f, logger, unimplemented)
+                             Matrix6x3f, Matrix6x12f, Matrix12x3f, MatrixNx3f,
+                             MatrixXf, MatrixXi, Vector1D, Vector3f, logger,
+                             unimplemented)
 from src.core.compute_boundaries import compute_face_boundary_edges
 from src.core.convex_polygon import ConvexPolygon
 from src.quadratic_spline_surface.optimize_spline_surface import (
@@ -58,17 +58,19 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
                  optimization_params: OptimizationParameters,
                  ) -> None:
         """ 
-        Maps from the input mesh faces to the patches and from patches to the faces are also generated.
-        Constructor for VF representation with uv coordinates and with additional data for the spline inferred as determined by the parameters.
+        Maps from the input mesh faces to the patches and from patches to the faces are also 
+        generated.
+        Constructor for VF representation with uv coordinates and with additional data for the 
+        spline inferred as determined by the parameters.
 
         Also calls the parent QuadraticSplineSurface class to initialize 
         the following member variables:
          * _patches
          * _hash_table
 
-        @param[in] V: mesh vertex positions
-        @param[in] affine_manifold: affine manifold structure
-        @param[in] optimization_params: parameters for the spline optimization
+        :param V: [in] mesh vertex positions
+        :param affine_manifold: [in] affine manifold structure
+        :param optimization_params: [in] parameters for the spline optimization
         """
         self.__affine_manifold: AffineManifold = affine_manifold
         self.__corner_data: dict[int, dict[int, TriangleCornerData]] = defaultdict(dict)
@@ -80,25 +82,22 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
         # Generate fit matrix by setting the parametrized quadratic surface mapping factor to zero
         fit_energy: float
         fit_derivatives: Vector1D
-        fit_matrix: coo_matrix
+        fit_matrix: csr_matrix
         fit_matrix_inverse: CholeskySolverD
-        # Make a deep since we don't want the same parameters between Fit vs Non-fit 12-split-splines
+        # Make a deep since we don't want the same parameters between
+        # Fit vs Non-fit 12-split-splines
         optimization_params_fit: OptimizationParameters = copy.deepcopy(optimization_params)
         optimization_params_fit.parametrized_quadratic_surface_mapping_factor = 0.0
-        fit_energy, fit_derivatives, fit_matrix, fit_matrix_inverse = build_twelve_split_spline_energy_system(V,
-                                                                                                              N,
-                                                                                                              affine_manifold,
-                                                                                                              optimization_params_fit)
+        fit_energy, fit_derivatives, fit_matrix, fit_matrix_inverse = (
+            build_twelve_split_spline_energy_system(V, N, affine_manifold, optimization_params_fit))
 
         # Build full energy hessian system
         energy: float
         derivatives: Vector1D
-        energy_hessian: coo_matrix
+        energy_hessian: csr_matrix
         energy_hessian_inverse: CholeskySolverD
-        energy, derivatives, energy_hessian, energy_hessian_inverse = build_twelve_split_spline_energy_system(V,
-                                                                                                              N,
-                                                                                                              affine_manifold,
-                                                                                                              optimization_params)
+        energy, derivatives, energy_hessian, energy_hessian_inverse = (
+            build_twelve_split_spline_energy_system(V, N, affine_manifold, optimization_params))
 
         # Build optimized corner and midpoint data.
         # As in, initializes self.__corner_data and self.__midpoint_data
@@ -132,8 +131,8 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
         # Saving everything into the class
         self.__face_to_patch_indices: list[list[int]] = face_to_patch_indices
         self.__patch_to_face_indices: list[int] = patch_to_face_indices
-        self.fit_matrix: coo_matrix = fit_matrix
-        self.energy_hessian: coo_matrix = energy_hessian
+        self.fit_matrix: csr_matrix = fit_matrix
+        self.energy_hessian: csr_matrix = energy_hessian
         self.energy_hessian_inverse: CholeskySolverD = energy_hessian_inverse
 
     # *******************
@@ -194,7 +193,7 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
 
     def update_positions(self,
                          V: MatrixXf,
-                         fit_matrix: coo_matrix,
+                         fit_matrix: csr_matrix,
                          energy_hessian_inverse: CholeskySolverD
                          ) -> None:
         """
@@ -255,12 +254,12 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
         Add the position data for the surface to the viewer.
         """
         # Add corner position data if it exists
-        if (len(self.__corner_data) != 0):
+        if len(self.__corner_data) != 0:
             position_matrix: MatrixXf
             first_derivative_matrix: MatrixXf
             second_derivative_matrix: MatrixXf
-            position_matrix, first_derivative_matrix, second_derivative_matrix = generate_corner_data_matrices(
-                self.__corner_data)
+            position_matrix, first_derivative_matrix, second_derivative_matrix = (
+                generate_corner_data_matrices(self.__corner_data))
 
             corner_data: ps.PointCloud = ps.register_point_cloud("corner data", position_matrix)
             corner_data.add_vector_quantity("first derivatives", first_derivative_matrix)
@@ -271,8 +270,8 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
             position_matrix: MatrixXf
             tangent_derivative_matrix: MatrixXf
             normal_derivative_matrix: MatrixXf
-            position_matrix, tangent_derivative_matrix, normal_derivative_matrix = generate_midpoint_data_matrices(
-                self.__corner_data, self.__midpoint_data)
+            position_matrix, tangent_derivative_matrix, normal_derivative_matrix = (
+                generate_midpoint_data_matrices(self.__corner_data, self.__midpoint_data))
             midpoint_data: ps.PointCloud = ps.register_point_cloud("midpoint data", position_matrix)
             midpoint_data.add_vector_quantity("tangent derivatives", tangent_derivative_matrix)
             midpoint_data.add_vector_quantity("normal derivatives", normal_derivative_matrix)
@@ -423,11 +422,10 @@ def compute_twelve_split_spline_patch_boundary_edges(F: MatrixXi,
     """
     Used in generation of figures, animation, and algebraic contours.
 
-    :param[in] F: mesh faces
-    :param[in] face_to_patch_indices: map from triangle mesh faces to the
-    patches arising from it
-    :param[out] patch_boundary_edges: edges of the patch triangle domains that
-    are boundaries
+    :param F: [in] mesh faces
+    :param face_to_patch_indices: [in] map from triangle mesh faces to the patches arising from it
+
+    :return patch_boundary_edges: edges of the patch triangle domains that are boundaries
     """
     logger.info("Computing patch boundary edges for mesh with %s faces", F.shape[ROWS])  # rows
     patch_boundary_edges: list[tuple[int, int]] = []

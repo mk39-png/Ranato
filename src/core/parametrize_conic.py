@@ -2,6 +2,7 @@
 Parameterize Conic.
 Quite important for computing contours.
 """
+import copy
 import math
 
 import numpy as np
@@ -72,12 +73,11 @@ def identify_standard_form_conic(conic_standard_form: Vector6f) -> ConicType:
         return ConicType.HYPERBOLA
 
 
-def parametrize_ellipse(conic_standard_form: Vector6f) -> list[Conic]:
+def parametrize_ellipse(conic_standard_form: Vector6f, conics_ref: list[Conic]) -> None:
     """
     Parametrize ellipse conics for parametrize_standard_form_conic()
     """
     assert identify_conic(conic_standard_form) == ConicType.ELLIPSE
-    conics: list[Conic] = []
 
     # Get axes lengths k1, k2
     c: float = conic_standard_form[0]
@@ -103,27 +103,24 @@ def parametrize_ellipse(conic_standard_form: Vector6f) -> list[Conic]:
         P_coeffs[:, 1] = k2 * elliptic_basis_2
 
     # Parametrize upper half over finite interval [-1,1]
-    semi_ellipse_upper = Conic(ConicType.ELLIPSE, P_coeffs, Q_coeffs)
+    semi_ellipse_upper = Conic(ConicType.ELLIPSE, np.copy(P_coeffs), np.copy(Q_coeffs))
     semi_ellipse_upper.domain.set_lower_bound(-1.0, False)
     semi_ellipse_upper.domain.set_upper_bound(1.0, False)
-    conics.append(semi_ellipse_upper)
+    conics_ref.append(semi_ellipse_upper)
 
     # Parametrize lower half (also with closed endpoints)
-    semi_ellipse_lower = Conic(ConicType.ELLIPSE, -P_coeffs, Q_coeffs)
+    semi_ellipse_lower = Conic(ConicType.ELLIPSE, -np.copy(P_coeffs), np.copy(Q_coeffs))
     semi_ellipse_lower.domain.set_lower_bound(-1.0, False)
     semi_ellipse_lower.domain.set_upper_bound(1.0,  False)
-    conics.append(semi_ellipse_lower)
-
-    return conics
+    conics_ref.append(semi_ellipse_lower)
 
 
-def parametrize_hyperbola(conic_standard_form: Vector6f) -> list[Conic]:
+def parametrize_hyperbola(conic_standard_form: Vector6f, conics_ref: list[Conic]) -> None:
     """
     Parametrize hyperbola conics for parametrize_standard_form_conic()
     """
     # TODO: for some reason, the line below was commented out
     assert identify_conic(conic_standard_form) == ConicType.HYPERBOLA
-    conics: list[Conic] = []
 
     c: float = conic_standard_form[0]
     sigma_1: float = conic_standard_form[4]
@@ -152,18 +149,16 @@ def parametrize_hyperbola(conic_standard_form: Vector6f) -> list[Conic]:
         P_coeffs[:, 1] = k2 * hyperbolic_basis_1
 
     # Parametrize one branch over finite interval (-1,1)
-    hyperbola_branch = Conic(ConicType.HYPERBOLA, P_coeffs, Q_coeffs)
+    hyperbola_branch = Conic(ConicType.HYPERBOLA, np.copy(P_coeffs), np.copy(Q_coeffs))
     hyperbola_branch.domain.set_lower_bound(-1.0, True)
     hyperbola_branch.domain.set_upper_bound(1.0, True)
-    conics.append(hyperbola_branch)
+    conics_ref.append(hyperbola_branch)
 
     # Parametrize other branch
-    hyperbola_branch_2 = Conic(ConicType.HYPERBOLA, -P_coeffs, Q_coeffs)
+    hyperbola_branch_2 = Conic(ConicType.HYPERBOLA, -np.copy(P_coeffs), np.copy(Q_coeffs))
     hyperbola_branch_2.domain.set_lower_bound(-1.0, True)
     hyperbola_branch_2.domain.set_upper_bound(1.0, True)
-    conics.append(hyperbola_branch_2)
-
-    return conics
+    conics_ref.append(hyperbola_branch_2)
 
 
 def parametrize_parabola(conic_standard_form: Vector6f) -> list[Conic]:
@@ -171,7 +166,6 @@ def parametrize_parabola(conic_standard_form: Vector6f) -> list[Conic]:
     Parametrize parabola conics for parametrize_standard_form_conic()
     """
     assert identify_conic(conic_standard_form) == ConicType.INTERSECTING_LINES
-    conics: list[Conic] = []
 
     # Get parabolic coefficient
     sigma: float = conic_standard_form[4]
@@ -184,7 +178,7 @@ def parametrize_parabola(conic_standard_form: Vector6f) -> list[Conic]:
     ], dtype=np.float64)
     Q_coeffs: Vector3f = np.array([1.0, 0.0, 0.0], dtype=np.float64)
 
-    conics.append(Conic(ConicType.PARABOLA, P_coeffs, Q_coeffs))
+    conics: list[Conic] = [Conic(ConicType.PARABOLA, P_coeffs, Q_coeffs)]
     return conics
 
 
@@ -192,6 +186,7 @@ def parametrize_intersecting_lines(conic_standard_form: Vector6f) -> list[Conic]
     """
     Add the intersecting lines as four rays with consistent orientation.
     """
+    assert conic_standard_form.shape == (6, )
     assert identify_conic(conic_standard_form) == ConicType.INTERSECTING_LINES
     conics: list[Conic] = []
 
@@ -214,15 +209,19 @@ def parametrize_intersecting_lines(conic_standard_form: Vector6f) -> list[Conic]
 
     # FIXME: ensure that the order of the arguments to Conic is correct
     conics.append(
-        Conic(ConicType.INTERSECTING_LINES, P_coeffs, Q_coeffs, nonnegatives))
+        Conic(ConicType.INTERSECTING_LINES,
+              np.copy(P_coeffs), np.copy(Q_coeffs), copy.deepcopy(nonnegatives)))
     conics.append(
-        Conic(ConicType.INTERSECTING_LINES, -1.0 * P_coeffs, Q_coeffs, nonnegatives))
+        Conic(ConicType.INTERSECTING_LINES,
+              -1.0 * np.copy(P_coeffs), np.copy(Q_coeffs), copy.deepcopy(nonnegatives)))
 
     P_coeffs[1, 1] *= -1.0
     conics.append(
-        Conic(ConicType.INTERSECTING_LINES, P_coeffs, Q_coeffs, nonpositives))
+        Conic(ConicType.INTERSECTING_LINES,
+              np.copy(P_coeffs), np.copy(Q_coeffs), copy.deepcopy(nonpositives)))
     conics.append(
-        Conic(ConicType.INTERSECTING_LINES, -1.0 * P_coeffs, Q_coeffs, nonpositives))
+        Conic(ConicType.INTERSECTING_LINES,
+              -1.0 * np.copy(P_coeffs), np.copy(Q_coeffs), copy.deepcopy(nonpositives)))
 
     return conics
 
@@ -250,10 +249,11 @@ def parametrize_parallel_lines(conic_standard_form: Vector6f) -> list[Conic]:
     ], dtype=np.float64)
 
     Q_coeffs: Vector3f = np.array([1.0, 0.0, 0.0], dtype=np.float64)
-    conics.append(Conic(ConicType.PARALLEL_LINES, P_coeffs, Q_coeffs))
+
+    conics.append(Conic(ConicType.PARALLEL_LINES, np.copy(P_coeffs), np.copy(Q_coeffs)))
     P_coeffs[0, 0] = x1
     P_coeffs[1, 1] = -1.0
-    conics.append(Conic(ConicType.PARALLEL_LINES, P_coeffs, Q_coeffs))
+    conics.append(Conic(ConicType.PARALLEL_LINES, np.copy(P_coeffs), np.copy(Q_coeffs)))
 
     return conics
 
@@ -288,10 +288,10 @@ def parametrize_standard_form_conic(conic_standard_form: Vector6f) -> list[Conic
 
     if conic_type == ConicType.ELLIPSE:
         logger.info("Parametrizing ellipse")
-        conics = parametrize_ellipse(conic_standard_form)
+        parametrize_ellipse(conic_standard_form, conics)
     elif conic_type == ConicType.HYPERBOLA:
         logger.info("Parametrizing hyperbola")
-        conics = parametrize_hyperbola(conic_standard_form)
+        parametrize_hyperbola(conic_standard_form, conics)
     elif conic_type == ConicType.PARABOLA:
         logger.info("Parametrizing parabola")
         conics = parametrize_parabola(conic_standard_form)
@@ -360,10 +360,10 @@ def check_orientation(conic: Conic, conic_coeffs: Vector6f) -> bool:
     if not conic.is_in_domain(t):
         t = -0.1
 
-    logger.info("Checking consistency for conic %s with implicit function %s at %s",
-                conic,
-                conic_coeffs,
-                t)
+    logger.debug("Checking consistency for conic %s with implicit function %s at %s",
+                 conic,
+                 conic_coeffs,
+                 t)
     tangent: RationalFunction  # <4, 2>
     tangent = conic.compute_derivative()
     assert (tangent.degree, tangent.dimension) == (4, 2)
@@ -376,15 +376,15 @@ def check_orientation(conic: Conic, conic_coeffs: Vector6f) -> bool:
     assert point.shape == (2, )
     perp_u: float = evaluate_line(u_derivative, point)
     perp_v: float = evaluate_line(v_derivative, point)
-    logger.info("Contour gradient: [%s, %s]", perp_u, perp_v)
+    logger.debug("Contour gradient: [%s, %s]", perp_u, perp_v)
     # HACK: flattening potentially 2D array
     point_tangent: PlanarPoint1d = tangent(t).flatten()
     assert point_tangent.shape == (2, )
     tu: float = point_tangent[0]
     tv: float = point_tangent[1]
-    logger.info("Contour parametric tangent: [%s, %s]", tu, tv)
+    logger.debug("Contour parametric tangent: [%s, %s]", tu, tv)
 
-    return (-tv * perp_u + tu * perp_v) < 0
+    return ((-tv * perp_u + tu * perp_v) < 0)
 
 
 # ***************
@@ -413,13 +413,12 @@ def parametrize_conic(conic_coeffs: Vector6f) -> list[Conic]:
     standard_form_conics: list[Conic] = parametrize_standard_form_conic(conic_standard_form)
     # FIXME: check to see that modification of conic in the loop is reflected back inside
     # standard_form_conics
-    for _, conic in enumerate(standard_form_conics):
+    for conic in standard_form_conics:
         assert check_parametrized_conic(conic, conic_standard_form)
         assert check_orientation(conic, conic_standard_form)
 
         conic.transform(rotation, translation)
-        # FIXME: string representation of conic not implemented correctly inside Conic class
-        logger.info("Parametrized conic:\n%s", conic)
+        logger.debug("Parametrized conic:\n%s", conic)
 
         assert check_parametrized_conic(conic, conic_coeffs)
         assert check_orientation(conic, conic_coeffs)
@@ -452,9 +451,9 @@ def parametrize_cone_patch_conic(conic_coeffs: Vector6f) -> list[Conic]:
     :param conic_coeffs: [in] implicit conic equation
     :return conics: segments of the parametrized conic
     """
-    logger.info("Parametrizing conic from cone patch with equation: %s",
-                conic_coeffs)
     conics: list[Conic] = []
+    logger.debug("Parametrizing conic from cone patch with equation: %s",
+                 conic_coeffs)
 
     # Get standard form with rotation and translation
     conic_standard_form: Vector6f
@@ -469,18 +468,16 @@ def parametrize_cone_patch_conic(conic_coeffs: Vector6f) -> list[Conic]:
 
     # If the determinant is positive, the contour is a point and can be skipped
     if (det > 0.0) or float_equal(det, 0.0):
-        logger.info("Skipping degenerate point contour in cone patch with determinant %s",
-                    det)
-        return []
+        logger.debug("Skipping degenerate point contour in cone patch with determinant %s", det)
+        return conics
 
     # Get parametrization of conic
-    logger.info("Parametrizing intersecting lines in cone patch")
+    logger.debug("Parametrizing intersecting lines in cone patch")
     standard_form_conics: list[Conic]
     standard_form_conics = parametrize_intersecting_lines(conic_standard_form)
-
     # FIXME: check to see that modification of conic in the loop is reflected back inside
     # standard_form_conics
-    for i, conic in enumerate(standard_form_conics):
+    for conic in standard_form_conics:
         assert check_parametrized_conic(conic, conic_standard_form)
         assert check_orientation(conic, conic_standard_form)
         conic.transform(rotation, translation)
@@ -489,7 +486,7 @@ def parametrize_cone_patch_conic(conic_coeffs: Vector6f) -> list[Conic]:
                          conic_coeffs,
                          conic)
         assert check_orientation(conic, conic_coeffs)
-        logger.info("Parametrized conic:\n%s", conic)
+        logger.debug("Parametrized conic:\n%s", conic)
         conics.append(conic)
 
     return conics

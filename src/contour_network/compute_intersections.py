@@ -53,6 +53,8 @@ def _compute_bezier_clipping_planar_curve_intersections(first_planar_curve: Rati
     """
     Compute planar curve intersections with Bezier clipping
     """
+    assert (first_planar_curve.degree, first_planar_curve.dimension) == (4, 2)
+    assert (second_planar_curve.degree, second_planar_curve.dimension) == (4, 2)
     assert first_bezier_control_points.shape == (5, 3)
     assert second_bezier_control_points.shape == (5, 3)
 
@@ -69,7 +71,11 @@ def _compute_bezier_clipping_planar_curve_intersections(first_planar_curve: Rati
         p1.append(first_bezier_control_points[i, :])
         p2.append(second_bezier_control_points[i, :])
 
-    # FIXME: potentially bad method below.
+    #
+    # FIXME: METHOD BELOW DOES NOT SOLVE FOR image_segment_index == 9...
+    # SHOULD BE (1.15926, 0.999999) ELEMENT INSIDE intersection_param_inkscope
+    #
+    # .... But now there are TOO many elements for image_segment_index == 5...
     intersection_param_inkscope = find_intersections_bezier_clipping(
         p1,
         p2,
@@ -120,9 +126,9 @@ def _compute_planar_curve_intersections_from_bounding_box(
         first_planar_curve: RationalFunction,
         second_planar_curve: RationalFunction,
         intersect_params: IntersectionParameters,
-        first_curve_intersections: list[float],
-        second_curve_intersections: list[float],
-        intersection_stats: IntersectionStats,
+        first_curve_intersections_ref: list[float],
+        second_curve_intersections_ref: list[float],
+        intersection_stats_ref: IntersectionStats,
         first_bounding_box: tuple[PlanarPoint1d, PlanarPoint1d],
         second_bounding_box: tuple[PlanarPoint1d, PlanarPoint1d],
         first_bezier_control_points: Matrix5x3f,
@@ -147,23 +153,26 @@ def _compute_planar_curve_intersections_from_bounding_box(
     assert first_bezier_control_points.shape == (5, 3)
     assert second_bezier_control_points.shape == (5, 3)
 
-    intersection_stats.num_intersection_tests += 1
+    intersection_stats_ref.num_intersection_tests += 1
     t1: datetime = datetime.now()
-    logger.info("Finding intersections for %s and %s",
-                first_planar_curve,
-                second_planar_curve)
+    logger.debug("Finding intersections for %s and %s",
+                 first_planar_curve,
+                 second_planar_curve)
 
-    intersection_stats.bounding_box_call += 1
+    intersection_stats_ref.bounding_box_call += 1
 
     if intersect_params.use_heuristics and are_nonintersecting_by_heuristic_bounding_box(
-            first_bounding_box, second_bounding_box, intersection_stats):
+            first_bounding_box, second_bounding_box, intersection_stats_ref):
         return
 
-    intersection_stats.intersection_call += 1
+    intersection_stats_ref.intersection_call += 1
 
     # Compute intersection points by Bezier clipping
     intersection_points: list[tuple[float, float]]
     try:
+        #
+        # FIXME: below is not giving values wanted...
+        #
         intersection_points = _compute_bezier_clipping_planar_curve_intersections(
             first_planar_curve,
             second_planar_curve,
@@ -171,18 +180,21 @@ def _compute_planar_curve_intersections_from_bounding_box(
             second_bezier_control_points)
     except Exception as e:
         logger.error("Failed to find intersection points %s", e)
+        # FIXME: raising another error to just end the program whenever theres a big failure
+        # But change back to exception for the final release build
+        raise ValueError(e)
         return
 
     # Prune the computed intersections to ensure they are in the correct domain
     _prune_intersection_points(first_planar_curve,
                                second_planar_curve,
                                intersection_points,
-                               first_curve_intersections,
-                               second_curve_intersections)
+                               first_curve_intersections_ref,
+                               second_curve_intersections_ref)
 
     t2: datetime = datetime.now()
     total_time: int = (t2 - t1).microseconds
-    logger.info("Finding intersections took %s ms", total_time)
+    logger.debug("Finding intersections took %s ms", total_time)
 
 
 def compute_planar_curve_intersections(first_planar_curve: RationalFunction,
@@ -240,10 +252,10 @@ def compute_planar_curve_intersections(first_planar_curve: RationalFunction,
 
 def compute_intersections(image_segments: list[RationalFunction],
                           intersect_params: IntersectionParameters,
+                          contour_intersections_ref: list[list[IntersectionData]],
                           num_intersections: int
                           ) -> tuple[list[list[float]],
                                      list[list[int]],
-                                     list[list[IntersectionData]],
                                      int,
                                      int]:
     """
@@ -254,23 +266,26 @@ def compute_intersections(image_segments: list[RationalFunction],
 
     :param image_segments:   [in] list of planar curve segments
     :param intersect_params: [in] parameters for the intersection computation
+    :param contour_intersections: [out] list of lists of full intersection data
     :param num_intersections: [in] total number of intersections to increment
+    TODO: some of the below need to be modified by reference...
 
     :return intersections: list of lists of intersection knots
     :return intersection_indices: list of lists of intersection indices
-    :return contour_intersections: list of lists of full intersection data
     :return num_intersections: total number of intersections to increment
     :return intersection_call: TODO description
     """
     # Lazy check
     assert (image_segments[0].degree, image_segments[0].dimension) == (4, 2)
-    intersections: list[list[float]] = []
-    intersection_indices: list[list[int]] = []
-    contour_intersections: list[list[IntersectionData]] = []
+    intersections: list[list[float]] = [[] for _ in enumerate(image_segments)]
+    intersection_indices: list[list[int]] = [[] for _ in enumerate(image_segments)]
 
     # Setup intersection diagnostic tools
     intersection_stats: IntersectionStats = IntersectionStats()
 
+    #
+    # FIXME: method below looks good
+    #
     # Compute all rational bezier control points
     image_segments_bezier_control_points: list[Matrix5x3f] = []
     for image_segment in image_segments:
@@ -281,6 +296,9 @@ def compute_intersections(image_segments: list[RationalFunction],
             image_segment.domain.upper_bound)
         image_segments_bezier_control_points.append(bezier_control_points)
 
+    #
+    # FIXME: method below looks good
+    #
     # Compute all bounding boxes
     image_segments_bounding_box: list[tuple[PlanarPoint1d, PlanarPoint1d]] = []
     for image_segment in image_segments:
@@ -289,6 +307,9 @@ def compute_intersections(image_segments: list[RationalFunction],
         lower_left_point, upper_right_point = compute_bezier_bounding_box(image_segment)
         image_segments_bounding_box.append((lower_left_point, upper_right_point))
 
+    #
+    # FIXME: method below looks good
+    #
     # Hash by uv
     num_interval: int = 50
     hash_table: dict[int, dict[int, list[int]]]  # FIXME Make global: change both here and num_interval
@@ -323,15 +344,14 @@ def compute_intersections(image_segments: list[RationalFunction],
                     image_segments[image_segment_index],
                     image_segments[i],
                     intersect_params,
-                    current_segment_intersections,
-                    other_segment_intersections,
+                    current_segment_intersections,  # first_curve_intersections_ref
+                    other_segment_intersections,  # second_curve_intersections_ref
                     intersection_stats,
                     image_segments_bounding_box[image_segment_index],
                     image_segments_bounding_box[i],
                     image_segments_bezier_control_points[image_segment_index],
                     image_segments_bezier_control_points[i])
 
-                # FIXME: potentially incompatible C++ translation
                 intersections[image_segment_index].extend(current_segment_intersections)
                 intersections[i].extend(other_segment_intersections)
 
@@ -353,7 +373,7 @@ def compute_intersections(image_segments: list[RationalFunction],
                     current_intersection_data.check_if_base(
                         image_segments[image_segment_index].domain,
                         intersect_params.trim_amount)
-                    contour_intersections[image_segment_index].append(
+                    contour_intersections_ref[image_segment_index].append(
                         current_intersection_data)
 
                     # Build complementary boundary intersection data
@@ -366,7 +386,7 @@ def compute_intersections(image_segments: list[RationalFunction],
                                                          intersect_params.trim_amount)
                     other_intersection_data.check_if_base(image_segments[i].domain,
                                                           intersect_params.trim_amount)
-                    contour_intersections[i].append(other_intersection_data)
+                    contour_intersections_ref[i].append(other_intersection_data)
                     num_intersections += 1
 
     # Record intersection information
@@ -378,7 +398,6 @@ def compute_intersections(image_segments: list[RationalFunction],
 
     return (intersections,
             intersection_indices,
-            contour_intersections,
             num_intersections,
             intersection_call)
 

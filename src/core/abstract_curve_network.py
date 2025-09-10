@@ -22,9 +22,9 @@ class AbstractCurveNetwork():
                  intersection_array: list[NodeIndex]) -> None:
         """
         Construct the network from the basic topological information.
-        @param[in] to_array: array mapping segments to their endpoints
-        @param[in] out_array: array mapping nodes to their outgoing segment
-        @param[in] intersection_array: list of intersection nodes
+        :param to_array:           [in] array mapping segments to their endpoints
+        :param out_array:          [in] array mapping nodes to their outgoing segment
+        :param intersection_array: [in] list of intersection nodes
         """
         self.__to_array: list[NodeIndex] = to_array
         self.__out_array: list[SegmentIndex] = out_array
@@ -53,7 +53,7 @@ class AbstractCurveNetwork():
 
         # Check validity
         if logger.getEffectiveLevel() == logging.DEBUG:
-            if not self.__is_valid_abstract_curve_network():
+            if not self._is_valid_abstract_curve_network():
                 raise ValueError("Inconsistent abstract curve network built")
 
     @property
@@ -178,7 +178,7 @@ class AbstractCurveNetwork():
         (self.__next_array, self.__prev_array,
          self.__from_array, self.__in_array) = self._init_abstract_curve_network()
 
-        if not self.__is_valid_abstract_curve_network():
+        if not self._is_valid_abstract_curve_network():
             self._clear_topology()
             raise ValueError("Inconsistent abstract curve network built")
 
@@ -465,7 +465,7 @@ class AbstractCurveNetwork():
     #  Formerly Private methods
     # ********************************
 
-    def __is_valid_abstract_curve_network(self) -> bool:
+    def _is_valid_abstract_curve_network(self) -> bool:
         """
         General validity checker for the network topology
         """

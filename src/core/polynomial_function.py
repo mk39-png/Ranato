@@ -27,7 +27,7 @@ from src.core.common import (COLS, ROWS, MatrixNx3f, MatrixXf, Vector1D,
 
 
 def remove_polynomial_trailing_coefficients(A_coeffs_ref: Vector1D) -> Vector1D:
-    """ 
+    """
     Remove any zeros at the end of the polynomial coefficient vector
 
     :param A_coeffs: [in] polynomal coefficient vector
@@ -43,7 +43,7 @@ def remove_polynomial_trailing_coefficients(A_coeffs_ref: Vector1D) -> Vector1D:
 
 
 def generate_monomials(degree: int, t: float) -> Vector2D:
-    """ 
+    """
     Generate the row vector T of n + 1 monomials 1, t, ... , t^n.
 
     :param int degree: [in] maximum monomial degree.
@@ -69,7 +69,7 @@ def evaluate_polynomial(degree: int,
                         polynomial_coeffs_ref: Vector1D | Vector2D,
                         t: float) -> Vector1D:
     """
-    Evaluate the polynomial with given coefficients at t. 
+    Evaluate the polynomial with given coefficients at t.
     NOTE: this has been modified from the ASOC code to support any dimension.
 
     :param int degree: [in] maximum monomial degree.
@@ -109,7 +109,7 @@ def compute_polynomial_mapping_product(first_degree: int,
                                        second_degree: int,
                                        first_polynomial_coeffs: Vector1D,
                                        second_polynomial_coeffs: Vector1D) -> Vector1D:
-    """ 
+    """
     Generate the polynomial coefficients for the kronecker product of two
     polynomials of the same dimension.
     Assuming 1 polynomial dimension since that is what it appears to be in all use cases.
@@ -120,7 +120,7 @@ def compute_polynomial_mapping_product(first_degree: int,
     :param first_polynomial_coeffs:  [in] coefficients of the first polynomial.
     :param second_polynomial_coeffs: [in] coefficients of the second polynomial.
 
-    :return product_polynomial_coeffs: product polynomial coefficients. 
+    :return product_polynomial_coeffs: product polynomial coefficients.
         shape = (first_degree + second_degree + 1, )
     """
     # TODO: ask about the shape b/c originally I had something like the pseudocode below
@@ -139,7 +139,7 @@ def compute_polynomial_mapping_product(first_degree: int,
 def compute_polynomial_mapping_scalar_product(first_degree: int, second_degree: int, dimension: int,
                                               scalar_polynomial_coeffs: Vector1D,
                                               polynomial_coeffs: MatrixXf) -> np.ndarray:
-    """ 
+    """
     Generate the polynomial coefficients for the product of a
     scalar polynomial and a vector valued polynomial mapping.
 
@@ -235,7 +235,7 @@ def compute_polynomial_mapping_dot_product() -> None:
 
 def compute_polynomial_mapping_derivative(degree: int, dimension: int,
                                           polynomial_coeffs_ref: Vector1D | MatrixXf) -> MatrixXf:
-    """ 
+    """
     Generate the polynomial coefficients for the derivative of a polynomial mapping.
 
     NOTE: used by rational_function.py, which is then used in compute_derivative() and hence
@@ -243,7 +243,7 @@ def compute_polynomial_mapping_derivative(degree: int, dimension: int,
 
     :param degree: [in] degree of the polynomial
     :param dimension: [in] polynomial mapping dimension.
-    :param polynomial_coeffs: [in] coefficients of the polynomial mapping. 
+    :param polynomial_coeffs: [in] coefficients of the polynomial mapping.
         polynomial_coeffs shape (degree + 1, dimension)
     :return derivative_polynomial_coeffs: derivative polynomial mapping coefficients.
         derivative_polynomial_coeffs shape (degree, dimension)
@@ -260,7 +260,7 @@ def compute_polynomial_mapping_derivative(degree: int, dimension: int,
 
 def quadratic_real_roots(quadratic_coeffs: Vector3f,
                          eps: float = 1e-10) -> tuple[Vector2f, int]:
-    """ 
+    """
     Compute the real roots of a quadratic polynomial.
 
     :param quadratic_coeffs: [in] coefficients of the polynomial
@@ -314,9 +314,9 @@ def polynomial_real_roots(A_coeffs: Vector1D, imag_tolerance=1e-10) -> Vector1D:
     """
     # Ensuring that A_coeffs is (n, ) shape array
     assert A_coeffs.ndim == 1
-    logger.info("Full coefficient vector: %s", A_coeffs)
+    logger.debug("Full coefficient vector: %s", A_coeffs)
     reduced_coeffs: Vector1D = remove_polynomial_trailing_coefficients(A_coeffs)
-    logger.info("Reduced coefficient vector: %s", reduced_coeffs)
+    logger.debug("Reduced coefficient vector: %s", reduced_coeffs)
 
     # Check if reduced coeff is 0
     if reduced_coeffs.size == 1 and float_equal_zero(reduced_coeffs[0]):
@@ -324,7 +324,8 @@ def polynomial_real_roots(A_coeffs: Vector1D, imag_tolerance=1e-10) -> Vector1D:
         return roots
 
     # Compute the complex roots
-    solver_roots: Vector1D = np.roots(reduced_coeffs)
+    solver = np.polynomial.Polynomial(reduced_coeffs)
+    solver_roots: Vector1D = solver.roots()[::-1]
 
     # Find the real roots (in the style of the C++ version)
     # XXX: Involves a floating point threshold test... well... the C++ version did.
@@ -333,7 +334,7 @@ def polynomial_real_roots(A_coeffs: Vector1D, imag_tolerance=1e-10) -> Vector1D:
     # TODO: utilize the tolerance value inside common.py
     # real_roots: Vector1D = solver_roots.real[abs(solver_roots.imag) < 1e-10]
     real_roots: Vector1D = solver_roots.real[abs(solver_roots.imag) < imag_tolerance]
-    logger.info("Real roots: %s", real_roots)
+    logger.debug("Real roots: %s", real_roots)
 
     return real_roots
 
@@ -356,7 +357,7 @@ def formatted_monomial(variable: str, degree: int) -> str:
 
 
 def formatted_term(coefficient: float, variable: str, precision: int = 16) -> str:
-    """ 
+    """
     Construct a formatted string for a term with given coefficient and variable.
 
     :param coefficient: [in] coefficient of the term
@@ -371,18 +372,18 @@ def formatted_term(coefficient: float, variable: str, precision: int = 16) -> st
         return ""
     # Negative case
     elif coefficient < 0:
-        term_string += f" - {coefficient:.{precision}f} {variable}"
+        term_string += f" - {abs(coefficient):.{precision}f} {variable}"
     # Positive case
     else:
-        term_string += f" + {coefficient:.{precision}f} {variable}"
+        term_string += f" + {abs(coefficient):.{precision}f} {variable}"
 
     return term_string
 
 
 def formatted_polynomial(degree: int, dimension: int,
-                         polynomial_coeffs: MatrixXf,
+                         polynomial_coeffs_ref: MatrixXf,
                          precision: int = 16) -> str:
-    """ 
+    """
     Construct a formatted string for a polynomial with given coefficients
     TODO: Implement separate method for polynomial mappings
 
@@ -393,6 +394,13 @@ def formatted_polynomial(degree: int, dimension: int,
 
     :return: formatted polynomial string
     """
+    polynomial_coeffs: MatrixXf
+    try:
+        polynomial_coeffs = polynomial_coeffs_ref.reshape(degree + 1, dimension)
+    except ValueError as e:
+        logger.info(f"{e} Invalid degree {degree}, dimension {dimension} for polynomial coeffs {polynomial_coeffs_ref}")
+        return ""
+
     assert np.shape(polynomial_coeffs) == (degree + 1, dimension)
 
     # Handle trivial case
@@ -403,8 +411,9 @@ def formatted_polynomial(degree: int, dimension: int,
 
     # Going through polynomial_coeffs columns
     for i in range(polynomial_coeffs.shape[COLS]):
-        polynomial_string += f"{polynomial_coeffs[0, i]}:.{precision}f"
-        for j in range(polynomial_coeffs.shape[ROWS]):
+        # f" - {coefficient:.{precision}f} {variable}"
+        polynomial_string += f"{polynomial_coeffs[0, i]:.{precision}f}"
+        for j in range(1, polynomial_coeffs.shape[ROWS]):
             monomial_string: str = formatted_monomial("t", j)
             polynomial_string += formatted_term(
                 polynomial_coeffs[j, i], monomial_string, precision)

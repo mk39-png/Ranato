@@ -7,7 +7,7 @@ import numpy as np
 import numpy.testing as npt
 import pytest
 from cholespy import CholeskySolverD
-from scipy.sparse import coo_matrix
+from scipy.sparse import coo_matrix, csr_matrix
 
 from src.core.affine_manifold import AffineManifold
 from src.core.common import (COLS, ROWS, Matrix2x3f, MatrixNx3f, MatrixXf,
@@ -407,7 +407,7 @@ def test_optimize_twelve_split_spline_surface_spot_mesh() -> None:
     N: MatrixXf = deserialize_eigen_matrix_csv_to_numpy(filepath)
 
     # Generate fit matrix by setting the parametrized quadratic surface mapping factor to zero
-    fit_matrix: coo_matrix
+    fit_matrix: csr_matrix
     # Make a deep since we don't want the same parameters between Fit vs Non-fit 12-split-splines
     optimization_params_fit: OptimizationParameters = OptimizationParameters(
         parametrized_quadratic_surface_mapping_factor=0.0)
@@ -496,7 +496,7 @@ def test_generate_optimized_twelve_split_position_data_spot_mesh() -> None:
     N: MatrixXf = deserialize_eigen_matrix_csv_to_numpy(filepath)
 
     # Generate fit matrix by setting the parametrized quadratic surface mapping factor to zero
-    fit_matrix: coo_matrix
+    fit_matrix: csr_matrix
     # Make a deep since we don't want the same parameters between Fit vs Non-fit 12-split-splines
     optimization_params_fit: OptimizationParameters = copy.deepcopy(optimization_params)
     optimization_params_fit.parametrized_quadratic_surface_mapping_factor = 0.0
@@ -648,7 +648,7 @@ def test_build_twelve_split_spline_energy_system_spot_mesh() -> None:
     # ** Fit Energy Case **
     fit_energy: float
     fit_derivatives: Vector1D
-    fit_matrix: coo_matrix
+    fit_matrix: csr_matrix
     fit_matrix_inverse: CholeskySolverD
     fit_energy, fit_derivatives, fit_matrix, fit_matrix_inverse = build_twelve_split_spline_energy_system(
         V, N, affine_manifold, optimization_params_fit)
@@ -663,12 +663,13 @@ def test_build_twelve_split_spline_energy_system_spot_mesh() -> None:
     # ** Full Energy Case **
     energy: float
     derivatives: Vector1D
-    energy_hessian: coo_matrix
+    energy_hessian: csr_matrix
     energy_hessian_inverse: CholeskySolverD
-    energy, derivatives, energy_hessian, energy_hessian_inverse = build_twelve_split_spline_energy_system(V,
-                                                                                                          N,
-                                                                                                          affine_manifold,
-                                                                                                          optimization_params_full)
+    energy, derivatives, energy_hessian, energy_hessian_inverse = (
+        build_twelve_split_spline_energy_system(V,
+                                                N,
+                                                affine_manifold,
+                                                optimization_params_full))
     # NOTE: can't really test energy_hessian_inverse directly since it's not translatable
     # from the original C++ code
     # NOTE: magic number from ASOC code's output for energy

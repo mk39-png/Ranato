@@ -207,6 +207,7 @@ class ConvexPolygon:
         """
         Return true iff point is in the convex polygon
         """
+        # FIXME: if not done already, rework method to utilize 1D PlanarPoint type
         assert point.shape == (2, )
 
         for _, L_coeffs in enumerate(self.m_boundary_segments_coeffs):

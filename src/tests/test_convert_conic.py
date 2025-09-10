@@ -56,9 +56,9 @@ def test_parametrize_contour_orthogonal() -> None:
     theta: float = 0.1
 
     D = np.array([[5, 0],
-                 [0, 0.5]])
+                 [0, 0.5]], dtype=np.float64)
     U = np.array([[math.cos(theta), -math.sin(theta)],
-                 [math.sin(theta), math.cos(theta)]])
+                 [math.sin(theta), math.cos(theta)]], dtype=np.float64)
     A = U.T @ D @ U
     assert D.shape == (2, 2)
     assert A.shape == (2, 2)

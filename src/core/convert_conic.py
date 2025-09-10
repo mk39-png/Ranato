@@ -31,7 +31,7 @@ def compute_symmetric_matrix_eigen_decomposition(A: Matrix2x2f) -> tuple[Vector2
     sigma_1: float = 0.5 * (A[0, 0] + A[1, 1] + math.sqrt(discriminant))
     sigma_2: float = 0.5 * (A[0, 0] + A[1, 1] - math.sqrt(discriminant))
     assert sigma_1 >= sigma_2
-    eigenvalues: Vector2f = np.array([sigma_1, sigma_2])
+    eigenvalues: Vector2f = np.array([sigma_1, sigma_2], dtype=np.float64)
 
     # Compute rotation matrix U such that A = U diag(sigma_1, sigma_2) U^T
     # First row of rotation matrix is the first eigenvector
@@ -41,24 +41,24 @@ def compute_symmetric_matrix_eigen_decomposition(A: Matrix2x2f) -> tuple[Vector2
     eigenvector_1: PlanarPoint1d
     if not float_equal(A[0, 1], 0.0):
         eigenvector_1 = np.array([A[0, 1], sigma_1 - A[0, 0]])
-        # HACK: wrapping float() to avoid Pylance error
-        assert not float_equal(float(np.linalg.norm(eigenvector_1)), 0.0)
+        assert not float_equal(np.linalg.norm(eigenvector_1), 0.0)
         eigenvector_1 /= np.linalg.norm(eigenvector_1)
     # This can be removed
     elif A[0, 0] < A[1, 1]:
-        eigenvector_1 = np.array([0, 1])
+        eigenvector_1 = np.array([0, 1], dtype=np.float64)
     else:
-        eigenvector_1 = np.array([1, 0])
+        eigenvector_1 = np.array([1, 0], dtype=np.float64)
 
     # Second column of rotation matrix is the first eigenvector rotated 90
     # degrees
     eigenvector_2: PlanarPoint1d
-    eigenvector_2 = np.array([-eigenvector_1[1], eigenvector_1[0]])
+    eigenvector_2 = np.array([-eigenvector_1[1], eigenvector_1[0]], dtype=np.float64)
 
     # Assemble rotation matrix
     rotation: Matrix2x2f = np.array(
         [eigenvector_1,
-         eigenvector_2])
+         eigenvector_2], dtype=np.float64)
+    assert rotation.shape == (2, 2)
 
     # FIXME: potentially incorrect C++ translation
     npt.assert_allclose(
@@ -81,6 +81,8 @@ def convert_conic_to_matrix_form(conic_coeffs: Vector6f) -> tuple[Matrix2x2f,
     :return b: linear terms vector
     :return c: constant term
     """
+    assert conic_coeffs.shape == (6, )
+
     #  Compute A
     A: Matrix2x2f = np.array([[2.0 * conic_coeffs[4], conic_coeffs[3]],
                               [conic_coeffs[3], 2.0 * conic_coeffs[5]]],
@@ -147,7 +149,7 @@ def convert_conic_to_standard_form(conic_coeffs: Vector6f) -> tuple[Vector6f,
             #  Normalize the equation
             # HACK: float wrapping to avoid Pylance error
             # FIXME: does this introduce any precision error?
-            normalization_factor: float = float(np.linalg.norm(b))
+            normalization_factor: float = np.linalg.norm(b)
             b /= normalization_factor
             c /= normalization_factor
 
@@ -193,6 +195,7 @@ def convert_conic_to_standard_form(conic_coeffs: Vector6f) -> tuple[Vector6f,
     else:
         # Get translation r_0 = -A^{-1} b
         translation = -np.linalg.inv(A) @ b
+        assert translation.shape == (2, )
 
         # Compute standard form coefficients for the conic
         # FIXME: potentially incompatible C++ translation below
@@ -200,10 +203,10 @@ def convert_conic_to_standard_form(conic_coeffs: Vector6f) -> tuple[Vector6f,
         conic_standard_form[0] = c - 0.5 * (translation @ A) @ translation.T
         conic_standard_form[4] = 0.5 * singular_values[0]
         conic_standard_form[5] = 0.5 * singular_values[1]
-        todo("double check the matmul above")
+        # todo("double check the matmul above")
 
-    logger.info("Standard form: %s", conic_standard_form)
-    logger.info("Rotation:\n%s", rotation)
-    logger.info("Translation:\n%s", translation)
+    logger.debug("Standard form: %s", conic_standard_form)
+    logger.debug("Rotation:\n%s", rotation)
+    logger.debug("Translation:\n%s", translation)
 
     return conic_standard_form, rotation, translation

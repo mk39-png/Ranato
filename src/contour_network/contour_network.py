@@ -240,7 +240,7 @@ class ContourNetwork(ProjectedCurveNetwork):
                                spline_surface: QuadraticSplineSurface,
                                intersect_params: IntersectionParameters,
                                invisibility_params: InvisibilityParameters,
-                               patch_boundary_edges: list[tuple[int, int]]):
+                               patch_boundary_edges: list[tuple[int, int]]) -> None:
         """
         Initialize the contour network
         """
@@ -254,8 +254,11 @@ class ContourNetwork(ProjectedCurveNetwork):
         contour_intersections: list[list[IntersectionData]]
         num_intersections: int
 
-        time_start: float = timeit.default_timer()
+        time_start: float = time.perf_counter()
 
+        #
+        # FIXME: below method looks good
+        #
         (contour_domain_curve_segments,
          contour_segments,
          contour_patch_indices,
@@ -267,28 +270,30 @@ class ContourNetwork(ProjectedCurveNetwork):
             patch_boundary_edges)
 
         # Build contour labels for boundary countours and patch locations
+        # FIXME: build contour labels looks GOOD
         contour_segment_labels: list[dict[str, int]] = _build_contour_labels(contour_patch_indices,
                                                                              contour_is_boundary)
 
         # Project contours to the plane
+        # FIXME: project_curves also looks good
         planar_contour_segments: list[RationalFunction] = project_curves(contour_segments, frame)
         # lazy check
         assert (planar_contour_segments[0].degree, planar_contour_segments[0].dimension) == (4, 2)
 
         # Chain the contour segments into closed contours
+        # FIXME: compute_closed_contours looks good
         contours: list[list[int]]
         contour_labels: list[int]
         contours, contour_labels = compute_closed_contours(contour_segments)
 
-        # Pad contour domaisn by an epsilon
+        # Pad contour domains by an epsilon
+        # FIXME: pad_contours looks good
         pad_contours(contour_domain_curve_segments,
                      contour_segments,
                      planar_contour_segments,
                      invisibility_params.pad_amount)
 
-        time_end: float = timeit.default_timer()
-        # FIXME: potentially improper translation
-        compute_contour_time: float = time_end - time_start
+        compute_contour_time: float = time.perf_counter() - time_start
 
         # Get cusp points and intersections if needed
         num_segments: int = len(contour_segments)
@@ -297,7 +302,11 @@ class ContourNetwork(ProjectedCurveNetwork):
         has_cusp_at_base: list[bool]
         has_cusp_at_tip: list[bool]
 
-        time_start = timeit.default_timer()
+        time_start = time.perf_counter()
+
+        #
+        # FIXME: compute_spline_surface_cusps looks good.
+        #
         (interior_cusps,
          boundary_cusps,
          has_cusp_at_base,
@@ -307,24 +316,24 @@ class ContourNetwork(ProjectedCurveNetwork):
                                                          contour_patch_indices,
                                                          contours)
 
-        compute_cusp_time: float = timeit.default_timer()
+        compute_cusp_time: float = time.perf_counter() - time_start
         logger.debug("Found %s interior cusps", nested_vector_size(interior_cusps))
         logger.debug("Found %s boundary cusps", nested_vector_size(boundary_cusps))
 
         # Compute planar contour intersections
-        time_start = timeit.default_timer()
+        time_start = time.perf_counter()
         intersection_knots: list[list[float]]
         intersection_indices: list[list[int]]
         intersection_call: int
         (intersection_knots,
          intersection_indices,
-         contour_intersections,
          num_intersections,
          intersection_call) = compute_intersections(planar_contour_segments,
                                                     intersect_params,
+                                                    contour_intersections,
                                                     num_intersections)
 
-        compute_intersection_time: float = timeit.default_timer() - time_start
+        compute_intersection_time: float = time.perf_counter() - time_start
         logger.debug("Found %s intersections", nested_vector_size(intersection_knots))
 
         # Optionally write contours before any graph construction
@@ -346,7 +355,7 @@ class ContourNetwork(ProjectedCurveNetwork):
                           elements=svg_elements))
 
         # Build the curve network from the contours
-        time_start = timeit.default_timer()
+        time_start = time.perf_counter()
         self._init_projected_curve_network(contour_domain_curve_segments,
                                            contour_segments,
                                            planar_contour_segments,
@@ -359,11 +368,11 @@ class ContourNetwork(ProjectedCurveNetwork):
                                            intersection_indices,
                                            contour_intersections,
                                            num_intersections)
-        compute_projected_time: float = timeit.default_timer() - time_start
+        compute_projected_time: float = time.perf_counter() - time_start
 
         # Check the validity of the topological graph structure
         # if logger.getEffectiveLoggingLevel
-        if not self.__is_valid_abstract_curve_network():
+        if not self._is_valid_abstract_curve_network():
             raise ValueError("Invalid abstract curve network made")
 
         # Check the validity of the geometric graph structure
@@ -371,10 +380,9 @@ class ContourNetwork(ProjectedCurveNetwork):
             raise ValueError("Invalid projected curve network made")
 
         # Compute the quantitative invisibility
-        # FIXME: am I doing this timing thing right?
-        time_start: float = timeit.default_timer()
+        time_start: float = time.perf_counter()
         self.__compute_quantitative_invisibility(spline_surface, invisibility_params)
-        compute_visibility_time: float = timeit.default_timer() - time_start
+        compute_visibility_time: float = time.perf_counter() - time_start
 
     # *********************
     # Direct QI Computation
@@ -424,8 +432,7 @@ class ContourNetwork(ProjectedCurveNetwork):
                                                     invisibility_params: InvisibilityParameters
                                                     ) -> int:
         """
-        Compute the QI for a single segment with robust polling of three sample
-        points
+        Compute the QI for a single segment with robust polling of three sample points
         """
         # Check segment validity
         if not self._is_valid_segment_index(segment_index):
@@ -443,7 +450,8 @@ class ContourNetwork(ProjectedCurveNetwork):
 
         sample_parameters: list[float] = [0.5, 0.25, 0.75]
         for i, sample_parameter in enumerate(sample_parameters):
-            sample_point: SpatialVector1d = spatial_curve.evaluate_normalized_coordinate(sample_parameter)
+            sample_point: SpatialVector1d = spatial_curve.evaluate_normalized_coordinate(
+                sample_parameter)
             assert sample_point.shape == (3, )
             logger.info("Sample point: %s", sample_point)
 

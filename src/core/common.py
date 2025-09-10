@@ -25,7 +25,9 @@ ADJACENT_CONTOUR_PRECISION: float = 1e-6
 # Epsilon for curve-curve bounding box padding
 PLANAR_BOUNDING_BOX_PRECISION: float = 0
 # Epsilon for Bezier clipping intersections
-FIND_INTERSECTIONS_BEZIER_CLIPPING_PRECISION: float = 1e-7
+FIND_INTERSECTIONS_BEZIER_CLIPPING_PRECISION: float = np.nextafter(1e-7, 0)  # 1e-7
+# FIND_INTERSECTIONS_BEZIER_CLIPPING_PRECISION: float = 9.999999999995e-8
+
 # Spline surface discretization level
 DISCRETIZATION_LEVEL: int = 2
 # Size of spline surface hash table
@@ -96,6 +98,7 @@ Matrix3x3r = np.ndarray  # shape (3, 3)
 Matrix3x3f = np.ndarray
 
 Matrix4x2f = np.ndarray
+Matrix4x4f = np.ndarray
 
 Matrix5x2f = np.ndarray
 Matrix5x3f = np.ndarray
@@ -171,12 +174,12 @@ def initialize_spot_control_mesh() -> tuple[npty.ArrayLike, npty.ArrayLike, npty
     return V, uv, F, FT
 
 
-def load_json(filename: str) -> list[dict]:
+def load_json(filename: str) -> list[dict] | list[list[dict]] | list[list[list]]:
     """
     Used by affine_manifold tests.
     Parses a list of dataclasses.
     """
-    obj: list[dict] | None = None
+    obj: list[list[dict]] | list[dict] | list[list[list]] | None = None
 
     filepath: str = os.path.abspath(f"src\\tests\\{filename}")
     with open(filepath, 'r', encoding='utf-8') as file:
@@ -191,6 +194,57 @@ def load_json(filename: str) -> list[dict]:
     return obj
 
 
+def deserialize_list_list_varying_lengths(filename: str) -> list[list[int]]:
+    """
+    Used when the csv list contains list with varying list lengths.
+    e.g. 
+    [
+    [1, 2, 3, 4],
+    [1, 2],
+    [5, 7, 8, 8, 19, 1],
+    ]
+
+    # TODO: change to be list of list of any datatype
+    """
+    filepath: str = os.path.abspath(f"src\\tests\\{filename}")
+    rows_control: list[list[int]] = []
+
+    with open(filepath, 'r', encoding='utf-8') as file:
+        reader = csv.reader(file)
+        for row in reader:
+            parsed: list[int] = [int(x) for x in row if x.strip() != '']
+            rows_control.append(parsed)
+
+    return rows_control
+
+
+def compare_list_list_varying_lengths_float(filename: str, rows_test: list[list[float]]) -> None:
+    """
+    Used when the csv list contains list with varying list lengths.
+    e.g. 
+    [
+    [1, 2, 3, 4],
+    [1, 2],
+    [5, 7, 8, 8, 19, 1],
+    ]
+    """
+    filepath: str = os.path.abspath(f"src\\tests\\{filename}")
+    rows_control: list[list[float]] = []
+
+    with open(filepath, 'r', encoding='utf-8') as file:
+        reader = csv.reader(file)
+        for row in reader:
+            parsed: list[float] = [float(x) for x in row if x.strip() != '']
+            rows_control.append(parsed)
+    # Make sure that both are the same length
+    assert len(rows_control) == len(rows_test)
+    num_rows: int = len(rows_control)
+
+    for i in range(num_rows):
+        npt.assert_allclose(np.array(rows_test[i]),
+                            np.array(rows_control[i]))
+
+
 def compare_list_list_varying_lengths(filename: str, rows_test: list[list[int]]) -> None:
     """
     Used when the csv list contains list with varying list lengths.
@@ -200,6 +254,8 @@ def compare_list_list_varying_lengths(filename: str, rows_test: list[list[int]])
     [1, 2],
     [5, 7, 8, 8, 19, 1],
     ]
+
+    Used for integer datatypes.
     """
     filepath: str = os.path.abspath(f"src\\tests\\{filename}")
     rows_control: list[list[int]] = []
@@ -244,6 +300,8 @@ def deserialize_eigen_matrix_csv_to_numpy(filename: str, make_3d: bool = False) 
     if make_3d:
         with open(filepath, 'r', encoding='utf-8') as file:
             file_lines_raw: str = file.read()
+
+            # In "3D" files, sections are separated by double newlines
             file_lines: list[str] = file_lines_raw.split("\n\n")
 
             arr_list: list[np.ndarray] = []  # build this list 3d then convert to np
@@ -334,6 +392,7 @@ def float_equal(x: float, y: float, eps=FLOAT_EQUAL_PRECISION) -> bool:
     """
 
     # NOTE: Use absolute tolerance! Relative tolerance is not suited for our purpose.
+    # return np.isclose(x, y, atol=eps)
     return math.isclose(x, y, abs_tol=eps)
 
 
@@ -900,8 +959,9 @@ def interval_lerp(t_min_0: float,
     return t_1
 
 
-def compute_point_cloud_bounding_box(points: MatrixNx3f) -> tuple[SpatialVector1d, SpatialVector1d]:
-    """ Compute the bounding box for a matrix of points in R^n.
+def compute_point_cloud_bounding_box(points: MatrixNx3f) -> tuple[Vector1D, Vector1D]:
+    """ 
+    Compute the bounding box for a matrix of points in R^n.
     The points are assumed to be the rows of the points matrix.
 
     :param points: points to compute the bounding box for.
@@ -909,9 +969,8 @@ def compute_point_cloud_bounding_box(points: MatrixNx3f) -> tuple[SpatialVector1
 
     :return (min_point, max_point): tuple of (point with minimum coordinates for the bounding box,
     point with maximum coordinates for the bounding box).
-    :rtype: tuple[Vector, Vector]
+    :rtype: tuple[Vector1d, Vector1d]
     """
-    # TODO: change type of points to matrix
     num_points: int = points.shape[ROWS]
     dimension: int = points.shape[COLS]
 
@@ -921,19 +980,10 @@ def compute_point_cloud_bounding_box(points: MatrixNx3f) -> tuple[SpatialVector1
         raise ValueError("dimension cannot be 0")
 
     # Get minimum and maximum coordinates for the points
-    # TODO: test this with NumPy, and also maybe mathutils
-    # Get minimum and maximum coordinates for the points
-    min_point: SpatialVector1d = points[0, :]
-    max_point: SpatialVector1d = points[0, :]
-    # NOTE: asserting (1, 3) since these points must be SpatialVectors
-    assert min_point.shape == (3, )
-    assert max_point.shape == (3, )
-
-    for pi in range(num_points):
-        for j in range(dimension):
-            min_point[j] = min(min_point[j], points[pi, j])
-            max_point[j] = max(max_point[j], points[pi, j])
-
+    min_point: Vector1D = points.min(axis=0)
+    max_point: Vector1D = points.max(axis=0)
+    assert min_point.ndim == 1
+    assert max_point.ndim == 1
     return min_point, max_point
 
 

@@ -8,7 +8,7 @@ from dataclasses import dataclass
 import numpy as np
 import numpy.testing as npt
 from cholespy import CholeskySolverD, MatrixType
-from scipy.sparse import coo_matrix
+from scipy.sparse import coo_matrix, csr_matrix
 
 from src.core.affine_manifold import AffineManifold, EdgeManifoldChart
 from src.core.common import (COLS, ROWS, Index, Matrix2x2f, Matrix2x3r,
@@ -89,7 +89,7 @@ class LocalHessianData:
     def __init__(self,
                  __H_f: Matrix12x12r,
                  __H_s: Matrix12x12r,
-                 __H_p: np.ndarray,  # matrix 36x36
+                 __H_p: Matrix36x36f,
                  __w_f: float,
                  __w_s: float,
                  __w_p: float) -> None:
@@ -149,7 +149,7 @@ class LocalHessianData:
 
         # H_p: planar fitting term
         # DEPRECATED (according to ASOC code)
-        H_p: np.ndarray  # matrix shape (36, 36)
+        H_p: Matrix36x36f
 
         # WARNING: below operation must remain a float comparison "!= 0.0".
         # Do not attempt using float comparison with tolerance or else you
@@ -421,7 +421,7 @@ def compute_twelve_split_energy_quadratic(
         optimization_params: OptimizationParameters,
         num_variable_vertices: int,
         num_variable_edges: int
-) -> tuple[float, Vector2D, coo_matrix, CholeskySolverD]:
+) -> tuple[float, Vector2D, csr_matrix, CholeskySolverD]:
     """
     Compute the energy system for a twelve-split spline.
 
@@ -606,22 +606,32 @@ def compute_twelve_split_energy_quadratic(
 
     # NOTE: Cholespy needed to be modified to treat "positive definite" warning not
     # as an error like in ASOC CHOLDMOD.
+    # TODO: fix hessian inverse csr matrix
     # NOTE: hessian is not used anywhere else but optimize_spline_surface...
     # in the original ASOC code... which is no longer needed with the Cholespy module.
-    hessian: coo_matrix = coo_matrix((data, (rows, cols)),
-                                     #  shape=(num_independent_variables, num_independent_variables),
-                                     dtype=np.float64)
-
+    # hessian_coo: coo_matrix = coo_matrix((data, (rows, cols)),
+    #                                      #  shape=(num_independent_variables, num_independent_variables),
+    #                                      dtype=np.float64)
+    hessian_csr: csr_matrix = csr_matrix((data, (rows, cols)),
+                                         shape=(num_independent_variables, num_independent_variables),
+                                         dtype=np.float64)
     assert derivatives.shape == (num_independent_variables, )
 
     # Build the inverse.
     # TODO: This is very finicky with CSR sparse matrices...
-    hessian_inverse: CholeskySolverD = CholeskySolverD(num_independent_variables,
-                                                       rows,
-                                                       cols,
-                                                       data,
-                                                       MatrixType.COO)
-    return energy, derivatives, hessian, hessian_inverse
+    hessian_inverse_csr: CholeskySolverD = CholeskySolverD(num_independent_variables,
+                                                           hessian_csr.indptr,
+                                                           hessian_csr.indices,
+                                                           hessian_csr.data,
+                                                           MatrixType.CSR)
+    # hessian_inverse_coo: CholeskySolverD = CholeskySolverD(num_independent_variables,
+    #                                                        rows,
+    #                                                        cols,
+    #                                                        data,
+    #                                                        MatrixType.COO)
+    # Both of the above should be the same, with coo being the control/baseline.
+
+    return energy, derivatives, hessian_csr, hessian_inverse_csr
 
 
 # ******************************************
@@ -748,7 +758,7 @@ def build_twelve_split_spline_energy_system(initial_V: MatrixNx3f,
                                             initial_face_normals: np.ndarray,
                                             affine_manifold: AffineManifold,
                                             optimization_params: OptimizationParameters
-                                            ) -> tuple[float, VectorX, coo_matrix, CholeskySolverD]:
+                                            ) -> tuple[float, VectorX, csr_matrix, CholeskySolverD]:
     """
     Build the quadratic energy system for the twelve-split spline with thin
     plate, fitting, and planarity energies.
@@ -807,7 +817,7 @@ def build_twelve_split_spline_energy_system(initial_V: MatrixNx3f,
     # Build energy for the affine manifold (all below)
     energy: float
     derivatives: Vector2D  # shape (n, 1)
-    hessian: coo_matrix  # Using coo_matrix for now because CSR matrix solver is apparently too large for C++ vectors
+    hessian: csr_matrix
     hessian_inverse: CholeskySolverD
 
     # Build the inverse as well...
@@ -834,7 +844,7 @@ def optimize_twelve_split_spline_surface(
         he_to_corner: list[tuple[Index, Index]],
         variable_vertices: list[int],
         variable_edges: list[int],
-        fit_matrix: coo_matrix,
+        fit_matrix: csr_matrix,
         hessian_inverse: CholeskySolverD
 ) -> tuple[MatrixNx3, list[Matrix2x3r], list[list[SpatialVector1d]]]:
     """
@@ -925,7 +935,7 @@ def optimize_twelve_split_spline_surface(
 def generate_optimized_twelve_split_position_data(
     V: MatrixXf,
     affine_manifold: AffineManifold,
-    fit_matrix: coo_matrix,
+    fit_matrix: csr_matrix,
     hessian_inverse: CholeskySolverD,
     corner_data_ref: dict[int, dict[int, TriangleCornerData]],
     midpoint_data_ref: dict[int, dict[int, TriangleMidpointData]]

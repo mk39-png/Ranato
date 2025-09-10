@@ -129,13 +129,13 @@ def evaluate_quadratic_mapping(quadratic_coeffs: Matrix6x3f,
     return quadratic_evaluation
 
 
-# TODO: This is the same as the above, just remove this or something
-def evaluate_quadratic() -> None:
+def evaluate_quadratic(quadratic_coeffs: Vector6f, domain_point: PlanarPoint1d) -> float:
     """
     Function not used.
+    Aside from testing in test_parametrize_conic.py
     """
-    unimplemented(
-        "evaluate_quadratic() will not be implemented.  Use evaluate_quadratic_mapping() instead.")
+    w: Vector6f = generate_quadratic_monomials(domain_point)
+    return w @ quadratic_coeffs
 
 
 def evaluate_line(line_coeffs: Vector3f, domain_point: PlanarPoint1d) -> float:

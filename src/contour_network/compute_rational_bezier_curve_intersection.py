@@ -2,10 +2,9 @@ import copy
 import math
 
 import numpy as np
-from svg import Matrix
 
 from src.core.common import (Matrix5x3f, SpatialVector1d, Vector2f, Vector3f,
-                             Vector5f, float_equal, todo)
+                             Vector5f, float_equal)
 
 MAX_PRECISION = 1e-8
 MIN_CLIPPED_SIZE_THRESHOLD = 0.8
@@ -51,9 +50,23 @@ def _map_to(J: Interval_ink, I: Interval_ink) -> None:
     J.setEnds(J.valueAt(I.min()), J.valueAt(I.max()))
 
 
+def _float_equal_ink(a: float, b: float, eps: float = 1e-9) -> bool:
+    """
+    Use this method specifically for the inkscape code below.
+    This differs from the usual float_equal in that this uses eps = 1e-9 rather than
+    eps = 1e-10 by default.
+    """
+    if abs(a - b) < eps:
+        return True
+    return False
+
+
 def _point_equal(a: SpatialVector1d, b: SpatialVector1d, eps: float = 1e-6) -> bool:
-    aa: Vector2f = np.array([a[0] / a[2], a[1] / a[2]])
-    bb: Vector2f = np.array([b[0] / b[2], b[1] / b[2]])
+    assert a.shape == (3, )
+    assert b.shape == (3, )
+
+    aa: Vector2f = np.array([a[0] / a[2], a[1] / a[2]], dtype=np.float64)
+    bb: Vector2f = np.array([b[0] / b[2], b[1] / b[2]], dtype=np.float64)
     if np.linalg.norm(aa - bb) < eps:
         return True
     return False
@@ -72,32 +85,51 @@ def _middle_point(p1: SpatialVector1d, p2: SpatialVector1d) -> SpatialVector1d:
     return _lerp(0.5, p1s, p2s)
 
 
-def _is_constant(A: np.ndarray, precision: float = 1e-6) -> bool:
+def _is_constant(A: Matrix5x3f, precision: float = 1e-6) -> bool:
     """
-    Uses numpy
+    Uses original way of checking point_equal
     """
-    A = np.asarray(A)
-    return np.allclose(A, A[0], atol=precision)
+    assert A.shape == (5, 3)
+
+    for i in range(1, 5):
+        assert A[0, :].shape == (3, )
+        if not _point_equal(A[0, :], A[i, :], precision):
+            return False
+        # if not _point_equal(A[i], A[0], precision):
+            # return False
+    # A = np.asarray(A)
+    # return np.allclose(A, A[0], atol=precision)
+
+    return True
 
 
 def _is_constant_list(A: list[SpatialVector1d], precision: float = 1e-6) -> bool:
     """
-    Uses numpy
+    Uses original way of checking point_equal
     """
-    # A = np.asarray(A)
-    for a in A[1:]:
+    # # A = np.asarray(A)
+    # for a in A[1:]:
 
-        # FIXME: checking that NumPy implementation and C++ translation are both correct
-        assert np.allclose(a, a[0], atol=precision) == _point_equal(a, a[0], precision)
+    #     # FIXME: checking that NumPy implementation and C++ translation are both correct
+    #     assert np.allclose(a, a[0], atol=precision) == _point_equal(a, A[0], precision)
 
-        if not np.allclose(a, A[0], atol=precision):
+    #     if not np.allclose(a, A[0], atol=precision):
+    #         return False
+    # return True
+    for i in range(1, len(A)):
+        assert A[0].shape == (3, )
+        assert A[i].shape == (3, )
+
+        if not _point_equal(A[i], A[0], precision):
             return False
+
     return True
 
 
 def check_split_criteria(q: list[SpatialVector1d]) -> bool:
     """
-    Split rational curve
+    Split rational curve.
+    Only used in testing.
     """
     assert len(q) == 5
 
@@ -131,12 +163,19 @@ def _get_solutions(A: list[SpatialVector1d],
     """
 
     """
+    assert A[0].shape == (3, )
+    assert B[0].shape == (3, )
+
     domsA: list[Interval_ink] = []
     domsB: list[Interval_ink] = []
     unit_interval_1 = Interval_ink(0, 1)
     unit_interval_2 = Interval_ink(0, 1)
-    counter = 0
-    iterate(domsA, domsB, A, B, unit_interval_1, unit_interval_2, precision, counter)
+    counter: float = 0
+
+    #
+    # FIXME: for image_segment_index == 9, domsA and domsB are empty! which is really bad for us.
+    #
+    counter = iterate(domsA, domsB, A, B, unit_interval_1, unit_interval_2, precision, counter)
 
     if len(domsA) != len(domsB):
         assert len(domsA) == len(domsB)
@@ -150,21 +189,21 @@ def _get_solutions(A: list[SpatialVector1d],
 
 def _left_portion(t: float, B: list[SpatialVector1d]) -> None:
     """
+    Appears to be correct translation from C++ to Python
     """
     n: int = len(B)
     for i in range(1, n):
-        # FIXME: ensure proper translation between Python and C++ for loop
         for j in range(n - 1, i - 1, -1):
             B[j] = _lerp(t, B[j - 1], B[j])
 
 
 def _right_portion(t: float, B: list[SpatialVector1d]) -> None:
     """
+    Appears to be correct translation from C++ to Python
     """
     n: int = len(B)
     for i in range(1, n):
-        # FIXME ensure proper translation of C++ code
-        for j in range(n - 1):
+        for j in range(n - i):
             B[j] = _lerp(t, B[j], B[j + 1])
 
 
@@ -172,38 +211,40 @@ def _portion(B: list[SpatialVector1d], I: Interval_ink) -> None:
     """
     Modifies B
     """
-    if float_equal(I.min(), 0.0):
-        if float_equal(I.max(), 1.0):
+    if _float_equal_ink(I.min(), 0.0):
+        if _float_equal_ink(I.max(), 1.0):
             return
         _left_portion(I.max(), B)
         return
     _right_portion(I.min(), B)
-    if float_equal(I.max(), 1.0):
+    if _float_equal_ink(I.max(), 1.0):
         return
     t: float = I.extent() / (1 - I.min())
     _left_portion(t, B)
 
-
+# *****************
 # Clip fatline
+# *****************
+
 
 def _fatline(Q: Matrix5x3f,
              L_min: Vector3f,
              L_max: Vector3f) -> None:
-    """
+    """Method appears to be working OK
     """
     assert Q.shape == (5, 3)
     assert L_min.shape == (3, )
     assert L_max.shape == (3, )
 
     nQ: int = 5
-    L: Vector3f = np.zeros(shape=(3, ))
-    # TODO: ensure the below cross works same as cross3 in C++ code
+    L: Vector3f = np.zeros(shape=(3, ), dtype=np.float64)
+    # NOTE: yes, np.cross works like the original C++ code
     L = np.cross(Q[0], Q[nQ - 1])
     assert L.shape == (3, )
     cmin: float = L[2]
     cmax: float = L[2]
     for i in range(2, nQ + 1):
-        c = -Q[i - 1][0] * L[0] - Q[i - 1][1] * L[1]
+        c: float = -Q[i - 1][0] * L[0] - Q[i - 1][1] * L[1]
         cmin = min(cmin, c)
         cmax = max(cmax, c)
     L_min[0] = -L[0]
@@ -223,16 +264,16 @@ def _clipline(P: Matrix5x3f,
     nP: int = 5
     nPf: float = float(nP - 1)
 
-    E0: Vector3f = np.array([0,  np.dot(L, P[0]), 1])
-    En: Vector3f = np.array([1, np.dot(L, P[nP - 1]), 1])
-    Ei: Vector3f = np.ndarray(shape=(3, ))
-    L0i: Vector3f = np.zeros((3, ))
-    Lni: Vector3f = np.zeros((3, ))
-    V0i: Vector3f = np.zeros((3, ))
-    Vni: Vector3f = np.zeros((3, ))
-    v0x: Vector5f = np.zeros((5, ))
-    vnx: Vector5f = np.zeros((5, ))
-    ey: Vector3f = np.array([0, 1, 0])
+    E0: Vector3f = np.array([0,  np.dot(L, P[0]), 1], dtype=np.float64)
+    En: Vector3f = np.array([1, np.dot(L, P[nP - 1]), 1], dtype=np.float64)
+    Ei: Vector3f = np.ndarray(shape=(3, ), dtype=np.float64)
+    L0i: Vector3f = np.zeros((3, ), dtype=np.float64)
+    Lni: Vector3f = np.zeros((3, ), dtype=np.float64)
+    V0i: Vector3f = np.zeros((3, ), dtype=np.float64)
+    Vni: Vector3f = np.zeros((3, ), dtype=np.float64)
+    v0x: Vector5f = np.zeros((5, ), dtype=np.float64)
+    vnx: Vector5f = np.zeros((5, ), dtype=np.float64)
+    ey: Vector3f = np.array([0, 1, 0], dtype=np.float64)
     t1: float
     t2: float
 
@@ -262,7 +303,7 @@ def _clipline(P: Matrix5x3f,
         t2 = 0.1e1
     else:
         t2 = 0.0
-        for j in range(1, nP):
+        for j in range(1, nP):  # FIXME: does this translate from j = 1; j <= nP; j++?
             if vnx[j - 1] < 0.1e1:
                 t2 = max(t2, vnx[j - 1])
 
@@ -292,7 +333,7 @@ def _clipfatline(P: Matrix5x3f,
     L_max: Vector3f = np.zeros(shape=(3, ))
     t_min: Vector2f = np.zeros(shape=(2, ))
     t_max: Vector2f = np.zeros(shape=(2, ))
-
+    # FIXME: iter 10 for image_segment_index 9 SHOULD ENTER THIS IF AND NOT GO INTO FATLINE ELSE STATEMENT
     if _is_constant(Q, precision):
         if _is_constant(P, precision):
             clip_range[0] = 0
@@ -315,7 +356,8 @@ def _clipfatline(P: Matrix5x3f,
         _fatline(Q, L_min, L_max)
 
     _clipline(P, L_min, t_min)
-    _clipline(P, L_min, t_min)
+    _clipline(P, L_max, t_max)
+    # FIXME: the below gets executed by the machine....
     if t_min[0] == -0.1e1 or t_max[0] == -0.1e1:
         clip_range[0] = -1
         clip_range[1] = -1
@@ -323,13 +365,17 @@ def _clipfatline(P: Matrix5x3f,
         clip_range[0] = max(t_max[0], t_min[0])
         clip_range[1] = min(t_min[1], t_max[1])
 
+# *****************
+# InkScope code
+# *****************
+
 
 def iterate(domsA: list[Interval_ink],
             domsB: list[Interval_ink],
-            A: list[SpatialVector1d],
-            B: list[SpatialVector1d],
-            domA: Interval_ink,
-            domB: Interval_ink,
+            A_const: list[SpatialVector1d],
+            B_const: list[SpatialVector1d],
+            domA_const: Interval_ink,
+            domB_const: Interval_ink,
             precision: float,
             counter: float) -> float:
     """
@@ -350,8 +396,11 @@ def iterate(domsA: list[Interval_ink],
     :return counter:
     """
     # Base case in order to limit recursion
-    if (float_equal(domA.extent(), 1.0) and float_equal(domB.extent(), 1.0)):
+    # FIXME: extra part from C++ implementation, maybe not needed
+    if (_float_equal_ink(domA_const.extent(), 1.0) and _float_equal_ink(domB_const.extent(), 1.0)):
         counter = 0
+
+    # FIXME: potentially bad translation below...
     counter += 1
     if counter > 100:
         return counter
@@ -359,25 +408,25 @@ def iterate(domsA: list[Interval_ink],
     if precision < 1e-8:
         precision = 1e-8
 
-    pA: list[SpatialVector1d] = copy.deepcopy(A)
-    pB: list[SpatialVector1d] = copy.deepcopy(B)
+    pA: list[SpatialVector1d] = copy.deepcopy(A_const)
+    pB: list[SpatialVector1d] = copy.deepcopy(B_const)
     C1: list[SpatialVector1d] = pA
     C2: list[SpatialVector1d] = pB
-    dompA: Interval_ink = copy.deepcopy(domA)
-    dompB: Interval_ink = copy.deepcopy(domB)
+    dompA: Interval_ink = copy.deepcopy(domA_const)  # FIXME: does class deepcopy even work?
+    dompB: Interval_ink = copy.deepcopy(domB_const)
     dom1: Interval_ink = dompA
     dom2: Interval_ink = dompB
 
-    if _is_constant_list(A, precision) and _is_constant_list(B, precision):
+    if _is_constant_list(A_const, precision) and _is_constant_list(B_const, precision):
         m1: SpatialVector1d = _middle_point(C1[0], C1[-1])
         m2: SpatialVector1d = _middle_point(C2[0], C2[-1])
         if _point_equal(m1, m2):
-            domsA.append(domA)
-            domsB.append(domB)
+            domsA.append(copy.deepcopy(domA_const))  # FIXME: potentially deep copy needed
+            domsB.append(copy.deepcopy(domB_const))
         return counter
 
     iteration = 0
-    while (iteration + 1) < 100 and (dompA.extent() >= precision or dompB.extent() >= precision):
+    while ((iteration + 1) < 100) and (dompA.extent() >= precision or dompB.extent() >= precision):
         iteration += 1
 
         # Convert list[SpatialVector] to Matrix5x3f
@@ -394,13 +443,13 @@ def iterate(domsA: list[Interval_ink],
             Q[i][0] = C2[i][0]
             Q[i][1] = C2[i][1]
             Q[i][2] = C2[i][2]
-
+        # FIXME: the function below is messing up on iteration 10 for image_segment_index 9
         _clipfatline(Q, P, clip_range, precision)
 
         # FIXME: potentially bad translation...
         dom: Interval_ink = Interval_ink(clip_range[0], clip_range[1])
 
-        if (float_equal(dom.max(), -1) and float_equal(dom.min(), -1)):
+        if (_float_equal_ink(dom.max(), -1) and _float_equal_ink(dom.min(), -1)):
             return counter
 
         # All other cases where dom[0] > dom[1] are invalid
@@ -420,6 +469,8 @@ def iterate(domsA: list[Interval_ink],
 
         # if we have clipped less than 20% than we need to subdive the curve
         # with the largest domain into two sub-curves
+
+        # FIXME: check if modification by reference.
         H1_INTERVAL = Interval_ink(0, 0.5)
         H2_INTERVAL = Interval_ink(np.nextafter(0.5, 1.0), 1.0)
         if dom.extent() > MIN_CLIPPED_SIZE_THRESHOLD:
@@ -428,12 +479,16 @@ def iterate(domsA: list[Interval_ink],
             dompC1: Interval_ink
             dompC2: Interval_ink
             if dompA.extent() > dompB.extent():
+
+                # FIXME, testing without deepcopy...
+                # pC1 = pC2 = pA
                 pC1 = copy.deepcopy(pA)
                 pC2 = copy.deepcopy(pA)
                 _portion(pC1, H1_INTERVAL)
                 _portion(pC2, H2_INTERVAL)
                 dompC1 = copy.deepcopy(dompA)
                 dompC2 = copy.deepcopy(dompA)
+                # dompC1 = dompC2 = dompA
                 _map_to(dompC1, H1_INTERVAL)
                 _map_to(dompC2, H2_INTERVAL)
                 counter = iterate(domsA, domsB, pC1, pB, dompC1, dompB, precision, counter)
@@ -441,8 +496,10 @@ def iterate(domsA: list[Interval_ink],
             else:
                 pC1 = copy.deepcopy(pB)
                 pC2 = copy.deepcopy(pB)
+                # pC1 = pC2 = pB
                 _portion(pC1, H1_INTERVAL)
                 _portion(pC2, H2_INTERVAL)
+                # dompC1 = dompC2 = dompB
                 dompC1 = copy.deepcopy(dompB)
                 dompC2 = copy.deepcopy(dompB)
                 _map_to(dompC1, H1_INTERVAL)
@@ -451,10 +508,11 @@ def iterate(domsA: list[Interval_ink],
                 counter = iterate(domsB, domsA, pC2, pA, dompC2, dompA, precision, counter)
             return counter
 
+        # TODO: does this swapping even work?
         C1, C2 = C2, C1
         dom1, dom2 = dom2, dom1
-
-    domsA.append(dompB)
+    # At iteration 10 for image_segment_index == 9, the below return statement should be met...
+    domsA.append(dompA)
     domsB.append(dompB)
     return counter
 
@@ -473,7 +531,7 @@ def find_intersections_bezier_clipping(
 def _split_bezier_curve(p: list[SpatialVector1d], t: float) -> tuple[list[SpatialVector1d],
                                                                      list[SpatialVector1d]]:
     """
-
+    Only used in testing.
     """
     q: list[SpatialVector1d] = [np.zeros((3, )),
                                 np.zeros((3, )),
@@ -516,6 +574,7 @@ def split_bezier_curve_no_self_intersection(p: list[SpatialVector1d],
                                             split_point_params_ref: list[float]) -> None:
     """
     Recursive function.
+    Only used in testing.
     """
     if check_split_criteria(p):
         return

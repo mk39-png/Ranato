@@ -7,8 +7,9 @@ import numpy as np
 
 from src.core.bivariate_quadratic_function import \
     formatted_bivariate_quadratic_mapping
-from src.core.common import (Matrix2x2f, Matrix3x2f, Matrix6xNi, PlanarPoint1d,
-                             Vector1D, Vector2D, Vector3f, logger)
+from src.core.common import (COLS, Matrix2x2f, Matrix3x2f, Matrix6xNi,
+                             PlanarPoint1d, Vector1D, Vector2D, Vector3f,
+                             logger)
 from src.core.interval import Interval
 from src.core.polynomial_function import (compute_polynomial_mapping_product,
                                           formatted_polynomial)
@@ -33,66 +34,67 @@ class Conic(RationalFunction):
     """
     Explicit representation of a conic segment
     """
-    __m_type: ConicType
 
     # ************
     # Constructors
     # ************
-    # def __init__(self, m_type=ConicType.UNKNOWN, *args, **kwargs) -> None:
-    #     super().__init__(2, 2, *args, **kwargs)
-    #     self.m_type: ConicType = m_type
-    #     assert self.__is_valid()
-    # FIXME: double check that the parameters to the constructor are OK
     def __init__(self,
                  m_type=ConicType.UNKNOWN,
-                 numerator_coeffs: np.ndarray | None = None,
-                 denominator_coeffs: np.ndarray | None = None,
+                 numerator_coeffs: Matrix3x2f | None = None,
+                 denominator_coeffs: Vector3f | None = None,
                  domain: Interval | None = None) -> None:
         """
         Constructor for Conic class.
         NOTE: Conic has degree == 2 and dimension == 2.
+
+        :param numerator_coeffs: shape (3, 2)
+        :param denominator_coeffs: shape (3, ) 
         """
         super().__init__(2, 2, numerator_coeffs, denominator_coeffs, domain)
-        self.m_type: ConicType = m_type
+        self.__type: ConicType = m_type
         assert self.__is_valid()
 
     # ******
     # PUBLIC
     # ******
+    @property
+    def type(self) -> ConicType:
+        """
+        Get the type (e.g. hyperbola, line, etc.) of the conic.
 
-    def get_type(self) -> ConicType:
+        :return: type identifier
         """
-        @brief Get the type (e.g. hyperbola, line, etc.) of the conic.
-        @return type identifier
-        """
-        return self.__m_type
+        return self.__type
 
     def transform(self, rotation: Matrix2x2f, translation: PlanarPoint1d) -> None:
         """
         NOTE: assumes row vector points... somewhat.
         """
         assert rotation.shape == (2, 2)
+        assert translation.shape == (2, )
 
         # HACK: forcing translation to 1D shape
         # FIXME: potentially bad C++ translation with 2D array now 1D
         assert translation.ndim == 1
         # assert translation.shape == (1, 2)
 
-        P_rot_coeffs: np.ndarray = self.numerators @ rotation + self.denominator @ translation
+        # (3, 2) @ (2, 2) + (3, 1) @ (1, 2)
+        P_rot_coeffs: Matrix3x2f = (self.numerators @ rotation +
+                                    (self.denominator.reshape(3, 1) @ translation.reshape(1, 2)))
         assert P_rot_coeffs.shape == (3, 2)
         self.numerators = P_rot_coeffs
 
     def pullback_quadratic_function(self, dimension: int,
                                     F_coeffs_ref: Vector1D | Matrix6xNi) -> RationalFunction:
         """
-
+        Compute the pulled back rational function numerator.
         """
         F_coeffs: Matrix6xNi = F_coeffs_ref.reshape((6, dimension))
         assert F_coeffs.shape == (6, dimension)
         assert F_coeffs.dtype == np.float64
 
-        logger.info("Pulling back conic by quadratic function %s",
-                    formatted_bivariate_quadratic_mapping(dimension, F_coeffs))
+        logger.debug("Pulling back conic by quadratic function %s",
+                     formatted_bivariate_quadratic_mapping(dimension, F_coeffs))
 
         # Separate the individual polynomial coefficients from the rational function
         P_coeffs: Matrix3x2f = self.numerators
@@ -104,11 +106,11 @@ class Conic(RationalFunction):
         assert v_coeffs.shape == (3, )
         assert Q_coeffs.shape == (3, )
 
-        logger.info("u function before pullback: (%s)/(%s)",
-                    u_coeffs, Q_coeffs)
+        logger.debug("u function before pullback: (%s)/(%s)",
+                     u_coeffs, Q_coeffs)
 
-        logger.info("v function before pullback: (%s)/(%s)",
-                    v_coeffs, Q_coeffs)
+        logger.debug("v function before pullback: (%s)/(%s)",
+                     v_coeffs, Q_coeffs)
         # formatted_polynomial(self.get_degree, self.get_dimension, u_coeffs),
         # formatted_polynomial(self.get_degree, self.get_dimension, Q_coeffs))
 
@@ -145,18 +147,18 @@ class Conic(RationalFunction):
                                     uu_coeffs,
                                     vv_coeffs]).T
         assert monomial_coeffs.shape == (5, 6)
-        logger.info("Monomial coefficients matrix:\n%s", monomial_coeffs)
+        logger.debug("Monomial coefficients matrix:\n%s", monomial_coeffs)
 
         # Compute the pulled back rational function numerator
-        logger.info("Quadratic coefficient matrix:\n%s", F_coeffs)
+        logger.debug("Quadratic coefficient matrix:\n%s", F_coeffs)
         pullback_coeffs = monomial_coeffs @ F_coeffs
         assert pullback_coeffs.shape == (5, dimension)
 
-        logger.info("Pullback numerator: %s",
-                    pullback_coeffs)
+        logger.debug("Pullback numerator: %s",
+                     pullback_coeffs)
         # formatted_polynomial(self.get_degree, self.get_dimension, pullback_coeffs))
-        logger.info("Pullback denominator: %s",
-                    QQ_coeffs)
+        logger.debug("Pullback denominator: %s",
+                     QQ_coeffs)
         # formatted_polynomial(self.get_degree, self.get_dimension, QQ_coeffs))
 
         # XXX: domain() is in the C++. Meanwhile, Python code here uses self.m_domain...
@@ -180,18 +182,21 @@ class Conic(RationalFunction):
         return True
 
     def formatted_conic(self) -> str:
+        """
+        Return the string representation of the Conic object.
+        """
         conic_string: str = "1/("
         conic_string += formatted_polynomial(2, 1, self.m_denominator_coeffs)
-        conic_string += ") [\n "
+        conic_string += ") [\n  "
 
         # Going through rows of m_numerator_coeffs
-        for i in self.m_numerator_coeffs.shape[1]:
-            conic_string += formatted_polynomial(2,
-                                                 1, self.m_numerator_coeffs[:, i])
-            conic_string += ", \n "
+        for i in range(self.m_numerator_coeffs.shape[COLS]):
+            # conic_string += f"{self.m_numerator_coeffs[:, i]}"
+            conic_string += formatted_polynomial(2, 1, self.m_numerator_coeffs[:, i])
+            conic_string += ",\n  "
 
         conic_string += "], t in "
-        conic_string += self.domain.formatted_interval()
+        conic_string += self.m_domain.formatted_interval()
 
         return conic_string
 

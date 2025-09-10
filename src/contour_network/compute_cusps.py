@@ -128,7 +128,7 @@ def compute_spline_surface_cusp_functions(spline_surface: QuadraticSplineSurface
     return cusp_functions
 
 
-def _tangent_x(px: Vector6f, py: Vector6f) -> Vector6f:
+def tangent_x(px: Vector6f, py: Vector6f) -> Vector6f:
     """
     Calculates the coefficients of the tangent of the x and y coefficients 
     of the normalized surface mappings.
@@ -341,18 +341,21 @@ def _compute_cusp_by_one_patch(spline_surface_patch: QuadraticSplineSurfacePatch
     assert px.shape == (6, )
     assert py.shape == (6, )
 
-    tx: Vector6f = _tangent_x(px, py)
+    #
+    # FIXME: tx and ty look correct for the first iteration that compute_cusp_by_one_patch() is called
+    #
+    tx: Vector6f = tangent_x(px, py)
     ty: Vector6f = _tangent_y(px, py)
     assert tx.shape == (6, )
     assert ty.shape == (6, )
 
     # Normalized solution
     num_solutions: int
-    solutions: list[PlanarPoint1d]  # length 4
+    solutions: list[PlanarPoint1d]  # length 4  # FIXME: now it is correct below.
     num_solutions, solutions = solve_quadratic_quadratic_equation_pencil_method(tx, ty)
 
     solutions_in_domain: list[PlanarPoint1d] = []
-    # Check whether the solution is inside the domain
+    # Check whether the solution is inside the domain # FIXME: below loop looks good! works good for i == 285
     for i in range(num_solutions):
         u: float = solutions[i][0]
         v: float = solutions[i][1]
@@ -472,7 +475,7 @@ def _compute_cusp_start_end_points(spline_surface: QuadraticSplineSurface,
         py: Vector6f = surface_mapping[:, 1]
         pz: Vector6f = surface_mapping[:, 2]
 
-        tx: Vector6f = _tangent_x(px, py)
+        tx: Vector6f = tangent_x(px, py)
         ty: Vector6f = _tangent_y(px, py)
         nx: Vector6f = _normal_x(py, pz, )
         ny: Vector6f = _normal_y(px, pz, )
@@ -520,7 +523,7 @@ def _compute_boundary_cusps(cusp_function_start_points: list[float],
     has_cusp_at_tip: list[bool] = [False] * num_segments
 
     for i in range(num_closed_contours):
-        for j, _ in enumerate(closed_contours):
+        for j, _ in enumerate(closed_contours[i]):
             # Get cusp function values around the boundary....
             current_segment: PatchIndex = closed_contours[i][j]
             next_segment: int = closed_contours[i][(j + 1) % len(closed_contours[i])]
@@ -560,14 +563,16 @@ def compute_spline_surface_cusps(spline_surface: QuadraticSplineSurface,
     :param contour_segments: [in] surface contour segments
     :param patch_indices:    [in] spline surface patch indices for the contour segments
     :param closed_contours:  [in] list of indices of segments for complete surface contours
+
     :return interior_cusps: paramater points of interior cusps per contour segment
     :return boundary_cusps: paramater points of boundary cusps per contour segment
     :return has_cusp_at_base: boolean per contour segment indicating if a cusp is at the base
     :return has_cusp_at_tip: boolean per contour segment indicating if a cusp is at the tip
     """
     # lazy check
-    assert contour_segments[0].degree == 4
-    assert contour_segments[0].dimension == 3
+    assert (contour_domain_curve_segments[0].degree,
+            contour_domain_curve_segments[0].dimension) == (2, 2)
+    assert (contour_segments[0].degree, contour_segments[0].dimension) == (4, 3)
 
     interior_cusps: list[list[float]] = []
     boundary_cusps: list[list[float]] = []
@@ -575,11 +580,13 @@ def compute_spline_surface_cusps(spline_surface: QuadraticSplineSurface,
     has_cusp_at_tip: list[bool] = []
 
     # Interior conics
+    # FIXME: loop below looks good for spot_control
     for i, _ in enumerate(contour_domain_curve_segments):
         cusp: list[float] = _compute_cusp_by_one_patch(spline_surface.get_patch(patch_indices[i]),
                                                        contour_domain_curve_segments[i])
         interior_cusps.append(cusp)
 
+    # FIXME: function below looks good.
     # Compute cusp function endpoints
     function_start_points: list[float]
     function_end_points: list[float]
@@ -593,6 +600,7 @@ def compute_spline_surface_cusps(spline_surface: QuadraticSplineSurface,
                                                                  patch_indices)
 
     # Compute boundary cusps
+    # FIXME: function below looks good.
     (boundary_cusps,
      has_cusp_at_base,
      has_cusp_at_tip) = _compute_boundary_cusps(function_start_points,
@@ -602,3 +610,68 @@ def compute_spline_surface_cusps(spline_surface: QuadraticSplineSurface,
                                                 closed_contours)
 
     return interior_cusps, boundary_cusps, has_cusp_at_base, has_cusp_at_tip
+
+
+# ****************************
+# Exposing methods for testing
+# ****************************
+
+def compute_cusp_by_one_patch_testing(spline_surface_patch: QuadraticSplineSurfacePatch,
+                                      contour_domain_curve_segment: Conic) -> list[float]:
+    """
+    Exposed method for testing
+    """
+    cusp: list[float] = _compute_cusp_by_one_patch(spline_surface_patch,
+                                                   contour_domain_curve_segment)
+    return cusp
+
+
+def compute_cusp_start_end_points_testing(spline_surface: QuadraticSplineSurface,
+                                          contour_domain_curve_segments: list[Conic],
+                                          patch_indices: list[PatchIndex]) -> tuple[list[float],
+                                                                                    list[float],
+                                                                                    list[float],
+                                                                                    list[float]]:
+    """
+    Exposing method for testing
+    """
+    function_start_points: list[float]
+    function_end_points: list[float]
+    function_start_points_param: list[float]
+    function_end_points_param: list[float]
+
+    (function_start_points,
+     function_end_points,
+     function_start_points_param,
+     function_end_points_param) = _compute_cusp_start_end_points(spline_surface,
+                                                                 contour_domain_curve_segments,
+                                                                 patch_indices)
+    return (function_start_points,
+            function_end_points,
+            function_start_points_param,
+            function_end_points_param)
+
+
+def compute_boundary_cusps_testing(function_start_points: list[float],
+                                   function_end_points: list[float],
+                                   function_start_points_param: list[float],
+                                   function_end_points_param: list[float],
+                                   closed_contours: list[list[int]]) -> tuple[list[list[float]],
+                                                                              list[bool],
+                                                                              list[bool]]:
+    """
+    Exposing method for testing
+    """
+    boundary_cusps: list[list[float]] = []
+    has_cusp_at_base: list[bool] = []
+    has_cusp_at_tip: list[bool] = []
+
+    (boundary_cusps,
+     has_cusp_at_base,
+     has_cusp_at_tip) = _compute_boundary_cusps(function_start_points,
+                                                function_end_points,
+                                                function_start_points_param,
+                                                function_end_points_param,
+                                                closed_contours)
+
+    return boundary_cusps, has_cusp_at_base, has_cusp_at_tip

@@ -51,5 +51,3 @@ class IntersectionData():
         @param[in] eps: epsilon tolerance for the check
         """
         self.is_base = float_equal(domain_ref.lower_bound, self.knot, eps)
-
-# TODO: is knot_less_than struct needed?

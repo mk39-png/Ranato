@@ -59,30 +59,29 @@ def _solve_linear_quadratic(a_in: Vector6f, b_in: Vector6f, threshold: float) ->
     """
     uu vv uv 1 u v
 
+    # FIXME: isn't there a numpy solution for this?
+
     :return: num_solution
     :return: solution
     """
     assert a_in.shape == (6, )
     assert b_in.shape == (6, )
-    num_solution: int = 0
-    solution: Matrix2x2f = np.zeros((2, 2), dtype=np.float64)
 
-    # quadratic_coefficients: Vector3f = np.zeros((3, ), dtype=np.float64)
-    # v_solution: Vector2f = np.zeros(shape=(2, ), dtype=np.float64)
-    # u_solution: Vector2f = np.zeros(shape=(2, ), dtype=np.float64)
-    a: Vector6f = np.zeros((6, ), dtype=np.float64)
-    b: Vector6f = np.zeros((6, ), dtype=np.float64)
+    num_solution: int = 0
+    solution: Matrix2x2f = np.zeros(shape=(2, 2), dtype=np.float64)
+    a: Vector6f = np.zeros(shape=(6, ), dtype=np.float64)
+    b: Vector6f = np.zeros(shape=(6, ), dtype=np.float64)
     ma: float = a_in[0]
     mb: float = b_in[0]
 
-    for i in range(2, len(a_in) + 1):
+    # FIXME: optimize below with vectorization (AFTER DONE IMPLEMENTING EVERYTHING)
+    for i in range(2, a_in.size + 1):
         ma = max(abs(a_in[i - 1]), ma)
         mb = max(abs(b_in[i - 1]), mb)
-
     if ma < threshold or mb < threshold:
         return num_solution, solution
     else:
-        for i in range(1, len(a_in) + 1):
+        for i in range(1, a_in.size + 1):
             a[i - 1] = a_in[i - 1] / ma
             b[i - 1] = b_in[i - 1] / mb
 
@@ -136,15 +135,20 @@ def pencil_first_part(coeff_F: Vector6f,
                       coeff_G: Vector6f) -> tuple[bool, int, list[PlanarPoint1d]]:
     """
     FIXME: this method is likeliest to fail
+    FIXME: test with ASOC code first! As in, go through ASOC debugger to grab values for comparison
+    FIXME: do this by grabbing each part to compare and whatnot.
+
+
+    FIXME: just like I said.
+    Check the outputs of this method with others.
     """
     assert coeff_F.shape == (6, )
     assert coeff_G.shape == (6, )
-    num_intersections: int = 0
-    intersection_points: list[PlanarPoint1d] = [np.zeros((2, ), dtype=np.float64),
-                                                np.zeros((2, ), dtype=np.float64),
-                                                np.zeros((2, ), dtype=np.float64),
-                                                np.zeros((2, ), dtype=np.float64)]
+    intersection_points: list[PlanarPoint1d] = [np.zeros((2, ), dtype=np.float64)
+                                                for _ in range(MAX_PATCH_RAY_INTERSECTIONS)]
     assert len(intersection_points) == MAX_PATCH_RAY_INTERSECTIONS
+
+    num_intersections: int = 0
     coeff_threshold: float = 1e-10
 
     F_linear: bool = False
@@ -157,7 +161,7 @@ def pencil_first_part(coeff_F: Vector6f,
         G_linear = True
 
     # Different cases
-    if (F_linear and G_linear):
+    if F_linear and G_linear:
         # Case both linear
         d: float = coeff_F[4] * coeff_G[5] - coeff_F[5] * coeff_G[4]
         if abs(d) > coeff_threshold:
@@ -225,11 +229,14 @@ def pencil_first_part(coeff_F: Vector6f,
             return False, num_intersections, intersection_points
 
     # else, F and G both quadratic
+
     #  input F = a uu + b vv + c + d uv + e u + f v
     #  input G = l uu + m vv + n + o uv + p u + q v
+
     #  code convention
     #  F = a uu + b vv + c + 2d uv + 2e u + 2f v
     #  G = l uu + m vv + n + 2o uv + 2p u + 2q v
+
     #  so the each last 3 inputs should be divided by 2
     intersection_flag: bool = False
     a: float = coeff_F[0]
@@ -261,11 +268,11 @@ def pencil_first_part(coeff_F: Vector6f,
     cubic_real_roots: Vector3f = np.zeros((3, ), dtype=np.float64)
 
     # FIXME: check behavior with C++ code below since dealing with imaginary numbers...
-
+    # AS in, make a test case for this.
     # Check if a3 = 0
     if abs(a3) < coeff_threshold:
         # Quadratic equation
-        quadratic: Vector3f = np.array([a2, a1, a0], np.float64)
+        quadratic: Vector3f = np.array([a2, a1, a0], dtype=np.float64)
         solution: Vector2f
         num_solution, solution = _solve_quadratic(quadratic, coeff_threshold)
         assert quadratic.shape == (3, )
@@ -275,29 +282,22 @@ def pencil_first_part(coeff_F: Vector6f,
             num_cubic_real_roots += 1
     else:
         # Solve cubic
-        # FIXME: ordering of coefficients in NumPy versus Eigen ordering
+        # FIXME: cubic_coeffs order and values looks good for the first iteration of
+        #        pencil_first_part
         cubic_coeffs: Vector4f = np.array([a0, a1, a2, a3], dtype=np.float64)
         assert cubic_coeffs.shape == (4, )
 
-        # TODO: double check conversion from C++ to NumPy code
-        # TODO: use polynomial real roots method
-        # XXX:  NumPy polynomial solver expects coefficients in ascending order.
-        # so lowest degree is first
-        cubic_solver = np.polynomial.Polynomial(cubic_coeffs[::-1])
-        cubic_roots: np.ndarray = cubic_solver.roots()
-        assert cubic_roots.shape == (3, )
+        # XXX:  NumPy polynomial solver expects roots in ascending order, so lowest degree is first
+        cubic_solver = np.polynomial.Polynomial(cubic_coeffs)
+        cubic_roots: np.ndarray = cubic_solver.roots()[::-1]
+        assert cubic_roots.shape == (3, )  # FIXME: indexing  ::-1 since the roots must be in ascending order
 
         # Check real roots
         imag_threshold: float = 1e-12
         for i in range(3):
-            if abs(cubic_roots.imag[i] < imag_threshold):
-                cubic_real_roots[0] = cubic_roots.real[i]
+            if abs(cubic_roots.imag[i]) < imag_threshold:
+                cubic_real_roots[num_cubic_real_roots] = cubic_roots.real[i]
                 num_cubic_real_roots += 1
-
-        # FIXME: ensuring Numpy implementation same as Eigen
-        cubic_roots_test = polynomial_real_roots(cubic_coeffs,
-                                                 imag_tolerance=imag_threshold)
-        np.testing.assert_allclose(cubic_real_roots, cubic_roots_test)
 
     if num_cubic_real_roots == 0:
         # No real root
@@ -325,6 +325,7 @@ def pencil_first_part(coeff_F: Vector6f,
         E = e * x + p
         F = f * x + q
 
+        # FIXME: MISSING BIG ELSE STATEMENT WHAT
         if abs(A) < abs(B):
             A /= B
             C /= B
@@ -374,17 +375,17 @@ def pencil_first_part(coeff_F: Vector6f,
                 else:
                     discriminant: float = (c1 * c1) - 4.0 * (c0 * c2)
                     if 0.0 <= discriminant:
-                        quadratic_coeffs = np.array([c2, c1, c0], dtype=np.float64)
+                        quadratic_coeffs: Vector3f = np.array([c2, c1, c0], dtype=np.float64)
 
                         # XXX:  NumPy polynomial solver expects coefficients in ascending order.
-                        # so lowest degree is first
-                        quadratic_solver = np.polynomial.Polynomial(quadratic_coeffs[::-1])
-                        quadratic_roots: np.ndarray = quadratic_solver.roots()
+                        #  so lowest degree is first.
+                        # But, flipping the order of the roots to be matching the C++ code's Eigen
+                        #  implementation.
+                        quadratic_solver = np.polynomial.Polynomial(quadratic_coeffs)
+                        quadratic_roots: np.ndarray = quadratic_solver.roots()[::-1]
                         assert quadratic_roots.shape == (2, )
 
-                        # FIXME: ensure that NumPy implementation is same as Eigen
-                        # quadratic_roots_test =
-                        # polynomial_real_roots(quadratic_coeffs, )
+                        # with line i
                         for i in range(2):
                             u = quadratic_roots.real[i]
                             v = g * u + h
@@ -395,10 +396,74 @@ def pencil_first_part(coeff_F: Vector6f,
                                                                                   dtype=np.float64)
                                 num_intersections += 1
                                 intersection_flag = True
+        else:
+            B /= A
+            C /= A
+            D /= A
+            E /= A
+            F /= A
+            A = 1.0
+            sqrtB: float = math.sqrt(D * D - B)
+            sqrtC = math.sqrt(E * E - C)
+            lb1: float = D + sqrtB
+            lb2: float = D - sqrtB
+            lc1 = E + sqrtC
+            lc2 = E - sqrtC
+
+            if (abs((2.0 * F) - (lb1 * lc1 + lb2 * lc2)) <
+                    abs((2.0 * F) - (lb1 * lc2 + lb2 * lc1))):
+                tmp = lc1
+                lc1 = lc2
+                lc2 = tmp
+
+            # quadratic equation: c0 vv + c1 v + c2 = 0  c0 c1 c2 g h
+            for i in range(2):
+                g = -lb1 if (i == 0) else -lb2
+                h = -lc1 if (i == 0) else -lc2
+                c0 = b + (2.0 * d + a * g) * g
+                c1 = 2.0 * ((d + a * g) * h + f + e * g)
+                c2 = (a * h + 2.0 * e) * h + c
+
+                if ((0.0 < c0) and (((0.0 < c1) and (0.0 < c2)) or
+                                    ((0.0 > c2) and (0.0 > c0 + c1 + c2)))):
+                    continue
+                if ((0.0 > c0) and (((0.0 > c1) and (0.0 > c2)) or
+                                    ((0.0 < c2) and (0.0 < c0 + c1 + c2)))):
+                    continue
+
+                if (0.00000000001 > abs(c0)):
+                    if (0.00000000001 < abs(c1)):
+                        v: float = -c2 / c1
+                        u: float = g * v + h
+                        w: float = 1.0 - (u + v)
+                        if (0.0 <= u and 0.0 <= v and 0.0 <= w):
+                            intersection_points[num_intersections] = np.array([u, v],
+                                                                              dtype=np.float64)
+                            num_intersections += 1
+                            intersection_flag = True
+                else:
+                    discriminant = (c1 * c1) - 4.0 * (c0 * c2)
+                    if 0.0 <= discriminant:
+                        quadratic_coeffs: Vector3f = np.array([c2, c1, c0], dtype=np.float64)
+                        quadratic_solver = np.polynomial.Polynomial(quadratic_coeffs)
+                        quadratic_roots: np.ndarray = quadratic_solver.roots()[::-1]
+
+                        # with line i
+                        for i in range(2):
+                            v = quadratic_roots.real[i]
+                            u = g * v + h
+                            w = 1.0 - (u + v)
+
+                            if (0.0 <= u and 0.0 <= v and 0.0 <= w):
+                                intersection_points[num_intersections] = np.array([u, v],
+                                                                                  dtype=np.float64)
+                                num_intersections += 1
+                                intersection_flag = True
+
     else:
         # Ellipsoid with zero area
         return False, num_intersections, intersection_points
-
+    # FIXME: jumped to asset at  i == 285.... cuz I didnt have the else statement after if absA < absB
     assert len(intersection_points) == MAX_PATCH_RAY_INTERSECTIONS
     return intersection_flag, num_intersections, intersection_points
 
@@ -413,13 +478,23 @@ def solve_quadratic_quadratic_equation_pencil_method(a: Vector6f,
     assert a.shape == (6, )
     assert b.shape == (6, )
 
+    #
+    #
+    # FIXME: utilize the implementation of max_ finder used in the C++ code
     # Divide by max coefficient to get better precision
-    max: float = abs(a[0])
+    max_: float = abs(a[0])
+    for i in range(6):
+        if (max_ < abs(a[i])):
+            max_ = abs(a[i])
+        if (max_ < abs(b[i])):
+            max_ = abs(b[i])
+        # max_ = max(abs(a[i]), abs(b[i]))
 
-    F: Vector6f = np.array([a[4] / max, a[5] / max, a[0] / max,
-                            a[3] / max, a[1] / max, a[2] / max], dtype=np.float64)
-    G: Vector6f = np.array([b[4] / max, b[5] / max, b[0] / max,
-                            b[3] / max, b[1] / max, b[2] / max], dtype=np.float64)
+    # FIXME: F and G look good after the fix above
+    F: Vector6f = np.array([a[4] / max_, a[5] / max_, a[0] / max_,
+                            a[3] / max_, a[1] / max_, a[2] / max_], dtype=np.float64)
+    G: Vector6f = np.array([b[4] / max_, b[5] / max_, b[0] / max_,
+                            b[3] / max_, b[1] / max_, b[2] / max_], dtype=np.float64)
     intersection_flag: bool
     num_intersections: int
     intersection_points: list[PlanarPoint1d]
