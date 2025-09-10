@@ -127,6 +127,168 @@ class ContourNetwork(ProjectedCurveNetwork):
         self.compute_visibility_time: float = 0
         self.compute_projected_time: float = 0
 
+    def __init_contour_network(self,
+                               spline_surface: QuadraticSplineSurface,
+                               intersect_params: IntersectionParameters,
+                               invisibility_params: InvisibilityParameters,
+                               patch_boundary_edges: list[tuple[int, int]]) -> None:
+        """
+        Initialize the contour network.
+        TODO: rename to build_projected_curve_network
+        Because this does MORE than just init contour network...
+        """
+        frame: Matrix3x3f = np.identity(3, dtype=np.float64)
+
+        # Compute contours
+        contour_domain_curve_segments: list[Conic]
+        contour_segments: list[RationalFunction]  # <4, 3>
+        contour_patch_indices: list[PatchIndex]
+        contour_is_boundary: list[bool]
+        contour_intersections: list[list[IntersectionData]]
+        num_intersections: int
+
+        time_start: float = time.perf_counter()
+
+        #
+        # FIXME: below method looks good
+        #
+        (contour_domain_curve_segments,
+         contour_segments,
+         contour_patch_indices,
+         contour_is_boundary,
+         contour_intersections,
+         num_intersections) = compute_spline_surface_contours_and_boundaries(
+            spline_surface,
+            frame,
+            patch_boundary_edges)
+
+        # Build contour labels for boundary countours and patch locations
+        # FIXME: build contour labels looks GOOD
+        contour_segment_labels: list[dict[str, int]] = _build_contour_labels(contour_patch_indices,
+                                                                             contour_is_boundary)
+
+        # Project contours to the plane
+        # FIXME: project_curves also looks good
+        planar_contour_segments: list[RationalFunction] = project_curves(contour_segments, frame)
+        # lazy check
+        assert (planar_contour_segments[0].degree, planar_contour_segments[0].dimension) == (4, 2)
+
+        # Chain the contour segments into closed contours
+        # FIXME: compute_closed_contours looks good
+        contours: list[list[int]]
+        contour_labels: list[int]
+        contours, contour_labels = compute_closed_contours(contour_segments)
+
+        # Pad contour domains by an epsilon
+        # FIXME: pad_contours looks good
+        pad_contours(contour_domain_curve_segments,
+                     contour_segments,
+                     planar_contour_segments,
+                     invisibility_params.pad_amount)
+
+        compute_contour_time: float = time.perf_counter() - time_start
+
+        # Get cusp points and intersections if needed
+        num_segments: int = len(contour_segments)
+        interior_cusps: list[list[float]]
+        boundary_cusps: list[list[float]]
+        has_cusp_at_base: list[bool]
+        has_cusp_at_tip: list[bool]
+
+        time_start = time.perf_counter()
+
+        #
+        # FIXME: compute_spline_surface_cusps looks good.
+        #
+        (interior_cusps,
+         boundary_cusps,
+         has_cusp_at_base,
+         has_cusp_at_tip) = compute_spline_surface_cusps(spline_surface,
+                                                         contour_domain_curve_segments,
+                                                         contour_segments,
+                                                         contour_patch_indices,
+                                                         contours)
+
+        compute_cusp_time: float = time.perf_counter() - time_start
+        logger.debug("Found %s interior cusps", nested_vector_size(interior_cusps))
+        logger.debug("Found %s boundary cusps", nested_vector_size(boundary_cusps))
+
+        #
+        # FIXME: compute_intersections has some problems. output is not 1-to-1 with the C++ code
+        #
+        # Compute planar contour intersections
+        time_start = time.perf_counter()
+        intersection_knots: list[list[float]]
+        intersection_indices: list[list[int]]
+        intersection_call: int
+        (intersection_knots,
+         intersection_indices,
+         num_intersections,
+         intersection_call) = compute_intersections(planar_contour_segments,
+                                                    intersect_params,
+                                                    contour_intersections,
+                                                    num_intersections)
+
+        compute_intersection_time: float = time.perf_counter() - time_start
+        logger.debug("Found %s intersections", nested_vector_size(intersection_knots))
+
+        # Optionally write contours before any graph construction
+        if invisibility_params.write_contour_soup:
+            curve_disc_params: CurveDiscretizationParameters = CurveDiscretizationParameters()
+            viewport: tuple[int, int] = (800, 800)
+            # TODO: include svgWriter of some sort
+            svg_elements: list[svg.Element] = []
+            write_contours_with_annotations(frame,
+                                            contour_segments,
+                                            interior_cusps,
+                                            boundary_cusps,
+                                            intersection_knots,
+                                            curve_disc_params,
+                                            svg_elements)
+
+            print(svg.SVG(x=0, y=0,
+                          width=viewport[0], height=viewport[0],
+                          elements=svg_elements))
+
+        # Build the curve network from the contours
+        time_start = time.perf_counter()
+
+        # TODO: why not just call super or whatnot???
+        # Actually, why not move the method below somewhere above?
+        # super().__init__();
+        # Because NONE of the method above needed anything...
+        self._init_projected_curve_network(contour_domain_curve_segments,
+                                           contour_segments,
+                                           planar_contour_segments,
+                                           contour_segment_labels,
+                                           contours,
+                                           contour_labels,
+                                           interior_cusps,
+                                           has_cusp_at_base,
+                                           intersection_knots,
+                                           intersection_indices,
+                                           contour_intersections,
+                                           num_intersections)
+        compute_projected_time: float = time.perf_counter() - time_start
+
+        # Check the validity of the topological graph structure
+        # if logger.getEffectiveLoggingLevel
+        if not self._is_valid_abstract_curve_network():
+            raise ValueError("Invalid abstract curve network made")
+
+        # Check the validity of the geometric graph structure
+        if not self._is_valid_projected_curve_network():
+            raise ValueError("Invalid projected curve network made")
+
+        # Compute the quantitative invisibility
+        time_start: float = time.perf_counter()
+        self.__compute_quantitative_invisibility(spline_surface, invisibility_params)
+        compute_visibility_time: float = time.perf_counter() - time_start
+
+    # **************
+    # Public Methods
+    # **************
+
     def add_contour_network_to_viewer(self) -> None:
         """
         Add the spatial network to the viewer
@@ -232,161 +394,10 @@ class ContourNetwork(ProjectedCurveNetwork):
         self.compute_visibility_time = 0
         self.compute_projected_time = 0
 
-    # ***************
-    # Privade Methods
-    # ***************
-
-    def __init_contour_network(self,
-                               spline_surface: QuadraticSplineSurface,
-                               intersect_params: IntersectionParameters,
-                               invisibility_params: InvisibilityParameters,
-                               patch_boundary_edges: list[tuple[int, int]]) -> None:
-        """
-        Initialize the contour network
-        """
-        frame: Matrix3x3f = np.identity(3, dtype=np.float64)
-
-        # Compute contours
-        contour_domain_curve_segments: list[Conic]
-        contour_segments: list[RationalFunction]  # <4, 3>
-        contour_patch_indices: list[PatchIndex]
-        contour_is_boundary: list[bool]
-        contour_intersections: list[list[IntersectionData]]
-        num_intersections: int
-
-        time_start: float = time.perf_counter()
-
-        #
-        # FIXME: below method looks good
-        #
-        (contour_domain_curve_segments,
-         contour_segments,
-         contour_patch_indices,
-         contour_is_boundary,
-         contour_intersections,
-         num_intersections) = compute_spline_surface_contours_and_boundaries(
-            spline_surface,
-            frame,
-            patch_boundary_edges)
-
-        # Build contour labels for boundary countours and patch locations
-        # FIXME: build contour labels looks GOOD
-        contour_segment_labels: list[dict[str, int]] = _build_contour_labels(contour_patch_indices,
-                                                                             contour_is_boundary)
-
-        # Project contours to the plane
-        # FIXME: project_curves also looks good
-        planar_contour_segments: list[RationalFunction] = project_curves(contour_segments, frame)
-        # lazy check
-        assert (planar_contour_segments[0].degree, planar_contour_segments[0].dimension) == (4, 2)
-
-        # Chain the contour segments into closed contours
-        # FIXME: compute_closed_contours looks good
-        contours: list[list[int]]
-        contour_labels: list[int]
-        contours, contour_labels = compute_closed_contours(contour_segments)
-
-        # Pad contour domains by an epsilon
-        # FIXME: pad_contours looks good
-        pad_contours(contour_domain_curve_segments,
-                     contour_segments,
-                     planar_contour_segments,
-                     invisibility_params.pad_amount)
-
-        compute_contour_time: float = time.perf_counter() - time_start
-
-        # Get cusp points and intersections if needed
-        num_segments: int = len(contour_segments)
-        interior_cusps: list[list[float]]
-        boundary_cusps: list[list[float]]
-        has_cusp_at_base: list[bool]
-        has_cusp_at_tip: list[bool]
-
-        time_start = time.perf_counter()
-
-        #
-        # FIXME: compute_spline_surface_cusps looks good.
-        #
-        (interior_cusps,
-         boundary_cusps,
-         has_cusp_at_base,
-         has_cusp_at_tip) = compute_spline_surface_cusps(spline_surface,
-                                                         contour_domain_curve_segments,
-                                                         contour_segments,
-                                                         contour_patch_indices,
-                                                         contours)
-
-        compute_cusp_time: float = time.perf_counter() - time_start
-        logger.debug("Found %s interior cusps", nested_vector_size(interior_cusps))
-        logger.debug("Found %s boundary cusps", nested_vector_size(boundary_cusps))
-
-        # Compute planar contour intersections
-        time_start = time.perf_counter()
-        intersection_knots: list[list[float]]
-        intersection_indices: list[list[int]]
-        intersection_call: int
-        (intersection_knots,
-         intersection_indices,
-         num_intersections,
-         intersection_call) = compute_intersections(planar_contour_segments,
-                                                    intersect_params,
-                                                    contour_intersections,
-                                                    num_intersections)
-
-        compute_intersection_time: float = time.perf_counter() - time_start
-        logger.debug("Found %s intersections", nested_vector_size(intersection_knots))
-
-        # Optionally write contours before any graph construction
-        if invisibility_params.write_contour_soup:
-            curve_disc_params: CurveDiscretizationParameters = CurveDiscretizationParameters()
-            viewport: tuple[int, int] = (800, 800)
-            # TODO: include svgWriter of some sort
-            svg_elements: list[svg.Element] = []
-            write_contours_with_annotations(frame,
-                                            contour_segments,
-                                            interior_cusps,
-                                            boundary_cusps,
-                                            intersection_knots,
-                                            curve_disc_params,
-                                            svg_elements)
-
-            print(svg.SVG(x=0, y=0,
-                          width=viewport[0], height=viewport[0],
-                          elements=svg_elements))
-
-        # Build the curve network from the contours
-        time_start = time.perf_counter()
-        self._init_projected_curve_network(contour_domain_curve_segments,
-                                           contour_segments,
-                                           planar_contour_segments,
-                                           contour_segment_labels,
-                                           contours,
-                                           contour_labels,
-                                           interior_cusps,
-                                           has_cusp_at_base,
-                                           intersection_knots,
-                                           intersection_indices,
-                                           contour_intersections,
-                                           num_intersections)
-        compute_projected_time: float = time.perf_counter() - time_start
-
-        # Check the validity of the topological graph structure
-        # if logger.getEffectiveLoggingLevel
-        if not self._is_valid_abstract_curve_network():
-            raise ValueError("Invalid abstract curve network made")
-
-        # Check the validity of the geometric graph structure
-        if not self._is_valid_projected_curve_network():
-            raise ValueError("Invalid projected curve network made")
-
-        # Compute the quantitative invisibility
-        time_start: float = time.perf_counter()
-        self.__compute_quantitative_invisibility(spline_surface, invisibility_params)
-        compute_visibility_time: float = time.perf_counter() - time_start
-
     # *********************
     # Direct QI Computation
     # *********************
+
     def __generate_ray_mapping_coeffs(self,
                                       sample_point: SpatialVector1d,
                                       ) -> Matrix2x3f:

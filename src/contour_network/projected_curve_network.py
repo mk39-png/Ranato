@@ -160,6 +160,12 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
         :param intersection_indices: [in] list of lists of indices of curves corresponding to 
                                           intersection points per segment
         """
+
+        # Member variables:
+        # segments
+        # nodes
+        # chain_start_nodes
+
         self._init_projected_curve_network(parameter_segments,
                                            spatial_segments,
                                            planar_segments,
@@ -959,6 +965,7 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
     # Protected Helpers
     # *****************
 
+    # TODO: Problem is, it's hard to test these sorts of methods individually.
     def _init_projected_curve_network(self,
                                       parameter_segments: list[Conic],
                                       spatial_segments: list[RationalFunction],  # RationalFunction<4, 3>
@@ -1004,6 +1011,7 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
         out_array: list[SegmentIndex]
         self.__segments: list[SegmentGeometry]
         self.__nodes: list[NodeGeometry]
+
         (to_array,
          out_array,
          self.__segments,
@@ -1154,6 +1162,7 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
 
         # Get all nodes that are special (and not path end nodes)
         self.__chain_start_nodes: list[NodeIndex] = []
+
         for ni in range(num_nodes):
             if (not self.__nodes[ni].is_knot()) and (not self.__nodes[ni].is_path_end_node()):
                 if self.out(ni) < 0:

@@ -5,6 +5,14 @@ Projected Curve Network testing
 from src.core.abstract_curve_network import AbstractCurveNetwork
 from src.core.common import NodeIndex, SegmentIndex
 
+# ************************
+# Main Test Cases
+# ************************
+
+
+# ************************
+# Original C++ test cases
+# ************************
 
 def test_closed_loop() -> None:
     """
