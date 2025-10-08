@@ -218,8 +218,10 @@ class RationalFunction:
 
     def split_at_knot(self, knot: float) -> tuple["RationalFunction", "RationalFunction"]:
         """
-        Split the rational function into two rational function at some knot
-        in the domain.
+        Split the rational function into two rational function at some knot in the domain.
+
+        WARNING: Do not try to use this method for the Conic subclass since it does not include
+        the "type" member variable
 
         Used by contour network.
 
@@ -228,23 +230,25 @@ class RationalFunction:
         :return upper_segment: [out] rational function with upper domain
         """
         #  Build lower segment
-        t0: float = self.domain.lower_bound
+        t0: float = self.m_domain.lower_bound
         assert t0 <= knot
+
+        # TODO: when  building interval, need to set is_upper_bound and is_lower_bound
         lower_domain = Interval(t0, knot)
-        lower_segment = RationalFunction(self.degree,
-                                         self.dimension,
-                                         self.numerator_coeffs,
-                                         self.denominator_coeffs,
+        lower_segment = RationalFunction(self.m_degree,
+                                         self.m_dimension,
+                                         self.m_numerator_coeffs,
+                                         self.m_denominator_coeffs,
                                          lower_domain)
 
         # Build upper segment
-        t1: float = self.domain.upper_bound
+        t1: float = self.m_domain.upper_bound
         assert knot <= t1
         upper_domain = Interval(knot, t1)
-        upper_segment = RationalFunction(self.degree,
-                                         self.dimension,
-                                         self.numerator_coeffs,
-                                         self.denominator_coeffs,
+        upper_segment = RationalFunction(self.m_degree,
+                                         self.m_dimension,
+                                         self.m_numerator_coeffs,
+                                         self.m_denominator_coeffs,
                                          upper_domain)
 
         return lower_segment, upper_segment

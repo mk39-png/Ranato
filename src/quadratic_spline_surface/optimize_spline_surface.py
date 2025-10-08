@@ -8,7 +8,7 @@ from dataclasses import dataclass
 import numpy as np
 import numpy.testing as npt
 from cholespy import CholeskySolverD, MatrixType
-from scipy.sparse import coo_matrix, csr_matrix
+from scipy.sparse import csr_matrix
 
 from src.core.affine_manifold import AffineManifold, EdgeManifoldChart
 from src.core.common import (COLS, ROWS, Index, Matrix2x2f, Matrix2x3r,

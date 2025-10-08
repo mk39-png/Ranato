@@ -56,12 +56,12 @@ class QuadraticSplineSurface:
 
         # Hash table parameters
         # TODO: these have been commented because they are not used for anything.
-        # self.__patches_bbox_x_min: float = 0.0
+        self.__patches_bbox_x_min: float = 0.0
         # self.__patches_bbox_x_max: float = 0.0
-        # self.__patches_bbox_y_min: float = 0.0
+        self.__patches_bbox_y_min: float = 0.0
         # self.__patches_bbox_y_max: float = 0.0
-        # self.hash_x_interval: float = 0.0
-        # self.hash_y_interval: float = 0.0
+        self.hash_x_interval: float = 0.0
+        self.hash_y_interval: float = 0.0
 
         # Hash table data in a 2D list of list[int]
         # NOTE: hash_table is HASH_TABLE_SIZE x HASH_TABLE_SIZE 2D list with elements list[int]
@@ -78,6 +78,9 @@ class QuadraticSplineSurface:
         Read a surface serialization from file.\n
         NOTE: method used for testing with ASOC code and to make sure that
         implementation is correct.
+
+        FIXME: this method is somewhat broken for QuadraticSplineSurfaces used in ContourNetwork...
+        i.e. the test_compute_spline_surface_contours_and_boundaries_spot_mesh() case
 
         :param filepath: [in] file path for the serialized surface
         :return: patches to save to.
@@ -595,23 +598,27 @@ class QuadraticSplineSurface:
         y_min: float
         y_max: float
         x_min, x_max, y_min, y_max = self.__compute_patches_bbox(patches_ref)
+        self.__patches_bbox_x_min = x_min
+        # self.__patches_bbox_x_max = x_max
+        self.__patches_bbox_y_min = y_min
+        # self.__patches_bbox_y_max = y_max
 
         for i in range(1, num_patch):
-            if (x_min > patches_ref[i].get_bbox_x_min()):
+            if x_min > patches_ref[i].get_bbox_x_min():
                 x_min = patches_ref[i].get_bbox_x_min()
-            if (x_max < patches_ref[i].get_bbox_x_max()):
+            if x_max < patches_ref[i].get_bbox_x_max():
                 x_max = patches_ref[i].get_bbox_x_max()
-            if (y_min > patches_ref[i].get_bbox_y_min()):
+            if y_min > patches_ref[i].get_bbox_y_min():
                 y_min = patches_ref[i].get_bbox_y_min()
-            if (y_max < patches_ref[i].get_bbox_y_max()):
+            if y_max < patches_ref[i].get_bbox_y_max():
                 y_max = patches_ref[i].get_bbox_y_max()
 
         x_interval: float = (x_max - x_min) / hash_size_x
         y_interval: float = (y_max - y_min) / hash_size_y
 
         # TODO: below are not used anywhere...
-        # self.hash_x_interval = x_interval
-        # self.hash_y_interval = y_interval
+        self.hash_x_interval = x_interval
+        self.hash_y_interval = y_interval
 
         eps: float = 1e-10
 
@@ -638,10 +645,11 @@ class QuadraticSplineSurface:
 
         :return: tuple of hash_x and hash_y computed.
         """
+        assert point.shape == (2, )
 
-        todo("Fix member variables")
-        hash_x = int((point[0][0] - self.__patches_bbox_x_min) / self.hash_x_interval)
-        hash_y = int((point[0][1] - self.__patches_bbox_y_min) / self.hash_y_interval)
+        # todo("Fix member variables")
+        hash_x = int((point[0] - self.__patches_bbox_x_min) // self.hash_x_interval)
+        hash_y = int((point[1] - self.__patches_bbox_y_min) // self.hash_y_interval)
 
         if (hash_x < 0) or (hash_x >= HASH_TABLE_SIZE):
             logger.error("x hash index out of bounds")

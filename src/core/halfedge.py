@@ -11,8 +11,9 @@ topological information. Can be initialized from face topology information.
 
 import logging
 
-from src.core.common import (PLACEHOLDER_INDEX, Index, MatrixNx3i,
-                             find_face_vertex_index, is_manifold, logger)
+from src.core.common import (CHECK_VALIDITY, PLACEHOLDER_INDEX, Index,
+                             MatrixNx3i, find_face_vertex_index, is_manifold,
+                             logger)
 from src.core.vertex_circulator import VertexCirculator
 
 
@@ -90,7 +91,7 @@ class Halfedge:
         num_vertices: int = F.max() + 1
         num_halfedges: int = 3 * num_faces
 
-        if logger.getEffectiveLevel == logging.DEBUG:
+        if CHECK_VALIDITY:
             if not is_manifold(F):
                 logger.error("Input mesh is not manifold")
                 self.clear()
