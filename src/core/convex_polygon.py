@@ -3,6 +3,7 @@ Convex polygons. Used in Quadratic Surface Patch files.
 Convex polygon formed by intersecting half planes.
 """
 
+import json
 from venv import logger
 
 import numpy as np
@@ -154,7 +155,9 @@ class ConvexPolygon:
         """
         # Assertions to match ASOC code C++ code
         assert len(boundary_segments_coeffs) == 3
-        assert boundary_segments_coeffs[0].shape == (3, )  # lazily checking elements
+        # Checks if empty in 2nd case
+        assert (boundary_segments_coeffs[0].shape == (3, ) or
+                boundary_segments_coeffs[0].shape == (3, 0))   # lazily checking elements.
         assert vertices.shape == (3, 2)
 
         # *******
@@ -162,6 +165,59 @@ class ConvexPolygon:
         # *******
         self.m_boundary_segments_coeffs: list[Vector3f] = boundary_segments_coeffs
         self.m_vertices: Matrix3x2f = vertices
+
+    # TODO: make a method to serialize to JSON... or something like that.
+    # def serialize_to_json_str(self) -> str:
+    #     """
+    #     Saves ConvexPolygon to a string in JSON format.
+    #     """
+    #     # TODO: save ConvexPolygon to a string in JSON format
+    #     # But I feel that if I could get some serialziation and deserialization of the Spline Surface,
+    #     # then that would REALLY help cut down on development time.
+
+    @classmethod
+    def init_from_json(cls, convex_polygon_json: dict[str, np.ndarray]):
+        """
+        Initialzes ConvexPolygon class from a dict made from a JSON-format string. 
+        Primarily used for deserializing domain for Quadratic Spline Surface Patch.
+        """
+        # Attempt to get from JSON.
+        # NOTE: use this version of the method since clear separation betwen data-reading functionality
+        # and data processing.
+        # TODO: error check for when key is mistyped or does not exist
+        # TODO: convert a nested list of list into...
+        boundary_segment_coeffs: list[Vector3f]
+        vertices: Matrix3x2f
+        boundary_segment_coeffs = [np.array(arr, dtype=np.float64)
+                                   for arr in convex_polygon_json.get("boundary_segment_coeffs")]
+        vertices = np.array(convex_polygon_json.get("vertices"), dtype=np.float64)
+
+        assert vertices.shape == (3, 2)
+        assert boundary_segment_coeffs[0].shape == (3, )  # lazy shape checking
+
+        return cls(boundary_segment_coeffs, vertices)
+
+    # @classmethod
+    # def init_from_json_str(cls, convex_polygon_json_str: str):
+    #     """
+    #     Initialzes ConvexPolygon class from a JSON-format string.
+    #     Primarily used for deserializing domain for Quadratic Spline Surface Patch.
+    #     """
+    #     convex_polygon_json: dict[str, np.ndarray] = json.loads(convex_polygon_json_str)
+
+    #     # Attempt to get from JSON.
+    #     # TODO: error check for when key is mistyped or does not exist
+    #     # TODO: convert a nested list of list into...
+    #     boundary_segment_coeffs: list[Vector3f]
+    #     vertices: Matrix3x2f
+    #     boundary_segment_coeffs = [np.array(arr, dtype=np.float64)
+    #                                for arr in convex_polygon_json.get("boundary_segment_coeffs")]
+    #     vertices = np.array(convex_polygon_json.get("vertices"), dtype=np.float64)
+
+    #     assert vertices.shape == (3, 2)
+    #     assert boundary_segment_coeffs[0].shape == (3, )  # lazy shape checking
+
+    #     return cls(boundary_segment_coeffs, vertices)
 
     @classmethod
     def init_from_boundary_segments_coeffs(cls, boundary_segments_coeffs: list[Vector3f]):

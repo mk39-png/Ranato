@@ -5,13 +5,17 @@ aim to shorten the length of the original file.
 
 from collections import defaultdict
 from enum import Enum
+from typing import Any
 
 from src.contour_network.intersection_data import IntersectionData
 from src.core.abstract_curve_network import AbstractCurveNetwork
-from src.core.common import (NodeIndex, SegmentIndex, arange, logger,
-                             vector_equal)
+from src.core.common import (NodeIndex, SegmentIndex, arange, load_json,
+                             logger, vector_equal)
 from src.core.conic import Conic
 from src.core.rational_function import RationalFunction
+from src.utils.conic_testing_utils import compare_conics, deserialize_conic
+from src.utils.rational_function_testing_utils import (
+    compare_rational_functions, deserialize_rational_function)
 
 # **************
 # Helper Classes
@@ -50,9 +54,9 @@ class SegmentGeometry():
         assert (spatial_curve.degree, spatial_curve.dimension) == (4, 3)
         assert (planar_curve.degree, planar_curve.dimension) == (4, 2)
 
-        self.__planar_curve: RationalFunction = planar_curve
-        self.__spatial_curve: RationalFunction = spatial_curve
         self.__parameter_curve: Conic = parameter_curve
+        self.__spatial_curve: RationalFunction = spatial_curve
+        self.__planar_curve: RationalFunction = planar_curve
         self.__segment_labels: dict[str, int] = segment_labels
         self.__quantitative_invisibility = -1
 
@@ -104,6 +108,13 @@ class SegmentGeometry():
         return segment_label
 
     @property
+    def segment_labels(self) -> dict[str, int]:
+        """
+        Primarily used for testing.
+        """
+        return self.__segment_labels
+
+    @property
     def quantitative_invisibility(self) -> NodeIndex:
         """
         Retrieves quantitative invisibility
@@ -140,8 +151,7 @@ class SegmentGeometry():
         upper_spatial_curve: RationalFunction  # <4, 3>
         upper_planar_curve: RationalFunction  # <4, 2>
 
-        # TODO: fix typing issue below since Conic inherits split_at_knot() from RationalFunction
-        lower_parameter_curve, upper_parameter_curve = self.parameter_curve.split_at_knot(knot)
+        lower_parameter_curve, upper_parameter_curve = self.parameter_curve.split_at_knot_conic(knot)
         assert (lower_parameter_curve.degree, lower_parameter_curve.dimension) == (2, 2)
         assert (upper_parameter_curve.degree, upper_parameter_curve.dimension) == (2, 2)
 
@@ -221,13 +231,21 @@ class NodeGeometry():
     Geometry at node
     """
 
-    def __init__(self) -> None:
+    def __init__(self,
+                 node_type: GeometricData = GeometricData.KNOT,
+                 quantitative_invisibility: int = -1,
+                 qi_set: bool = False
+                 ) -> None:
         """
         Constructor for NodeGeometry
+        Default values in case nothing is passed through.
         """
-        self.__node_type: GeometricData = GeometricData.KNOT
-        self.__quantitative_invisibility: int = -1
-        self.__qi_set = False
+        # self.__node_type: GeometricData = GeometricData.KNOT
+        # self.__quantitative_invisibility: int = -1
+        # self.__qi_set = False
+        self.__node_type: GeometricData = node_type
+        self.__quantitative_invisibility: int = quantitative_invisibility
+        self.__qi_set: bool = qi_set
 
     def mark_as_knot(self) -> None:
         """Mark node type as KNOT enum"""
@@ -387,7 +405,10 @@ def build_projected_curve_network_without_intersections(parameter_segments: list
     # base of the segment has the same index
     to_array = [-1] * num_segments
     for i, _ in enumerate(chains):
-        for j, _ in enumerate(chains[i], 1):
+
+        # FIXME: out of range error... prolly because using enumerate is a bit weird...
+        for j in range(1, len(chains[i])):
+            # for j, _ in enumerate(chains[i], 1):
             to_array[chains[i][j - 1]] = chains[i][j]
 
         # Close vector if the curve is closed or add a cap node otherwise
@@ -418,11 +439,13 @@ def remove_redundant_intersections(to_array: list[NodeIndex],
     of two adjacent segments
     """
     # Build map from intersection ids to their index in intersection data
-    intersection_segments: dict[int, dict[int, tuple[int, int]]] = defaultdict(dict)
+    intersection_segments: list[list[tuple[int, int]]] = [[] for _ in range(num_intersections)]
+    # intersection_segments: dict[int, dict[int, tuple[int, int]]] = defaultdict(dict)
     for i, _ in enumerate(intersection_data_ref):
         for j, _ in enumerate(intersection_data_ref[i]):
             intersection_id: int = intersection_data_ref[i][j].id
-            intersection_segments[intersection_id][j] = (i, j)
+            intersection_segments[intersection_id].append((i, j))
+            # intersection_segments[intersection_id][j] = (i, j)
 
     # FIXME: is below the correct assertion to make?
     assert len(intersection_segments) == num_intersections
@@ -740,6 +763,15 @@ def split_segments_at_cusps(interior_cusps: list[list[float]],
     Split segments at all of the cusp points, and create maps from the new
     segments to their original indices and from the original indices to their
     corresponding split segment indices
+
+    :param interior_cusps: [in]
+    :param original_segment_indices_ref: [out]
+    :param split_segment_indices_ref:    [out]
+    :param to_array_ref:  [out]
+    :param out_array_ref: [out]
+    :param intersection_array_ref: [out]
+    :param segments_ref: [out]
+    :param nodes_ref:    [out]
     """
     logger.info("Splitting segments at cusps")
 
@@ -832,3 +864,201 @@ def is_valid_next_prev_pair(next_: list[int], prev: list[int]) -> bool:
             return False
 
     return True
+
+# **********************
+# Testing Helper Methods
+# **********************
+
+
+#
+# Node Geometry -- Deserialization Methods
+#
+
+
+def _deserialize_node_geometry(node_geometry_intermediate: dict[str, int | str]) -> NodeGeometry:
+    """
+    Helper method.
+    Reads in JSON representation of NodeGeometry and deserializes it to
+    NodeGeometry object.
+    """
+    node_type_intermediate: str = node_geometry_intermediate.get("node_type")
+    node_type_final: GeometricData
+    if node_type_intermediate == "knot":
+        node_type_final = GeometricData.KNOT
+    elif node_type_intermediate == "marked_knot":
+        node_type_final = GeometricData.MARKED_KNOT
+    elif node_type_intermediate == "boundary_cusp":
+        node_type_final = GeometricData.BOUNDARY_CUSP
+    elif node_type_intermediate == "interior_cusp":
+        node_type_final = GeometricData.INTERIOR_CUSP
+    elif node_type_intermediate == "intersection":
+        node_type_final = GeometricData.INTERSECTION
+    elif node_type_intermediate == "path_end_node":
+        node_type_final = GeometricData.PATH_END_NODE
+    elif node_type_intermediate == "path_start_node":
+        node_type_final = GeometricData.PATH_START_NODE
+    else:
+        raise ValueError(
+            f"NodeGeometry deserialization error: node type {node_type_intermediate} invalid")
+
+    quantitative_invisibility: int = node_geometry_intermediate.get("quantitative_invisibility")
+    qi_set: bool = node_geometry_intermediate.get("qi_set")
+
+    return NodeGeometry(node_type_final,
+                        quantitative_invisibility,
+                        qi_set)
+
+
+def _deserialize_list_node_geometry(filename: str) -> list[NodeGeometry]:
+    """
+    Helper method.
+    Reads in JSON representation of vector NodeGeometry and deserializes it to
+    list[NodeGeometry] object.
+    """
+    # TODO: fix type hint
+    list_node_geometry_intermediate: list[dict[str, int]] = load_json(filename)
+    list_node_geometry_final: list[NodeGeometry] = []
+
+    for node_geometry_intermediate in list_node_geometry_intermediate:
+        node_geometry_final: NodeGeometry = _deserialize_node_geometry(node_geometry_intermediate)
+        list_node_geometry_final.append(node_geometry_final)
+
+    return list_node_geometry_final
+
+#
+# Node Geometry -- Comparison Methods
+#
+
+
+def _compare_node_geometry(node_test: NodeGeometry,
+                           node_control: NodeGeometry) -> None:
+    """
+    Helper method.
+    Does assertions between two NodeGeometry objects.
+    """
+    assert node_test.formatted_node() == node_control.formatted_node()
+    assert (node_test.quantitative_invisibility ==
+            node_control.quantitative_invisibility)
+    assert (node_test.quantitative_invisibility_is_set() ==
+            node_control.quantitative_invisibility_is_set())
+
+
+def compare_list_node_geometry(filename: str, nodes_test: list[NodeGeometry]) -> None:
+    """
+    Primary method.
+    """
+    nodes_control: list[NodeGeometry] = _deserialize_list_node_geometry(filename)
+    assert len(nodes_control) == len(nodes_test)
+    num_nodes: NodeIndex = len(nodes_control)
+
+    for i in range(num_nodes):
+        _compare_node_geometry(nodes_control[i], nodes_test[i])
+
+#
+# Segment Geometry -- Deserialization Methods
+#
+
+
+def _deserialize_segment_geometry(segment_geometry_intermediate: dict[str, Any]
+                                  ) -> SegmentGeometry:
+    """
+    Helper method.
+    Deserializes segment_geometry dict[str, Any] to SegmentGeometry object.
+    """
+    parameter_curve: dict[str, Any] = segment_geometry_intermediate.get("parameter_curve")
+    spatial_curve: dict[str, Any] = segment_geometry_intermediate.get("spatial_curve")
+    planar_curve: dict[str, Any] = segment_geometry_intermediate.get("planar_curve")
+    segment_labels: dict[str, int] = segment_geometry_intermediate.get("segment_labels")  # already as dict[str, int]
+
+    segment_geometry_final = SegmentGeometry(
+        parameter_curve=deserialize_conic(parameter_curve),
+        spatial_curve=deserialize_rational_function(spatial_curve),
+        planar_curve=deserialize_rational_function(planar_curve),
+        segment_labels=segment_labels,  # segment labels are already in the format we need.
+    )
+
+    # For case where quantitative invisibility is -1, then simply do not
+    # set quantitative invisibility to avoid error.
+    # When quantitative invisibility is -1, likely that QI has not been set.
+    if segment_geometry_intermediate.get("quantitative_invisibility") != -1:
+        segment_geometry_final.quantitative_invisibility = segment_geometry_intermediate.get(
+            "quantitative_invisibility")
+
+    return segment_geometry_final
+
+
+def _deserialize_list_segment_geometry(filename: str) -> list[SegmentGeometry]:
+    """
+    Reads in JSON representation of SegmentGeometry and deserializes it to
+    SegmentGeometry object.
+    """
+    # TODO: fix type hint
+    list_segment_geometry_intermediate: list[dict[str, int]] = load_json(filename)
+    list_segment_geometry_final: list[SegmentGeometry] = []
+
+    for segment_geometry_intermediate in list_segment_geometry_intermediate:
+        segment_geometry_final: SegmentGeometry = _deserialize_segment_geometry(
+            segment_geometry_intermediate)
+        list_segment_geometry_final.append(segment_geometry_final)
+
+    return list_segment_geometry_final
+
+
+#
+# Segment Geometry -- Comaprison Methods
+#
+
+def compare_list_segment_geometry(filename: str,
+                                  segments_test: list[SegmentGeometry]) -> None:
+    """
+    Deserializes list of SegmentGeometry from provided filename and 
+    compares two lists of segment geometry.
+    """
+    segments_control: list[SegmentGeometry] = _deserialize_list_segment_geometry(filename)
+    assert len(segments_control) == len(segments_test)
+    num_segments: int = len(segments_control)
+    for i in range(num_segments):
+        compare_segment_geometry(segments_test[i], segments_control[i])
+
+
+def compare_segment_geometry(segment_test: SegmentGeometry,
+                             segment_control: SegmentGeometry) -> None:
+    """
+    Helper method.
+    Compares two given SegmetGeometry objects. 
+    """
+
+    # HACK: wrapping segment_test and segment_control into list to reuse function
+    compare_rational_functions([segment_control.planar_curve], [segment_test.planar_curve])
+    compare_rational_functions([segment_control.spatial_curve], [segment_test.spatial_curve])
+    compare_conics([segment_control.parameter_curve], [segment_test.parameter_curve])
+
+    # Comparing segment labels.
+    assert len(segment_test.segment_labels) == len(segment_control.segment_labels)
+    for key in segment_control.segment_labels:
+        assert segment_test.segment_labels.get(key) == segment_control.segment_labels.get(key)
+
+
+#
+# Segment Labels -- Deserialization Methods
+#
+def compare_segment_labels(filename: str, segment_labels_test: list[dict[str, int]]) -> None:
+    """
+
+    """
+    segment_labels_control: list[dict[str, int]] = deserialize_segment_labels(filename)
+    assert len(segment_labels_control) == len(segment_labels_test)
+
+    # Compare element by element
+    for _, (control, test) in enumerate(zip(segment_labels_control, segment_labels_test)):
+        assert control == test
+
+
+def deserialize_segment_labels(filename: str) -> list[dict[str, int]]:
+    """
+    Simple deserialization of segment_labels.json.
+    Since segment_labels used to be a vector<map<string, int>>
+    """
+    # TODO: fix type hint
+    segment_labels_intermediate: list[dict[str, int]] = load_json(filename)
+    return segment_labels_intermediate

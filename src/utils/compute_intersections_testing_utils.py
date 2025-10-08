@@ -10,12 +10,47 @@ Utility methods for testing compute_intersections.
 # **************
 
 
+import numpy.testing as npt
+
 from src.contour_network.intersection_data import IntersectionData
+from src.contour_network.intersection_heuristics import IntersectionStats
 from src.core.common import float_equal, load_json
 
 
+def compare_intersection_stats(filename: str, intersection_stats_test: IntersectionStats) -> None:
+    """
+    Compares IntersectionStats from file
+    """
+    intersection_stats_control: IntersectionStats = deserialize_intersection_stats(filename)
+    assert intersection_stats_control == intersection_stats_test
+
+
+def deserialize_intersection_stats(filename: str) -> IntersectionStats:
+    """
+    Deserializes IntersectionStats json file
+    """
+    intersection_stats_intermediate: dict = load_json(filename)
+    return IntersectionStats(intersection_stats_intermediate.get("num_intersection_tests"),
+                             intersection_stats_intermediate.get("num_bezier_nonoverlaps"),
+                             intersection_stats_intermediate.get("bounding_box_call"),
+                             intersection_stats_intermediate.get("intersection_call"))
+
+
+def compare_list_list_intersection_data_from_file(
+        filename: str,
+        contour_intersections_test: list[list[IntersectionData]]) -> None:
+    """
+    Reads in contour intersections file to compare to.
+    """
+    contour_intersections_control: list[list[IntersectionData]] = (
+        deserialize_list_list_intersection_data(filename)
+    )
+    compare_list_list_intersection_data(contour_intersections_test,
+                                        contour_intersections_control)
+
+
 def compare_list_list_intersection_data(contour_intersections_test: list[list[IntersectionData]],
-                                        contour_intersections_control: list[list[IntersectionData]]
+                                        contour_intersections_control: list[list[IntersectionData]],
                                         ) -> None:
     """
     Compares list[list[IntersectionData]]

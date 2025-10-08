@@ -4,6 +4,8 @@ rational_function_utils.py
 Methods used to serialize, deserialize, and compare rational functions for testing.
 """
 
+from typing import Any
+
 import numpy as np
 import numpy.testing as npt
 
@@ -14,6 +16,15 @@ from src.core.rational_function import RationalFunction
 # These utils are more for testing than anything else.
 # TODO: move/rename file to better reflect that this file is only for testing and not to be used for
 # rational_function.py itself.
+
+
+def compare_rational_functions_from_file(filename: str,
+                                         rational_functions_test: list[RationalFunction]) -> None:
+    """
+    Reads from file to compare rational functions
+    """
+    rational_functions_control: list[RationalFunction] = deserialize_rational_functions(filename)
+    compare_rational_functions(rational_functions_control, rational_functions_test)
 
 
 def compare_rational_functions(rational_functions_control: list[RationalFunction],
@@ -51,50 +62,99 @@ def compare_rational_functions(rational_functions_control: list[RationalFunction
                 rational_function_control_ref.domain.is_open_above())
 
 
+def deserialize_rational_function(rational_function_intermediate: dict[str, Any]
+                                  ) -> RationalFunction:
+    """
+    Takes in JSON dict representation of RationalFunction and converts to RationalFunction object.
+    """
+    # Intermediate processing.
+    # TODO: add typehinting for dict
+
+    # Extract the following:
+    degree: int = rational_function_intermediate.get("degree")
+    dimension: int = rational_function_intermediate.get("dimension")
+
+    # NOTE: must transpose to be (degree + 1, dimension) shape.
+    numerator_coeffs: list[list[float]] = np.array(
+        rational_function_intermediate.get("numerator_coeffs"),
+        dtype=np.float64).T
+
+    denominator_coeffs: list[list[float]] = np.array(
+        rational_function_intermediate.get("denominator_coeffs"),
+        dtype=np.float64).squeeze()
+
+    # Getting the interval.
+    t0: float = rational_function_intermediate.get("domain").get("t0")
+    t1: float = rational_function_intermediate.get("domain").get("t1")
+
+    # NOTE: the below probably is not needed, but it's good to confirm nonetheless
+    bounded_below: bool = rational_function_intermediate.get("domain").get("bounded_below")
+    bounded_above: bool = rational_function_intermediate.get("domain").get("bounded_above")
+    open_below: bool = rational_function_intermediate.get("domain").get("open_below")
+    open_above: bool = rational_function_intermediate.get("domain").get("open_above")
+
+    domain: Interval = Interval(t0, t1)
+    domain.set_lower_bound(t0)
+    domain.set_upper_bound(t1)
+
+    rational_function_final: RationalFunction = RationalFunction(
+        degree,
+        dimension,
+        numerator_coeffs,
+        denominator_coeffs,
+        domain)
+
+    return rational_function_final
+
+
 def deserialize_rational_functions(filepath: str) -> list[RationalFunction]:
     """
     Takes in a JSON file and deserializes it to list of RationalFunction objects.
     """
     # Intermediate processing.
-    # TODO: add typehinting for dict
-    rational_functions_intermediate: list[dict] = load_json(filepath)
+    # TODO: add proper typehinting for dict
+    rational_functions_intermediate: list[dict[str, int | float | bool | list]] = load_json(
+        filepath)
     rational_functions_final: list[RationalFunction] = []
 
-    for rational_function in rational_functions_intermediate:
-        # Extract the following:
-        degree: int = rational_function.get("degree")
-        dimension: int = rational_function.get("dimension")
+    for rational_function_intermediate in rational_functions_intermediate:
+        rational_function_final: RationalFunction = deserialize_rational_function(
+            rational_function_intermediate)
 
-        # NOTE: must transpose to be (degree + 1, dimension) shape.
-        numerator_coeffs: list[list[float]] = np.array(
-            rational_function.get("numerator_coeffs"),
-            dtype=np.float64).T
+        # # Extract the following:
+        # degree: int = rational_function.get("degree")
+        # dimension: int = rational_function.get("dimension")
 
-        denominator_coeffs: list[list[float]] = np.array(
-            rational_function.get("denominator_coeffs"),
-            dtype=np.float64).squeeze()
+        # # NOTE: must transpose to be (degree + 1, dimension) shape.
+        # numerator_coeffs: list[list[float]] = np.array(
+        #     rational_function.get("numerator_coeffs"),
+        #     dtype=np.float64).T
 
-        # Getting the interval.
-        t0: float = rational_function.get("domain").get("t0")
-        t1: float = rational_function.get("domain").get("t1")
+        # denominator_coeffs: list[list[float]] = np.array(
+        #     rational_function.get("denominator_coeffs"),
+        #     dtype=np.float64).squeeze()
 
-        # NOTE: the below probably is not needed, but it's good to confirm nonetheless
-        bounded_below: bool = rational_function.get("domain").get("bounded_below")
-        bounded_above: bool = rational_function.get("domain").get("bounded_above")
-        open_below: bool = rational_function.get("domain").get("open_below")
-        open_above: bool = rational_function.get("domain").get("open_above")
+        # # Getting the interval.
+        # t0: float = rational_function.get("domain").get("t0")
+        # t1: float = rational_function.get("domain").get("t1")
 
-        domain: Interval = Interval(t0, t1)
-        domain.set_lower_bound(t0)
-        domain.set_upper_bound(t1)
+        # # NOTE: the below probably is not needed, but it's good to confirm nonetheless
+        # bounded_below: bool = rational_function.get("domain").get("bounded_below")
+        # bounded_above: bool = rational_function.get("domain").get("bounded_above")
+        # open_below: bool = rational_function.get("domain").get("open_below")
+        # open_above: bool = rational_function.get("domain").get("open_above")
 
-        rational_function_final: RationalFunction = RationalFunction(
-            degree,
-            dimension,
-            numerator_coeffs,
-            denominator_coeffs,
-            domain
-        )
+        # domain: Interval = Interval(t0, t1)
+        # domain.set_lower_bound(t0)
+        # domain.set_upper_bound(t1)
+
+        # rational_function_final: RationalFunction = RationalFunction(
+        #     degree,
+        #     dimension,
+        #     numerator_coeffs,
+        #     denominator_coeffs,
+        #     domain
+        # )
 
         rational_functions_final.append(rational_function_final)
 

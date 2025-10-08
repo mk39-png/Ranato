@@ -3,6 +3,8 @@ conic_testing_utils.py
 
 Methods used to serialize, deserialize, and compare conics for testing.
 """
+from typing import Any
+
 import numpy as np
 import numpy.testing as npt
 
@@ -38,6 +40,15 @@ def _string_to_conictype(type_string: str) -> ConicType:
     if type_string == "UNKNOWN":
         return ConicType.UNKNOWN
     raise ValueError(f"Given {type_string} does not match any of the ConicTypes")
+
+
+def compare_conics_from_file(filename: str,
+                             conics_test: list[Conic]) -> None:
+    """
+    Reads Conics from file to compare to.
+    """
+    conics_control: list[Conic] = deserialize_conics(filename)
+    compare_conics(conics_control, conics_test)
 
 
 def compare_conics(conics_control: list[Conic],
@@ -76,6 +87,49 @@ def compare_conics(conics_control: list[Conic],
                 conic_control_ref.domain.is_open_above())
 
 
+def deserialize_conic(conic_intermediate: dict[str, Any]) -> Conic:
+    """
+    Takes in JSON dict representation of Conic and converts to Conic object.
+    """
+    # Extract the following:
+    degree: int = conic_intermediate.get("degree")
+    dimension: int = conic_intermediate.get("dimension")
+
+    type: str = conic_intermediate.get("type")
+
+    # NOTE: must transpose to be (degree + 1, dimension) shape.
+    numerator_coeffs: list[list[float]] = np.array(
+        conic_intermediate.get("numerator_coeffs"),
+        dtype=np.float64).T
+
+    denominator_coeffs: list[list[float]] = np.array(
+        conic_intermediate.get("denominator_coeffs"),
+        dtype=np.float64).squeeze()
+
+    # Getting the interval.
+    t0: float = conic_intermediate.get("domain").get("t0")
+    t1: float = conic_intermediate.get("domain").get("t1")
+
+    # NOTE: the below probably is not needed, but it's good to confirm nonetheless
+    bounded_below: bool = conic_intermediate.get("domain").get("bounded_below")
+    bounded_above: bool = conic_intermediate.get("domain").get("bounded_above")
+    open_below: bool = conic_intermediate.get("domain").get("open_below")
+    open_above: bool = conic_intermediate.get("domain").get("open_above")
+
+    domain: Interval = Interval(t0, t1)
+    domain.set_lower_bound(t0)
+    domain.set_upper_bound(t1)
+
+    conic_final: Conic = Conic(
+        _string_to_conictype(type),
+        numerator_coeffs,
+        denominator_coeffs,
+        domain
+    )
+
+    return conic_final
+
+
 def deserialize_conics(filepath: str) -> list[Conic]:
     """
     Takes in a JSON file and deserializes it to list of Conic objects.
@@ -85,42 +139,43 @@ def deserialize_conics(filepath: str) -> list[Conic]:
     conics_intermediate: list[dict] = load_json(filepath)
     conics_final: list[Conic] = []
 
-    for conic in conics_intermediate:
-        # Extract the following:
-        degree: int = conic.get("degree")
-        dimension: int = conic.get("dimension")
+    for conic_intermediate in conics_intermediate:
+        conic_final: Conic = deserialize_conic(conic_intermediate)
+        # # Extract the following:
+        # degree: int = conic.get("degree")
+        # dimension: int = conic.get("dimension")
 
-        type: str = conic.get("type")
+        # type: str = conic.get("type")
 
-        # NOTE: must transpose to be (degree + 1, dimension) shape.
-        numerator_coeffs: list[list[float]] = np.array(
-            conic.get("numerator_coeffs"),
-            dtype=np.float64).T
+        # # NOTE: must transpose to be (degree + 1, dimension) shape.
+        # numerator_coeffs: list[list[float]] = np.array(
+        #     conic.get("numerator_coeffs"),
+        #     dtype=np.float64).T
 
-        denominator_coeffs: list[list[float]] = np.array(
-            conic.get("denominator_coeffs"),
-            dtype=np.float64).squeeze()
+        # denominator_coeffs: list[list[float]] = np.array(
+        #     conic.get("denominator_coeffs"),
+        #     dtype=np.float64).squeeze()
 
-        # Getting the interval.
-        t0: float = conic.get("domain").get("t0")
-        t1: float = conic.get("domain").get("t1")
+        # # Getting the interval.
+        # t0: float = conic.get("domain").get("t0")
+        # t1: float = conic.get("domain").get("t1")
 
-        # NOTE: the below probably is not needed, but it's good to confirm nonetheless
-        bounded_below: bool = conic.get("domain").get("bounded_below")
-        bounded_above: bool = conic.get("domain").get("bounded_above")
-        open_below: bool = conic.get("domain").get("open_below")
-        open_above: bool = conic.get("domain").get("open_above")
+        # # NOTE: the below probably is not needed, but it's good to confirm nonetheless
+        # bounded_below: bool = conic.get("domain").get("bounded_below")
+        # bounded_above: bool = conic.get("domain").get("bounded_above")
+        # open_below: bool = conic.get("domain").get("open_below")
+        # open_above: bool = conic.get("domain").get("open_above")
 
-        domain: Interval = Interval(t0, t1)
-        domain.set_lower_bound(t0)
-        domain.set_upper_bound(t1)
+        # domain: Interval = Interval(t0, t1)
+        # domain.set_lower_bound(t0)
+        # domain.set_upper_bound(t1)
 
-        conic_final: Conic = Conic(
-            _string_to_conictype(type),
-            numerator_coeffs,
-            denominator_coeffs,
-            domain
-        )
+        # conic_final: Conic = Conic(
+        #     _string_to_conictype(type),
+        #     numerator_coeffs,
+        #     denominator_coeffs,
+        #     domain
+        # )
 
         conics_final.append(conic_final)
 
