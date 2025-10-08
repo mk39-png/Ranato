@@ -18,4 +18,4 @@ def test_apply_camera_frame_transformation_to_vertices():
     V, uv, F, FT = initialize_spot_control_mesh()
     V_copy = apply_camera_frame_transformation_to_vertices(V, frame)
     compare_eigen_numpy_matrix(
-        "spot_control\\apply_transformations\\apply_camera_frame_transformation_to_vertices\\V_transformed.csv", V_copy)
+        "spot_control\\core\\apply_transformations\\apply_camera_frame_transformation_to_vertices\\V_transformed.csv", V_copy)

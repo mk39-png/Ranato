@@ -1,16 +1,7 @@
-import os
-from datetime import timedelta
-from numbers import Number
 
-import igl
-import mathutils
 import numpy as np
-import scipy as sp
-import svg
 from cholespy import CholeskySolverD, MatrixType
-from scipy.sparse import coo_matrix, csr_matrix
-
-from src.core.common import initialize_spot_control_mesh
+from scipy.sparse import coo_matrix
 
 # from src.contour_network.intersection_data import IntersectionData
 # from src.core.common import Matrix4x4f

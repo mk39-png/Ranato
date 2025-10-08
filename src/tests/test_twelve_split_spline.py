@@ -6,16 +6,15 @@ from collections import defaultdict
 import igl
 import numpy as np
 import numpy.testing as npt
-import pytest
 from cholespy import CholeskySolverD
-from scipy.sparse import coo_matrix, csr_matrix
+from scipy.sparse import csr_matrix
 
 from src.core.affine_manifold import AffineManifold, ParametricAffineManifold
 from src.core.bivariate_quadratic_function import evaluate_quadratic_mapping
 from src.core.common import (DISCRETIZATION_LEVEL, SKY_BLUE, Matrix3x2f,
                              Matrix6x3r, MatrixNx3f, MatrixXf, MatrixXi,
-                             PlanarPoint, PlanarPoint1d, SpatialVector,
-                             SpatialVector1d, compare_eigen_numpy_matrix,
+                             PlanarPoint1d, SpatialVector, SpatialVector1d,
+                             compare_eigen_numpy_matrix,
                              initialize_spot_control_mesh, logger,
                              vector_equal)
 from src.core.convex_polygon import ConvexPolygon

@@ -1,21 +1,19 @@
 import copy
-import os
 from collections import defaultdict
 
-import igl
 import numpy as np
 import numpy.testing as npt
 import pytest
 from cholespy import CholeskySolverD
-from scipy.sparse import coo_matrix, csr_matrix
+from scipy.sparse import csr_matrix
 
 from src.core.affine_manifold import AffineManifold
-from src.core.common import (COLS, ROWS, Matrix2x3f, MatrixNx3f, MatrixXf,
-                             MatrixXi, SpatialVector, SpatialVector1d,
-                             Vector1D, compare_eigen_numpy_matrix,
+from src.core.common import (COLS, ROWS, Matrix2x3f, MatrixXf, SpatialVector,
+                             SpatialVector1d, Vector1D,
+                             compare_eigen_numpy_matrix,
                              deserialize_eigen_matrix_csv_to_numpy,
                              float_equal, index_vector_complement,
-                             initialize_spot_control_mesh, todo)
+                             initialize_spot_control_mesh)
 from src.core.halfedge import Halfedge
 from src.quadratic_spline_surface.optimize_spline_surface import (  # generate_twelve_split_variable_value_vector,
     OptimizationParameters, TriangleCornerData, TriangleMidpointData,

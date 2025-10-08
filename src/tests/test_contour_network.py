@@ -9,11 +9,13 @@ import numpy as np
 from src.contour_network.compute_intersections import IntersectionParameters
 from src.contour_network.contour_network import (ContourNetwork,
                                                  InvisibilityMethod,
-                                                 InvisibilityParameters)
+                                                 InvisibilityParameters,
+                                                 _build_contour_labels)
 from src.core.affine_manifold import AffineManifold
 from src.core.apply_transformation import \
     apply_camera_frame_transformation_to_vertices
 from src.core.common import (Matrix3x3f, MatrixNx3f,
+                             deserialize_eigen_matrix_csv_to_numpy,
                              initialize_spot_control_mesh, logger)
 from src.quadratic_spline_surface.optimize_spline_surface import \
     OptimizationParameters
@@ -21,9 +23,31 @@ from src.quadratic_spline_surface.quadratic_spline_surface import \
     QuadraticSplineSurface
 from src.quadratic_spline_surface.twelve_split_spline import (
     TwelveSplitSplineSurface, compute_twelve_split_spline_patch_boundary_edges)
-from src.utils.projected_curve_networks_utils import SVGOutputMode
+from src.tests.test_compute_rational_bezier_curve_intersections import \
+    ROOT_FOLDER
+from src.utils.projected_curve_networks_utils import (
+    SVGOutputMode, compare_list_segment_geometry, compare_segment_labels)
 
 # TODO: the deserialization of rational functions and then printing of rational functions should be the same as the whole rational functions.txt file
+
+
+def test_build_contour_labels_spot_control() -> None:
+    """
+
+    """
+    filepath: str = f"{ROOT_FOLDER}\\contour_network\\contour_network\\build_contour_labels\\"
+
+    contour_patch_indices: list[int] = deserialize_eigen_matrix_csv_to_numpy(
+        filepath+"contour_patch_indices.csv").tolist()
+    contour_is_boundary: list[bool] = np.array(deserialize_eigen_matrix_csv_to_numpy(
+        filepath+"contour_is_boundary.csv"), dtype=bool).tolist()
+
+    contour_segment_labels_test: list[dict[str, int]] = _build_contour_labels(
+        contour_patch_indices,
+        contour_is_boundary)
+
+    compare_segment_labels(filepath+"contour_segment_labels.json",
+                           contour_segment_labels_test)
 
 
 def test_contour_network() -> None:
@@ -54,7 +78,7 @@ def test_contour_network() -> None:
     V_transformed: MatrixNx3f = apply_camera_frame_transformation_to_vertices(V, frame)
 
     # Generate quadratic spline
-    logger.info("Comnputing spline surface")
+    logger.info("Computing spline surface")
     affine_manifold: AffineManifold = AffineManifold(F, uv, FT)
     spline_surface: TwelveSplitSplineSurface = TwelveSplitSplineSurface(V_transformed,
                                                                         affine_manifold,

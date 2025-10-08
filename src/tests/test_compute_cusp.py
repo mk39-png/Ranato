@@ -26,11 +26,10 @@ from src.utils.conic_testing_utils import deserialize_conics
 from src.utils.rational_function_testing_utils import \
     deserialize_rational_functions
 
-
-def test_tangent_x_spot_mesh():
-    """
-    Tests with values from spot mesh
-    """
+# def test_tangent_x_spot_mesh():
+#     """
+#     Tests with values from spot mesh
+#     """
 
 
 def test_compute_spline_surface_cusps():

@@ -12,10 +12,12 @@ def test_init_abstract_curve_network():
     """
     """
     filepath_base: str = "spot_control\\core\\abstract_curve_network\\init_abstract_curve_network\\"
-    to_array: Vector1D = np.array(deserialize_eigen_matrix_csv_to_numpy(filepath_base+"to_array.csv"),
-                                  dtype=np.int64)
-    out_array: Vector1D = np.array(deserialize_eigen_matrix_csv_to_numpy(filepath_base+"out_array.csv"),
-                                   dtype=np.int64)
+    to_array: list[NodeIndex] = np.array(deserialize_eigen_matrix_csv_to_numpy(
+        filepath_base+"to_array.csv"),
+        dtype=np.int64).tolist()
+    out_array: list[SegmentIndex] = np.array(deserialize_eigen_matrix_csv_to_numpy(
+        filepath_base+"out_array.csv"),
+        dtype=np.int64).tolist()
 
     filepath_next: str = "spot_control\\core\\abstract_curve_network\\build_next_array\\"
     next_array: list[SegmentIndex] = AbstractCurveNetwork.build_next_array(to_array, out_array)
