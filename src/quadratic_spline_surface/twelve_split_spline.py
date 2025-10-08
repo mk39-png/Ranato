@@ -10,7 +10,7 @@ import igl
 import numpy as np
 import polyscope as ps
 from cholespy import CholeskySolverD
-from scipy.sparse import coo_matrix, csr_matrix
+from scipy.sparse import csr_matrix
 
 from src.core.affine_manifold import AffineManifold, VertexManifoldChart
 from src.core.common import (COLS, DISCRETIZATION_LEVEL, ROWS, SKY_BLUE, Index,

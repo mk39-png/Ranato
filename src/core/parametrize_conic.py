@@ -310,10 +310,13 @@ def parametrize_standard_form_conic(conic_standard_form: Vector6f) -> list[Conic
         logger.info("Skipping degenerate empty set")
     elif conic_type == ConicType.PLANE:
         logger.error("Entire plane is the solution")
+        raise ValueError("Entire plane is the solution")
     elif conic_type == ConicType.ERROR:
         logger.error("Error in conic")
+        raise ValueError("Error in conic")
     else:
         logger.error("Unknown conic")
+        raise ValueError("Unknown conic")
 
     return conics
 

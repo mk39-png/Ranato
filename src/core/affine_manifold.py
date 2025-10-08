@@ -9,11 +9,12 @@ from dataclasses import dataclass
 import numpy as np
 import polyscope as ps
 
-from src.core.common import (COLS, GOLD_YELLOW, PLACEHOLDER_BOOL,
-                             PLACEHOLDER_INDEX, PLACEHOLDER_VALUE, ROWS, Index,
-                             Matrix2x2f, Matrix3x2f, MatrixNx2f, MatrixNx3f,
-                             MatrixNx3i, MatrixXf, MatrixXi, PlanarPoint1d,
-                             Vector3i, angle_from_positions, area_from_length,
+from src.core.common import (CHECK_VALIDITY, COLS, GOLD_YELLOW,
+                             PLACEHOLDER_BOOL, PLACEHOLDER_INDEX,
+                             PLACEHOLDER_VALUE, ROWS, Index, Matrix2x2f,
+                             Matrix3x2f, MatrixNx2f, MatrixNx3f, MatrixNx3i,
+                             MatrixXf, MatrixXi, PlanarPoint1d, Vector3i,
+                             angle_from_positions, area_from_length,
                              find_face_vertex_index, float_equal,
                              float_equal_zero, formatted_vector, is_manifold,
                              logger, matrix_contains_nan,
@@ -140,22 +141,22 @@ class AffineManifold:
         """
 
         # Check the input
-        # if CHECK_VALIDITY
-        if not is_manifold(F):
-            logger.error("Input mesh is not manifold")
-            self.clear()
-            return
+        if CHECK_VALIDITY:
+            if not is_manifold(F):
+                logger.error("Input mesh is not manifold")
+                self.clear()
+                return
 
-        if not is_manifold(F_uv):
-            logger.error("Input mesh is not manifold")
-            self.clear()
-            return
+            if not is_manifold(F_uv):
+                logger.error("Input mesh is not manifold")
+                self.clear()
+                return
 
-        # Comparing row sizes
-        if F_uv.shape[ROWS] != F.shape[ROWS]:
-            logger.error("Input mesh and uv mesh have different sizes")
-            self.clear()
-            return
+            # Comparing row sizes
+            if F_uv.shape[ROWS] != F.shape[ROWS]:
+                logger.error("Input mesh and uv mesh have different sizes")
+                self.clear()
+                return
 
         # *** Topology information ***
         # TODO (from ASOC): The faces are duplicated in the halfedge. Our halfedge alway retains
@@ -1187,6 +1188,8 @@ class AffineManifold:
                 if not float_equal(edge_length, edge_uv_length, length_threshold):
                     logger.error("Inconsistent edge length %s and uv length %s for corner %s, %s",
                                  edge_length, edge_uv_length, fi, j)
+                    raise ValueError("Inconsistent edge length %s and uv length %s for corner %s, %s",
+                                     edge_length, edge_uv_length, fi, j)
                     return False
 
                 # Get opposite halfedge and corner if it exists
@@ -1202,6 +1205,8 @@ class AffineManifold:
                 if not float_equal(edge_length, opposite_edge_uv_length, length_threshold):
                     logger.error("Inconsistent opposite uv length for corners %s, %s and %s, %s",
                                  fi, j, fi_opp, j_opp)
+                    raise ValueError("Inconsistent opposite uv length for corners %s, %s and %s, %s",
+                                     fi, j, fi_opp, j_opp)
                     return False
 
         # Check that each vertex chart is valid
@@ -1247,6 +1252,10 @@ class AffineManifold:
                                  chart.one_ring_uv_positions[i, :],
                                  vertex_index,
                                  self.__l[face_index][(face_vertex_index + 2) % 3])
+                    raise ValueError("uv position %s in chart %s does not expect norm %s",
+                                     chart.one_ring_uv_positions[i, :],
+                                     vertex_index,
+                                     self.__l[face_index][(face_vertex_index + 2) % 3])
                     return False
 
                 if not edge_has_length(chart.one_ring_uv_positions[i + 1, :],
@@ -1256,6 +1265,10 @@ class AffineManifold:
                                  chart.one_ring_uv_positions[i + 1, :],
                                  chart.one_ring_uv_positions[i, :],
                                  vertex_index, self.__l[face_index][(face_vertex_index + 0) % 3])
+                    raise ValueError("uv positions %s and %s in chart %s do not have expected length %s",
+                                     chart.one_ring_uv_positions[i + 1, :],
+                                     chart.one_ring_uv_positions[i, :],
+                                     vertex_index, self.__l[face_index][(face_vertex_index + 0) % 3])
                     return False
 
                 if not edge_has_length(zero,
@@ -1265,6 +1278,10 @@ class AffineManifold:
                                  chart.one_ring_uv_positions[i + 1, :],
                                  vertex_index,
                                  self.__l[face_index][(face_vertex_index + 1) % 3])
+                    raise ValueError("uv position %s in chart %s does not have the expected norm %s",
+                                     chart.one_ring_uv_positions[i + 1, :],
+                                     vertex_index,
+                                     self.__l[face_index][(face_vertex_index + 1) % 3])
                     return False
 
         # Return true if no issues found
