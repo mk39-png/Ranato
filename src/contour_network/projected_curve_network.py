@@ -4,7 +4,6 @@ soup.
 """
 import copy
 import logging
-import os
 
 import numpy as np
 import polyscope
@@ -16,9 +15,13 @@ from src.contour_network.write_output import (add_curve_to_svg,
                                               write_planar_curve_segment,
                                               write_planar_point)
 from src.core.abstract_curve_network import AbstractCurveNetwork
-from src.core.common import (PLACEHOLDER_VALUE, Color, MatrixXf, NodeIndex,
-                             PlanarPoint1d, SegmentIndex, SpatialVector1d,
-                             Vector3f, convert_nested_vector_to_matrix,
+from src.core.common import (CHECK_VALIDITY,
+                             INLINE_TESTING_ENABLED_CONTOUR_NETWORK,
+                             PLACEHOLDER_VALUE, TESTING_FOLDER_SOURCE, Color,
+                             MatrixXf, NodeIndex, PlanarPoint1d, SegmentIndex,
+                             SpatialVector1d, Vector3f,
+                             compare_eigen_numpy_matrix,
+                             convert_nested_vector_to_matrix,
                              convert_polylines_to_edges, logger, todo,
                              unimplemented)
 from src.core.conic import Conic
@@ -28,13 +31,14 @@ from src.core.rational_function import (CurveDiscretizationParameters,
 from src.utils.projected_curve_networks_utils import (
     NodeGeometry, SegmentGeometry, SVGOutputMode,
     build_projected_curve_network_without_intersections,
-    connect_segment_intersections, is_valid_next_prev_pair,
-    remove_redundant_intersections, split_segments_at_cusps,
-    split_segments_at_intersections)
+    compare_list_node_geometry, connect_segment_intersections,
+    is_valid_next_prev_pair, remove_redundant_intersections,
+    split_segments_at_cusps, split_segments_at_intersections)
 
 # ***********************
 # Helper Methods
 # ***********************
+ROOT_FOLDER: str = "spot_control"
 
 
 class SegmentChainIterator():
@@ -59,6 +63,8 @@ class SegmentChainIterator():
         Replaces C++ operator++().
         Updates current_segment_index and is_end_of_chain.
         """
+        # TODO: could reimplemnt as an iterator
+
         # Check if off end of chain
         if self.__is_end_of_chain or self.__is_reverse_end_of_chain:
             return
@@ -160,32 +166,54 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
         :param intersection_indices: [in] list of lists of indices of curves corresponding to 
                                           intersection points per segment
         """
-
         # Member variables:
-        # segments
-        # nodes
-        # chain_start_nodes
+        self.__segments: list[SegmentGeometry]
+        self.__nodes: list[NodeGeometry]
+        self.__chain_start_nodes: list[NodeIndex]
 
-        self._init_projected_curve_network(parameter_segments,
-                                           spatial_segments,
-                                           planar_segments,
-                                           segment_labels,
-                                           chains,
-                                           chain_labels,
-                                           interior_cusps,
-                                           has_cusp_at_base,
-                                           intersections,
-                                           intersection_indices,
-                                           intersection_data,
-                                           num_intersections)
+        # Rebuild topology with intersection and cusp splits
+        #
+        # FIXME: below super should be equivalent
+        #
+        # self.update_topology(to_array, out_array, intersection_array)
+        super().__init__(*self._init_projected_curve_network(parameter_segments,
+                                                             spatial_segments,
+                                                             planar_segments,
+                                                             segment_labels,
+                                                             chains,
+                                                             chain_labels,
+                                                             interior_cusps,
+                                                             has_cusp_at_base,
+                                                             intersections,
+                                                             intersection_indices,
+                                                             intersection_data,
+                                                             num_intersections))
 
-        if logger.getEffectiveLevel() == logging.DEBUG:
-            # TODO: is the below protected or private?
-            # NOTE: do not need to call the below because it's called upon super().__init__(...)
-            if not self._is_valid_abstract_curve_network():
-                logger.error("Invalid abstract curve network made")
-                raise RuntimeError("Invalid abstract curve network made")
+        # Record chain start points
+        #
+        # FIXME: test the function below...
+        # TODO: change the method to take in arguments?
+        #
+        self.__init_chain_start_nodes()
 
+        # TODO: testing with chain start nodes
+
+        if INLINE_TESTING_ENABLED_CONTOUR_NETWORK:
+            filepath: str = (
+                f"{TESTING_FOLDER_SOURCE}\\contour_network\\projected_curve_network\\init_chain_start_nodes\\")
+            compare_list_node_geometry(filepath+"nodes_out.json", self.__nodes)
+            compare_eigen_numpy_matrix(filepath+"chain_start_nodes.csv",
+                                       np.array(self.__chain_start_nodes, dtype=int))
+
+        # Check the validity of the topological graph structure
+        if CHECK_VALIDITY:
+            for node_index in range(self.num_nodes):
+                if (self.is_intersection_node(node_index) and
+                        not self._is_valid_node_index(self.intersection(node_index))):
+                    raise ValueError(f"Intersection node {node_index} does not \
+                                    have a valid intersection")
+
+            # Check the validity of the geometric graph structure
             if not self._is_valid_projected_curve_network():
                 logger.error("Invalid projected curve network made")
                 raise RuntimeError("Invalid projected curve network made")
@@ -199,6 +227,7 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
     # ******
     # Geometry (setters and getters)
     # ******
+
     @property
     def nodes(self) -> list[NodeGeometry]:
         """Retrieves nodes of projected curve network"""
@@ -287,32 +316,33 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
         FIXME: potentially flawed deep copy of RationalFunction spatial curve.
         FIXME: may just want a list of references to the spatial of segments
 
-        :return spatial_curves: list of all spatial curves
+        :return spatial_curves_ref: list of all spatial curves reference
         """
-        spatial_curves: list[RationalFunction] = []
+        spatial_curves_ref: list[RationalFunction] = []
         for i in range(self.num_segments):
-            spatial_curves.append(copy.deepcopy(self.__segments[i].spatial_curve))
             assert (self.__segments[i].spatial_curve.degree,
                     self.__segments[i].spatial_curve.dimension) == (4, 3)
 
-        return spatial_curves
+            spatial_curves_ref.append(self.__segments[i].spatial_curve)
 
-    def enumerate_planar_curves(self) -> list[RationalFunction]:
-        """
-        Returns new list of planar curves.
-        FIXME: potentially flawed deep copy of RationalFunction planar curve.
-        FIXME: may just want a list of references to the planar_curve of segments
+        return spatial_curves_ref
 
-        :return planar_curves: list of all planar curves
-        """
-        planar_curves: list[RationalFunction] = []
+    # def enumerate_planar_curves(self) -> list[RationalFunction]:
+    #     """
+    #     Returns new list of planar curves.
+    #     FIXME: potentially flawed deep copy of RationalFunction planar curve.
+    #     FIXME: may just want a list of references to the planar_curve of segments
 
-        for i in range(self.num_segments):
-            planar_curves.append(copy.deepcopy(self.__segments[i].planar_curve))
-            assert (self.__segments[i].planar_curve.degree,
-                    self.__segments[i].planar_curve.dimension) == (4, 2)
+    #     :return planar_curves: list of all planar curves
+    #     """
+    #     planar_curves: list[RationalFunction] = []
 
-        return planar_curves
+    #     for i in range(self.num_segments):
+    #         planar_curves.append(copy.deepcopy(self.__segments[i].planar_curve))
+    #         assert (self.__segments[i].planar_curve.degree,
+    #                 self.__segments[i].planar_curve.dimension) == (4, 2)
+
+    #     return planar_curves
 
     def enumerate_planar_nodes(self) -> tuple[list[PlanarPoint1d],
                                               list[PlanarPoint1d],
@@ -481,6 +511,8 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
         assert self._is_valid_node_index(node_index)
         if not self._is_valid_node_index(node_index):
             logger.error("Invalid node query")
+            raise ValueError("Invalid node query")
+
             return False
 
         return self.nodes[node_index].is_knot()
@@ -492,6 +524,7 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
         assert self._is_valid_node_index(node_index)
         if not self._is_valid_node_index(node_index):
             logger.error("Invalid node query")
+            raise ValueError("Invalid node query")
             return False
 
         return self.nodes[node_index].is_marked_knot()
@@ -503,6 +536,7 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
         assert self._is_valid_node_index(node_index)
         if not self._is_valid_node_index(node_index):
             logger.error("Invalid node query")
+            raise ValueError("Invalid node query")
             return False
         return self.__nodes[node_index].is_intersection()
 
@@ -523,6 +557,8 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
         assert self._is_valid_node_index(node_index)
         if not self._is_valid_node_index(node_index):
             logger.error("Invalid node query")
+            raise ValueError("Invalid node query")
+
             return False
         return self.__nodes[node_index].is_boundary_cusp()
 
@@ -533,6 +569,8 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
         assert self._is_valid_node_index(node_index)
         if not self._is_valid_node_index(node_index):
             logger.error("Invalid node query")
+            raise ValueError("Invalid node query")
+
             return False
         return self.__nodes[node_index].is_path_start_node()
 
@@ -543,6 +581,8 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
         assert self._is_valid_node_index(node_index)
         if not self._is_valid_node_index(node_index):
             logger.error("Invalid node query")
+            raise ValueError("Invalid node query")
+
             return False
         return self.__nodes[node_index].is_path_end_node()
 
@@ -758,8 +798,10 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
         # Write SVG
         svg_writer = svg.SVG(viewBox=viewport, elements=svg_elements)
         # file_path: str = os.path.relpath(output_path)
-        if not os.path.isfile(output_path):
-            raise OSError(f"Output path is invalid: {output_path}.")
+
+        # FIXME: remove isfile below because invalid checker of filepath
+        # if not os.path.isfile(output_path):
+        #     raise OSError(f"Output path is invalid: {output_path}")
         with open(output_path, 'w', encoding='utf-8') as output_file:
             output_file.write(svg_writer.as_str())
             output_file.close()
@@ -965,11 +1007,10 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
     # Protected Helpers
     # *****************
 
-    # TODO: Problem is, it's hard to test these sorts of methods individually.
     def _init_projected_curve_network(self,
                                       parameter_segments: list[Conic],
-                                      spatial_segments: list[RationalFunction],  # RationalFunction<4, 3>
-                                      planar_segments: list[RationalFunction],  # RationalFunction<4, 2>
+                                      spatial_segments: list[RationalFunction],
+                                      planar_segments: list[RationalFunction],
                                       segment_labels: list[dict[str, int]],
                                       chains: list[list[int]],
                                       chain_labels: list[int],
@@ -978,10 +1019,34 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
                                       intersections: list[list[float]],
                                       intersection_indices: list[list[int]],
                                       intersection_data_ref: list[list[IntersectionData]],
-                                      num_intersections: int) -> None:
+                                      num_intersections: int) -> tuple[list[NodeIndex],
+                                                                       list[SegmentIndex],
+                                                                       list[NodeIndex]]:
         """
         Main constructor implementation
-        TODO: inherit docstring from constructor
+
+        :param parameter_segments:   [in] uv domain quadratic curves parametrizing the other curves
+        :param spatial_segments:     [in] spatial rational curves before projection. 
+                                          degree 4, dimension 3
+        :param planar_segments:      [in] planar rational curves after projection.
+                                          degree 4, dimension 2
+        :param chain_labels:         [in] list of maps of labels for each segment 
+                                          (e.g., patch label)
+        :param chains:               [in] list of lists of chained curve indices
+        :param chain_labels:         [in] list of chain labels for each segment
+        :param interior_cusps:       [in] list of lists of cusp points per segment
+        :param has_cusp_at_base:     [in] list of bools per segment indicating if the segment base 
+                                          node is a cusp
+        :param intersections:        [in] list of lists of intersection points per segment
+        :param intersection_indices: [in] list of lists of indices of curves corresponding to 
+                                          intersection points per segment
+
+        :param self.__segments: [out]
+        :param self.__nodes: [out]
+
+        :return to_array: array mapping segments to their endpoints
+        :return out_array: array mapping nodes to their outgoing segment
+        :return intersection_array: list of intersection nodes
         """
         num_segments: int = len(planar_segments)
 
@@ -1009,8 +1074,6 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
         # Connect segments into chains before splitting at intersections
         to_array: list[NodeIndex]
         out_array: list[SegmentIndex]
-        self.__segments: list[SegmentGeometry]
-        self.__nodes: list[NodeGeometry]
 
         (to_array,
          out_array,
@@ -1023,7 +1086,7 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
             chains,
             has_cusp_at_base)
         assert self._is_valid_curve_data(to_array, out_array)
-        self.__mark_open_chain_endpoints(to_array, out_array, chains, self.nodes)
+        self.__mark_open_chain_endpoints(to_array, out_array, chains, self.__nodes)
 
         # Remove intersections that are redundant
         remove_redundant_intersections(to_array,
@@ -1087,20 +1150,7 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
                                 self.__segments,
                                 self.__nodes)
 
-        assert self._is_valid_minimal_curve_network_data(to_array, out_array, intersection_array)
-
-        # Rebuild topology with intersection and cusp splits
-        self.update_topology(to_array, out_array, intersection_array)
-
-        # Record chain start points
-        self.__init_chain_start_nodes()
-
-        # Check validity
-        for node_index in range(self.num_nodes):
-            if (self.is_intersection_node(node_index) and
-                    not self._is_valid_node_index(self.intersection(node_index))):
-                raise ValueError(f"Intersection node {node_index} does not \
-                                  have a valid intersection")
+        return to_array, out_array, intersection_array
 
     def _is_valid_projected_curve_network(self) -> bool:
         """
@@ -1110,11 +1160,12 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
         is_covered_node: list[bool] = [False] * self.num_nodes
         is_covered_segment: list[bool] = [False] * self.num_segments
 
-        for i, ni in enumerate(self.chain_start_nodes):
+        for i, ni in enumerate(self.__chain_start_nodes):
             is_covered_node[ni] = True
             start_si: SegmentIndex = self.out(ni)
             if not self._is_valid_segment_index(start_si):
                 logger.error("Start node is an end point")
+                raise ValueError("Start node is an end point")
                 return False
 
             # Check chain from start node
@@ -1127,21 +1178,28 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
                 is_covered_node[self.to(si)] = True
                 iter_.increment()
 
-            num_missed_nodes = 0
-            for ni in range(self.num_nodes):
-                if not is_covered_node[ni]:
-                    num_missed_nodes += 1
-                    logger.error("%s node %s is not covered by chain iteration",
+        num_missed_nodes = 0
+        for ni in range(self.num_nodes):
+            if not is_covered_node[ni]:
+                num_missed_nodes += 1
+                logger.error("%s node %s is not covered by chain iteration",
+                             self.nodes[ni].formatted_node(),
+                             ni)
+                raise ValueError("%s node %s is not covered by chain iteration",
                                  self.nodes[ni].formatted_node(),
                                  ni)
 
-            num_missed_segments = 0
-            for si in range(self.num_segments):
-                if not is_covered_segment[si]:
-                    logger.error("Segment %s is not covered by chain iteration", si)
+        num_missed_segments = 0
+        for si in range(self.num_segments):
+            if not is_covered_segment[si]:
+                logger.error("Segment %s is not covered by chain iteration", si)
+                raise ValueError("Segment %s is not covered by chain iteration", si)
 
-            if (num_missed_segments > 0) or (num_missed_nodes > 0):
-                logger.error("Missed %s nodes and %s segments",
+        if (num_missed_segments > 0) or (num_missed_nodes > 0):
+            logger.error("Missed %s nodes and %s segments",
+                         num_missed_nodes,
+                         num_missed_segments)
+            raise ValueError("Missed %s nodes and %s segments",
                              num_missed_nodes,
                              num_missed_segments)
 
@@ -1150,18 +1208,16 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
     # ***************
     # Private Helpers
     # ***************
-
     def __init_chain_start_nodes(self) -> None:
         """
-        Add all special nodes except the path end nodes to the list of chain start
-        nodes
+        Add all special nodes except the path end nodes to the list of chain start nodes
         WARNING: This method is a little dangerous; it modifies the segments as it
         iterates over them
         """
         num_nodes: NodeIndex = len(self.__nodes)
 
         # Get all nodes that are special (and not path end nodes)
-        self.__chain_start_nodes: list[NodeIndex] = []
+        self.__chain_start_nodes = []
 
         for ni in range(num_nodes):
             if (not self.__nodes[ni].is_knot()) and (not self.__nodes[ni].is_path_end_node()):
@@ -1199,36 +1255,38 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
                     break
 
     def __discretize_segment_chain(self,
-                                   iter: SegmentChainIterator) -> tuple[list[PlanarPoint1d],
-                                                                        list[int]]:
+                                   iter_: SegmentChainIterator) -> tuple[list[PlanarPoint1d],
+                                                                         list[int]]:
         """
         """
         points: list[PlanarPoint1d] = []
         polyline: list[int] = []
 
         curve_disc_params = CurveDiscretizationParameters()
-        if iter.at_end_of_chain:
+        if iter_.at_end_of_chain:
             return points, polyline
 
         # Start the chain polyline
         start_polyline: list[int] = []
         planar_curve_start: RationalFunction = (
-            self.segments[iter.current_segment_index].planar_curve)
+            self.segments[iter_.current_segment_index].planar_curve)
         points, start_polyline = planar_curve_start.discretize(curve_disc_params)
 
         # Add other chain segment points, skipping shared endpoints
         # FIXME: check for duplicates with the above...
-        while not iter.at_end_of_chain:
+        while not iter_.at_end_of_chain:
             planar_curve_segment: RationalFunction = (
-                self.segments[iter.current_segment_index].planar_curve)
+                self.segments[iter_.current_segment_index].planar_curve)
             segment_points: list[PlanarPoint1d]
             segment_polyline: list[int]
             segment_points, segment_polyline = planar_curve_segment.discretize(curve_disc_params)
 
-            for _, segment_point in enumerate(segment_points, 1):
-                points.append(segment_point)
+            # FIXME: utilize len just to be safe.
+            for i in range(1, len(segment_points)):
+                # for _, segment_point in enumerate(segment_points, 1):
+                points.append(segment_points[i])
 
-            iter.increment()
+            iter_.increment()
 
         # Build trivial polyline
         polyline = [PLACEHOLDER_VALUE] * len(points)
@@ -1269,8 +1327,12 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
             segment_polyline: list[int]
             segment_points, segment_polyline = planar_curve_segment_ref.discretize(
                 curve_disc_params)
-            for _, segment_point in enumerate(segment_points, 1):
-                points.append(segment_point)
+
+            # FIXME: using enumerate with start value is a bit weird
+            for i in range(1, len(segment_points)):
+                # for _, segment_point in enumerate(segment_points, 1):
+                # points.append(segment_point)
+                points.append(segment_points[i])
                 is_cusp.append(False)
 
             # Get the next node in the curve, check if it's a cusp and break if it's
@@ -1310,7 +1372,7 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
 
         # Do an O(n^2) search for joined curves
         prev: list[int] = [-1] * num_curves
-        next: list[int] = [-1] * num_curves
+        next_: list[int] = [-1] * num_curves
         for i in range(num_curves):
             end_node_i: NodeIndex = visible_curve_end_nodes[i]
             for j in range(num_curves):
@@ -1350,14 +1412,15 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
                     continue
 
                 # Mark connectivity
-                next[i] = j
+                next_[i] = j
                 prev[j] = i
 
         # TODO: originally was a CHECK_VALIDITY pragma, may want to reimplement something like that
-        if logger.getEffectiveLevel() == logging.DEBUG:
+        if CHECK_VALIDITY:
             # Check if the connectivity has consistent next/prev pairs
-            if not is_valid_next_prev_pair(next, prev):
+            if not is_valid_next_prev_pair(next_, prev):
                 logger.error("Invalid next/prev pair found")
+                raise ValueError("Invalid next/prev pair found")
                 return simplified_points, simplified_polylines
 
         # Combine the sorted lines
@@ -1387,11 +1450,14 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
             condition = True
             while condition:
                 covered[current_index] = True
-                for j, _ in enumerate(all_points, start=1):
+
+                # FIXME: using enumerate with start value is a bit weird.
+                for j in range(1, len(all_points)):
+                    # for j, _ in enumerate(all_points, start=1):
                     polyline.append(len(points))
                     points.append(all_points[current_index][j - 1])
                 prev_index = current_index
-                current_index = next[current_index]
+                current_index = next_[current_index]
                 logger.info("Processing index %s", current_index)
 
                 # Break if current index is invalid or check for consistency
@@ -1402,7 +1468,7 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
                 difference: PlanarPoint1d = start_point - end_point
                 if difference.dot(difference) > 2e-4:
                     logger.error("Points %s and %s are distant", end_point, start_point)
-
+                    raise ValueError("Points %s and %s are distant", end_point, start_point)
                 condition: bool = (current_index != start_index)
 
             # Close loop or add last point
@@ -1607,13 +1673,14 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
         Add spatial curves to the polyscope viewer
         """
         # Get spatial curve list
-        spatial_curves: list[RationalFunction] = self.enumerate_spatial_curves()
+        spatial_curves_ref: list[RationalFunction] = self.enumerate_spatial_curves()
         curve_disc_params: CurveDiscretizationParameters = CurveDiscretizationParameters()
 
         # Discretize the spatial curves
         points: list[PlanarPoint1d]
         polylines: list[list[int]]
-        points, polylines = discretize_curve_segments(4, 3, spatial_curves, curve_disc_params)
+        points, polylines = discretize_curve_segments(4, 3, spatial_curves_ref, curve_disc_params)
+
         # FIXME: apparently there's a problem with the method below
         points_mat: MatrixXf = convert_nested_vector_to_matrix(points)
         edges: list[tuple[int, int]] = convert_polylines_to_edges(polylines)
@@ -1634,7 +1701,7 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
 
         # Get visible curves separately
         visible_spatial_curves: list[RationalFunction] = []
-        for i, spatial_curve in enumerate(spatial_curves):
+        for i, spatial_curve in enumerate(spatial_curves_ref):
             if quantitative_invisibility[i] == 0:
                 visible_spatial_curves.append(spatial_curve)
 
@@ -1724,8 +1791,8 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
         self.__nodes.clear()
         self.__chain_start_nodes.clear()
 
-    def __mark_open_chain_endpoints(self,
-                                    to_array: list[NodeIndex],
+    @staticmethod
+    def __mark_open_chain_endpoints(to_array: list[NodeIndex],
                                     out_array: list[SegmentIndex],
                                     chains: list[list[SegmentIndex]],
                                     nodes_ref: list[NodeGeometry]) -> None:
@@ -1734,7 +1801,7 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
         closed contour
         """
         # Build from array from the network topology
-        from_array: list[NodeIndex] = self.build_from_array(to_array, out_array)
+        from_array: list[NodeIndex] = AbstractCurveNetwork.build_from_array(to_array, out_array)
 
         for i, _ in enumerate(chains):
             # Get the first and last segments in the chain
@@ -1746,3 +1813,16 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
                 end_node: NodeIndex = to_array[last_segment]
                 nodes_ref[start_node].mark_as_path_start_node()
                 nodes_ref[end_node].mark_as_path_end_node()
+
+    @staticmethod
+    def testing_mark_open_chain_endpoints(to_array: list[NodeIndex],
+                                          out_array: list[SegmentIndex],
+                                          chains: list[list[SegmentIndex]],
+                                          nodes_ref: list[NodeGeometry]) -> None:
+        """
+        Exposed mark_open_chain_endpoints() for testing.
+        """
+        ProjectedCurveNetwork.__mark_open_chain_endpoints(to_array,
+                                                          out_array,
+                                                          chains,
+                                                          nodes_ref)

@@ -6,9 +6,6 @@ import numpy as np
 from src.core.common import (Matrix5x3f, SpatialVector1d, Vector2f, Vector3f,
                              Vector5f, float_equal)
 
-MAX_PRECISION = 1e-8
-MIN_CLIPPED_SIZE_THRESHOLD = 0.8
-
 
 class Interval_ink:
     """
@@ -41,6 +38,18 @@ class Interval_ink:
 
     def valueAt(self, t: float) -> float:
         return (1 - t) * self.begin + t * self.end
+
+
+# TODO: make a function to deserialize Interval_ink method.
+
+
+#
+# Constants
+#
+MAX_PRECISION = 1e-8
+MIN_CLIPPED_SIZE_THRESHOLD = 0.8
+H1_INTERVAL = Interval_ink(0, 0.5)
+H2_INTERVAL = Interval_ink(np.nextafter(0.5, 1.0), 1.0)
 
 
 def _map_to(J: Interval_ink, I: Interval_ink) -> None:
@@ -134,11 +143,11 @@ def check_split_criteria(q: list[SpatialVector1d]) -> bool:
     assert len(q) == 5
 
     degree_sum: float = 0.0
-    p: list[SpatialVector1d] = [np.zeros((3, )),
-                                np.zeros((3, )),
-                                np.zeros((3, )),
-                                np.zeros((3, )),
-                                np.zeros((3, ))]
+    p: list[SpatialVector1d] = [np.zeros((3, ), dtype=np.float64),
+                                np.zeros((3, ), dtype=np.float64),
+                                np.zeros((3, ), dtype=np.float64),
+                                np.zeros((3, ), dtype=np.float64),
+                                np.zeros((3, ), dtype=np.float64)]
 
     for i in range(5):
         # Standardize to w = 1
@@ -168,14 +177,16 @@ def _get_solutions(A: list[SpatialVector1d],
 
     domsA: list[Interval_ink] = []
     domsB: list[Interval_ink] = []
-    unit_interval_1 = Interval_ink(0, 1)
-    unit_interval_2 = Interval_ink(0, 1)
-    counter: float = 0
+    # unit_interval_1 = Interval_ink(0, 1)
+    # unit_interval_2 = Interval_ink(0, 1)
+    UNIT_INTERVAL = Interval_ink(0, 1)
+
+    counter: int = 0
 
     #
     # FIXME: for image_segment_index == 9, domsA and domsB are empty! which is really bad for us.
     #
-    counter = iterate(domsA, domsB, A, B, unit_interval_1, unit_interval_2, precision, counter)
+    counter = iterate(domsA, domsB, A, B, UNIT_INTERVAL, UNIT_INTERVAL, precision, counter)
 
     if len(domsA) != len(domsB):
         assert len(domsA) == len(domsB)
@@ -193,6 +204,8 @@ def _left_portion(t: float, B: list[SpatialVector1d]) -> None:
     """
     n: int = len(B)
     for i in range(1, n):
+
+        # FIXME: is below correct translation?
         for j in range(n - 1, i - 1, -1):
             B[j] = _lerp(t, B[j - 1], B[j])
 
@@ -222,6 +235,33 @@ def _portion(B: list[SpatialVector1d], I: Interval_ink) -> None:
     t: float = I.extent() / (1 - I.min())
     _left_portion(t, B)
 
+
+def _dot3(v: Vector3f, w: Vector3f) -> float:
+    """
+    Returns dot product.
+    NOTE: for some reason, this implementation is preferred by the C++ code over the numpy.dot 
+    method
+    """
+    assert v.shape == (3, )
+    assert w.shape == (3, )
+    return (v[0] * w[0] + v[1] * w[1] + v[2] * w[2])
+
+
+def _cross3(v: Vector3f,  w: Vector3f) -> Vector3f:
+    """
+    Returns cross product.
+    NOTE: for some reason, this implementation is preferred by the C++ code over the numpy.cross 
+    method
+    """
+    assert v.shape == (3, )
+    assert w.shape == (3, )
+    res: Vector3f = np.zeros(shape=(3, ), dtype=np.float64)
+    res[0] = v[1] * w[2] - v[2] * w[1]
+    res[1] = -v[0] * w[2] + v[2] * w[0]
+    res[2] = v[0] * w[1] - v[1] * w[0]
+
+    return res
+
 # *****************
 # Clip fatline
 # *****************
@@ -238,8 +278,9 @@ def _fatline(Q: Matrix5x3f,
 
     nQ: int = 5
     L: Vector3f = np.zeros(shape=(3, ), dtype=np.float64)
-    # NOTE: yes, np.cross works like the original C++ code
-    L = np.cross(Q[0], Q[nQ - 1])
+    # L = np.cross(Q[0], Q[nQ - 1])
+    L = _cross3(Q[0], Q[nQ - 1])
+
     assert L.shape == (3, )
     cmin: float = L[2]
     cmax: float = L[2]
@@ -264,46 +305,49 @@ def _clipline(P: Matrix5x3f,
     nP: int = 5
     nPf: float = float(nP - 1)
 
-    E0: Vector3f = np.array([0,  np.dot(L, P[0]), 1], dtype=np.float64)
-    En: Vector3f = np.array([1, np.dot(L, P[nP - 1]), 1], dtype=np.float64)
+    E0: Vector3f = np.array([0,  _dot3(L, P[0]), 1], dtype=np.float64)
+    En: Vector3f = np.array([1, _dot3(L, P[nP - 1]), 1], dtype=np.float64)
     Ei: Vector3f = np.ndarray(shape=(3, ), dtype=np.float64)
     L0i: Vector3f = np.zeros((3, ), dtype=np.float64)
     Lni: Vector3f = np.zeros((3, ), dtype=np.float64)
     V0i: Vector3f = np.zeros((3, ), dtype=np.float64)
     Vni: Vector3f = np.zeros((3, ), dtype=np.float64)
     v0x: Vector5f = np.zeros((5, ), dtype=np.float64)
+    v0x[0] = 0.0e0
     vnx: Vector5f = np.zeros((5, ), dtype=np.float64)
+    vnx[nP - 1] = 0.0e0
     ey: Vector3f = np.array([0, 1, 0], dtype=np.float64)
     t1: float
     t2: float
 
     for i in range(1, nP + 1):
-        Ei[0] = (i - 1) / nPf
-        Ei[1] = np.dot(L, P[i - 1])
+        Ei[0] = float(i - 1) / nPf
+        Ei[1] = _dot3(L, P[i - 1])
         Ei[2] = 1
-        L0i = np.cross(E0, Ei)
-        Lni = np.cross(En, Ei)
+        L0i = _cross3(E0, Ei)
+        Lni = _cross3(En, Ei)
 
         if 1 < i:
-            V0i = np.cross(L0i, ey)
+            V0i = _cross3(L0i, ey)
             v0x[i - 1] = V0i[0] / V0i[2]
         if i < nP:
-            Vni = np.cross(Lni, ey)
+            # NOTE: division by 0 is fine as that's to be expected in the C++ code as well
+            Vni = _cross3(Lni, ey)
             vnx[i - 1] = Vni[0] / Vni[2]
 
-    if 0.0 <= E0[1]:
-        t1 = 0
+    if 0.0e0 <= E0[1]:
+        t1 = 0.0e0
     else:
         t1 = 0.1e1
         for j in range(2, nP + 1):
-            if 0.0 < v0x[j - 1]:
+            if 0.0e0 < v0x[j - 1]:
                 t1 = min(t1, v0x[j - 1])
 
-    if 0.0 <= En[1]:
+    if 0.0e0 <= En[1]:
         t2 = 0.1e1
     else:
-        t2 = 0.0
-        for j in range(1, nP):  # FIXME: does this translate from j = 1; j <= nP; j++?
+        t2 = 0.0e0
+        for j in range(1, nP):  # FIXME: does this translate from j = 1; j <= nP - 1; j++?
             if vnx[j - 1] < 0.1e1:
                 t2 = max(t2, vnx[j - 1])
 
@@ -320,6 +364,9 @@ def _clipfatline(P: Matrix5x3f,
                  clip_range: Vector2f,
                  precision: float = 1e-8) -> None:
     """
+    :param P: [in]
+    :param Q: [in]
+    :param clip_range: [out]
     """
     assert P.shape == (5, 3)
     assert Q.shape == (5, 3)
@@ -343,7 +390,8 @@ def _clipfatline(P: Matrix5x3f,
             direction: Vector2f = np.array([-(P[4][1] / P[4][2] - P[0][1] / P[0][2]),
                                             P[4][0] / P[4][2] - P[0][0] / P[0][2]])
             # FIXME: potentially bad translation? normalizing direcction.
-            direction /= np.linalg.norm(direction)
+            direction = direction / np.linalg.norm(direction)
+            # direction /= np.linalg.norm(direction)
             L_min[0] = direction[1]
             L_min[1] = -direction[0]
             L_min[2] = (-direction[1] * (Q[0][0] + Q[4][0]) / 2 +
@@ -377,7 +425,7 @@ def iterate(domsA: list[Interval_ink],
             domA_const: Interval_ink,
             domB_const: Interval_ink,
             precision: float,
-            counter: float) -> float:
+            counter: int) -> int:
     """
     Inkscope code
     NOTE: function runs recursively.
@@ -397,7 +445,8 @@ def iterate(domsA: list[Interval_ink],
     """
     # Base case in order to limit recursion
     # FIXME: extra part from C++ implementation, maybe not needed
-    if (_float_equal_ink(domA_const.extent(), 1.0) and _float_equal_ink(domB_const.extent(), 1.0)):
+    if (_float_equal_ink(domA_const.extent(), 1.0) and
+            _float_equal_ink(domB_const.extent(), 1.0)):
         counter = 0
 
     # FIXME: potentially bad translation below...
@@ -423,6 +472,9 @@ def iterate(domsA: list[Interval_ink],
         if _point_equal(m1, m2):
             domsA.append(copy.deepcopy(domA_const))  # FIXME: potentially deep copy needed
             domsB.append(copy.deepcopy(domB_const))
+            # domsA.append(domA_const)  # FIXME: potentially deep copy needed
+            # domsB.append(domB_const)
+
         return counter
 
     iteration = 0
@@ -443,13 +495,14 @@ def iterate(domsA: list[Interval_ink],
             Q[i][0] = C2[i][0]
             Q[i][1] = C2[i][1]
             Q[i][2] = C2[i][2]
+
         # FIXME: the function below is messing up on iteration 10 for image_segment_index 9
         _clipfatline(Q, P, clip_range, precision)
 
         # FIXME: potentially bad translation...
         dom: Interval_ink = Interval_ink(clip_range[0], clip_range[1])
 
-        if (_float_equal_ink(dom.max(), -1) and _float_equal_ink(dom.min(), -1)):
+        if (_float_equal_ink(dom.max(), -1.0) and _float_equal_ink(dom.min(), -1.0)):
             return counter
 
         # All other cases where dom[0] > dom[1] are invalid
@@ -471,17 +524,16 @@ def iterate(domsA: list[Interval_ink],
         # with the largest domain into two sub-curves
 
         # FIXME: check if modification by reference.
-        H1_INTERVAL = Interval_ink(0, 0.5)
-        H2_INTERVAL = Interval_ink(np.nextafter(0.5, 1.0), 1.0)
+
         if dom.extent() > MIN_CLIPPED_SIZE_THRESHOLD:
             pC1: list[SpatialVector1d]
             pC2: list[SpatialVector1d]
             dompC1: Interval_ink
             dompC2: Interval_ink
             if dompA.extent() > dompB.extent():
-
-                # FIXME, testing without deepcopy...
-                # pC1 = pC2 = pA
+                # pC1 = pC2 = copy.deepcopy(pA)
+                # pC1 = pA[:]
+                # pC2 = pA[:]
                 pC1 = copy.deepcopy(pA)
                 pC2 = copy.deepcopy(pA)
                 _portion(pC1, H1_INTERVAL)
@@ -489,19 +541,25 @@ def iterate(domsA: list[Interval_ink],
                 dompC1 = copy.deepcopy(dompA)
                 dompC2 = copy.deepcopy(dompA)
                 # dompC1 = dompC2 = dompA
+                # dompC1 = dompA
+                # dompC2 = dompA
                 _map_to(dompC1, H1_INTERVAL)
                 _map_to(dompC2, H2_INTERVAL)
                 counter = iterate(domsA, domsB, pC1, pB, dompC1, dompB, precision, counter)
                 counter = iterate(domsA, domsB, pC2, pB, dompC2, dompB, precision, counter)
             else:
+                # pC1 = pC2 = pB
+                # pC1 = pB[:]
+                # pC2 = pB[:]
                 pC1 = copy.deepcopy(pB)
                 pC2 = copy.deepcopy(pB)
-                # pC1 = pC2 = pB
                 _portion(pC1, H1_INTERVAL)
                 _portion(pC2, H2_INTERVAL)
-                # dompC1 = dompC2 = dompB
                 dompC1 = copy.deepcopy(dompB)
                 dompC2 = copy.deepcopy(dompB)
+                # dompC1 = dompC2 = dompB
+                # dompC1 = dompB
+                # dompC2 = dompB
                 _map_to(dompC1, H1_INTERVAL)
                 _map_to(dompC2, H2_INTERVAL)
                 counter = iterate(domsB, domsA, pC1, pA, dompC1, dompA, precision, counter)

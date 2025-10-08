@@ -47,6 +47,7 @@ class IntersectionData():
     def check_if_base(self, domain_ref: Interval, eps: float) -> None:
         """
         Check if the knot is the base of an oriented curve
+
         @param[in] domain: domain for the curve
         @param[in] eps: epsilon tolerance for the check
         """

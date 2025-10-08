@@ -6,7 +6,8 @@ Methods to chain contour segments into closed contours.
 import numpy as np
 import numpy.testing as npt
 
-from src.core.common import (PLACEHOLDER_VALUE, SpatialVector1d,
+from src.core.common import (INLINE_TESTING_ENABLED_CONTOUR_NETWORK,
+                             PLACEHOLDER_VALUE, SpatialVector1d,
                              compare_eigen_numpy_matrix, float_equal_zero,
                              logger, todo)
 from src.core.rational_function import RationalFunction
@@ -281,12 +282,13 @@ def compute_closed_contours(contour_segments: list[RationalFunction]) -> tuple[l
         assert contour_end_points[-1].shape == (3, )
 
     # TESTING
-    compare_eigen_numpy_matrix(
-        "spot_control\\contour_network\\compute_closed_contours\\compute_closed_contours\\contour_start_points.csv",
-        np.array(contour_start_points))
-    compare_eigen_numpy_matrix(
-        "spot_control\\contour_network\\compute_closed_contours\\compute_closed_contours\\contour_end_points.csv",
-        np.array(contour_end_points))
+    if INLINE_TESTING_ENABLED_CONTOUR_NETWORK:
+        compare_eigen_numpy_matrix(
+            "spot_control\\contour_network\\compute_closed_contours\\compute_closed_contours\\contour_start_points.csv",
+            np.array(contour_start_points))
+        compare_eigen_numpy_matrix(
+            "spot_control\\contour_network\\compute_closed_contours\\compute_closed_contours\\contour_end_points.csv",
+            np.array(contour_end_points))
 
     while True:
         # Get next starting contour segment to process or return if none left

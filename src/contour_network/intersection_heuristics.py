@@ -556,6 +556,7 @@ def compute_bounding_box_hash_table(bounding_boxes: list[tuple[PlanarPoint1d, Pl
     Hash bounding boxes by x and y coordinates.
 
     :param bounding_boxes: [in] bounding boxes to hash
+
     :return hash_table: lists of bounding boxes per hash region
     :return reverse_hash_table: map from bounding boxes to ids of hash regions containing them
     """

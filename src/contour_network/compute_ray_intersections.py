@@ -9,7 +9,8 @@ import numpy as np
 
 from src.contour_network.compute_ray_intersections_pencil_method import \
     compute_spline_surface_patch_ray_intersections_pencil_method
-from src.core.common import (MAX_PATCH_RAY_INTERSECTIONS, Matrix2x3f,
+from src.core.common import (INLINE_TESTING_ENABLED_QI,
+                             MAX_PATCH_RAY_INTERSECTIONS, Matrix2x3f,
                              PatchIndex, PlanarPoint1d, SpatialVector1d,
                              float_equal, logger)
 from src.quadratic_spline_surface.quadratic_spline_surface import \
@@ -54,10 +55,17 @@ def compute_spline_surface_ray_intersections(spline_surface: QuadraticSplineSurf
     assert ray_plane_point.shape == (2, )
     hash_indices: tuple[int, int] = spline_surface.compute_hash_indices(ray_plane_point)
 
+    # TODO: CHECK HASH TABLE AND SEE IF THEYRE THE SAME
+
     for i in spline_surface.hash_table[hash_indices[0]][hash_indices[1]]:
         num_intersections: int
         patch_surface_intersections: list[PlanarPoint1d]  # length MAX_PATCH_RAY_INTERSECTIONS
         patch_ray_intersections: list[float]  # length MAX_PATCH_RAY_INTERSECTIONS
+
+        # FIXME: the below method not giving any patch_sruface_intersections
+        # nor any ray_intersections... which is bad for us
+        # But how do I even test this?
+        # Is there an accurate was to deserialize QuadraticSplineSurface?
         (num_intersections,
          patch_surface_intersections,
          patch_ray_intersections,
@@ -71,8 +79,9 @@ def compute_spline_surface_ray_intersections(spline_surface: QuadraticSplineSurf
 
         # Add patch intersections to surface intersections arrays
         if num_intersections > MAX_PATCH_RAY_INTERSECTIONS:
-            logger.error("More than four intersections found of a ray with a patch")
             # TODO: raise value error here?
+            logger.error("More than four intersections found of a ray with a patch")
+            raise ValueError("More than four intersections found of a ray with a patch")
 
         for j in range(num_intersections):
             patch_indices.append(i)

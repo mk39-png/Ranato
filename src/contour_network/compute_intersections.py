@@ -5,6 +5,8 @@ Methods to compute intersections for quadratic surfaces.
 from dataclasses import dataclass
 from datetime import datetime
 
+import numpy as np
+
 from src.contour_network.compute_rational_bezier_curve_intersection import (
     find_intersections_bezier_clipping,
     split_bezier_curve_no_self_intersection)
@@ -14,9 +16,20 @@ from src.contour_network.intersection_heuristics import (
     compute_bezier_bounding_box, compute_bounding_box_hash_table,
     compute_homogeneous_bezier_points_over_interval)
 from src.core.common import (FIND_INTERSECTIONS_BEZIER_CLIPPING_PRECISION,
+                             INLINE_TESTING_ENABLED_CONTOUR_NETWORK,
                              Matrix5x3f, PlanarPoint1d, SpatialVector1d,
-                             float_equal_zero, interval_lerp, logger)
+                             compare_eigen_numpy_matrix,
+                             compare_list_list_varying_lengths,
+                             compare_list_list_varying_lengths_float,
+                             float_equal_zero, interval_lerp, load_json,
+                             logger)
 from src.core.rational_function import RationalFunction
+from src.tests.test_compute_rational_bezier_curve_intersections import \
+    ROOT_FOLDER
+from src.utils.compute_intersections_testing_utils import (
+    compare_intersection_stats, compare_list_list_intersection_data_from_file)
+from src.utils.rational_function_testing_utils import \
+    compare_rational_functions_from_file
 
 
 @dataclass
@@ -29,6 +42,7 @@ class IntersectionParameters():
     # Amount to trim ends of contour segments by; intersections that are trimmed are clamped
     # to the endpoint.
     trim_amount: float = 1e-5
+    # trim_amount: float = 1.0000000000000001e-05
 
 
 def _convert_spline_to_planar_curve_parameter(planar_curve: RationalFunction,
@@ -71,16 +85,16 @@ def _compute_bezier_clipping_planar_curve_intersections(first_planar_curve: Rati
         p1.append(first_bezier_control_points[i, :])
         p2.append(second_bezier_control_points[i, :])
 
-    #
-    # FIXME: METHOD BELOW DOES NOT SOLVE FOR image_segment_index == 9...
-    # SHOULD BE (1.15926, 0.999999) ELEMENT INSIDE intersection_param_inkscope
-    #
-    # .... But now there are TOO many elements for image_segment_index == 5...
+    # Below gives back the amount of intersections
     intersection_param_inkscope = find_intersections_bezier_clipping(
         p1,
         p2,
         FIND_INTERSECTIONS_BEZIER_CLIPPING_PRECISION)  # 1e-7
 
+    #
+    # FIXME: below seems OK? I think? I mean, the problem is with finding too many intersections
+    # Rather than the actual value of those intersections.
+    #
     for spline in intersection_param_inkscope:
         t_spline: float = spline[0]
         s_spline: float = spline[1]
@@ -107,6 +121,9 @@ def _prune_intersection_points(first_planar_curve: RationalFunction,
     assert (first_planar_curve.degree, first_planar_curve.dimension) == (4, 2)
     assert (second_planar_curve.degree, second_planar_curve.dimension) == (4, 2)
 
+    # FIXME: Potential this function that decides whether or not to add something...
+    # Check for i == 76 of intersection_indices...
+
     for intersection_point in intersection_points:
         t: float = intersection_point[0]
         s: float = intersection_point[1]
@@ -120,6 +137,9 @@ def _prune_intersection_points(first_planar_curve: RationalFunction,
         # Add points otherwise
         first_curve_intersections_ref.append(t)
         second_curve_intersections_ref.append(s)
+
+
+# counter_compute_planar_curve_testing: int = 0
 
 
 def _compute_planar_curve_intersections_from_bounding_box(
@@ -171,7 +191,7 @@ def _compute_planar_curve_intersections_from_bounding_box(
     intersection_points: list[tuple[float, float]]
     try:
         #
-        # FIXME: below is not giving values wanted...
+        # FIXME: below is not giving values wanted... for some intersections
         #
         intersection_points = _compute_bezier_clipping_planar_curve_intersections(
             first_planar_curve,
@@ -186,11 +206,19 @@ def _compute_planar_curve_intersections_from_bounding_box(
         return
 
     # Prune the computed intersections to ensure they are in the correct domain
+    #
+    # FIXME: this appears to work for image_segment_index == 9 in compute_intersections
+    #
     _prune_intersection_points(first_planar_curve,
                                second_planar_curve,
                                intersection_points,
                                first_curve_intersections_ref,
                                second_curve_intersections_ref)
+
+    # TODO: test this function for every call of this as well...
+    # Which means... yeah... testing both pieces together since there could be something wrong with
+    # how they interact?
+    # Because both of them work fine on their own...
 
     t2: datetime = datetime.now()
     total_time: int = (t2 - t1).microseconds
@@ -296,6 +324,12 @@ def compute_intersections(image_segments: list[RationalFunction],
             image_segment.domain.upper_bound)
         image_segments_bezier_control_points.append(bezier_control_points)
 
+    if INLINE_TESTING_ENABLED_CONTOUR_NETWORK:
+        filepath: str = "spot_control\\contour_network\\intersection_heuristics\\compute_homogeneous_bezier_points_over_interval\\"
+        compare_eigen_numpy_matrix(filepath+"image_segments_bezier_control_points.csv",
+                                   np.array(image_segments_bezier_control_points),
+                                   make_3d=True)
+
     #
     # FIXME: method below looks good
     #
@@ -307,6 +341,12 @@ def compute_intersections(image_segments: list[RationalFunction],
         lower_left_point, upper_right_point = compute_bezier_bounding_box(image_segment)
         image_segments_bounding_box.append((lower_left_point, upper_right_point))
 
+    if INLINE_TESTING_ENABLED_CONTOUR_NETWORK:
+        filepath: str = "spot_control\\contour_network\\intersection_heuristics\\compute_bezier_bounding_box\\"
+        compare_eigen_numpy_matrix(filepath+"image_segments_bounding_box.csv",
+                                   np.array(image_segments_bounding_box),
+                                   make_3d=True)
+
     #
     # FIXME: method below looks good
     #
@@ -316,7 +356,26 @@ def compute_intersections(image_segments: list[RationalFunction],
     reverse_hash_table: list[list[int]]
     hash_table, reverse_hash_table = compute_bounding_box_hash_table(image_segments_bounding_box)
 
+    if INLINE_TESTING_ENABLED_CONTOUR_NETWORK:
+        filepath: str = "spot_control\\contour_network\\intersection_heuristics\\compute_bounding_box_hash_table\\"
+
+        hash_table_control: list[list[list[int]]] = load_json(filepath+"hash_table_out.json")
+        # Hash table is 50x50 with each element holding an array of int.
+        for i in range(50):
+            outer_table: list[list[int]] = hash_table_control[i]
+            for j in range(50):
+                inner_table: list[int] = hash_table_control[i][j]
+                for k, data_control in enumerate(inner_table):
+                    assert hash_table[i][j][k] == data_control
+        compare_list_list_varying_lengths(filepath+"reverse_hash_table.csv", reverse_hash_table)
+
+    # COUNTER FOR TESTING
+    counter: int = 0
+    counter_planar_curve_calls: int = 0
+    # counter_compute_planar_curve_testing
+
     # Compute intersections
+    # FIXME: check this loop itself to see if its correct or not
     num_segments: int = len(image_segments)
     for image_segment_index in range(num_segments):
         cells: list[int] = reverse_hash_table[image_segment_index]
@@ -325,21 +384,46 @@ def compute_intersections(image_segments: list[RationalFunction],
         for cell in cells:
             j: int = cell // num_interval
             k: int = cell % num_interval
+
+            # FIXME: maybe switch data strucutre for the hash table
+            # Wait, the ordering of the hash table is a bit weird...
+
             for i in hash_table[j][k]:
                 if i >= image_segment_index or visited[i]:
                     continue
                 visited[i] = True
 
                 # Iterate over image segments with lower indices
-                logger.info("Computing segments %s, %s out of %s",
-                            image_segment_index,
-                            i,
-                            len(image_segments))
+                logger.debug("Computing segments %s, %s out of %s",
+                             image_segment_index,
+                             i,
+                             len(image_segments))
 
                 # Compute intersections between the two image segments
                 current_segment_intersections: list[float] = []
                 other_segment_intersections: list[float] = []
 
+                # Testing to see if parameters into the function below are correct
+                if INLINE_TESTING_ENABLED_CONTOUR_NETWORK:
+                    filepath: str = f"{ROOT_FOLDER}\\contour_network\\compute_intersections\\compute_planar_curve_intersections\\"
+                    compare_rational_functions_from_file(filepath+f"first_planar_curve\\{counter}.json",
+                                                         [image_segments[image_segment_index]])
+                    compare_rational_functions_from_file(filepath+f"second_planar_curve\\{counter}.json",
+                                                         [image_segments[i]])
+                    compare_intersection_stats(filepath+f"intersection_stats_in\\{counter}.json",
+                                               intersection_stats)
+                    compare_eigen_numpy_matrix(filepath+f"first_bounding_box\\{counter}.csv",
+                                               np.array(image_segments_bounding_box[image_segment_index]))
+                    compare_eigen_numpy_matrix(filepath+f"second_bounding_box\\{counter}.csv",
+                                               np.array(image_segments_bounding_box[i]))
+                    compare_eigen_numpy_matrix(filepath+f"first_bezier_control_points\\{counter}.csv",
+                                               image_segments_bezier_control_points[image_segment_index])
+                    compare_eigen_numpy_matrix(filepath+f"second_bezier_control_points\\{counter}.csv",
+                                               image_segments_bezier_control_points[i])
+
+                #
+                # FIXME: method below is providing more segment intersections than we would like
+                #
                 _compute_planar_curve_intersections_from_bounding_box(
                     image_segments[image_segment_index],
                     image_segments[i],
@@ -351,7 +435,12 @@ def compute_intersections(image_segments: list[RationalFunction],
                     image_segments_bounding_box[i],
                     image_segments_bezier_control_points[image_segment_index],
                     image_segments_bezier_control_points[i])
+                counter_planar_curve_calls += 1
+                # print(counter_planar_curve_calls)
+                # logger.error(counter_planar_curve_calls)
 
+                # TODO: test this loop below...
+                # Because uhhh, I haven't tested it yet for every iteration.
                 intersections[image_segment_index].extend(current_segment_intersections)
                 intersections[i].extend(other_segment_intersections)
 
@@ -360,8 +449,8 @@ def compute_intersections(image_segments: list[RationalFunction],
                     intersection_indices[image_segment_index].append(i)
                     intersection_indices[i].append(image_segment_index)
 
+                # Build full intersection data
                 for k, _ in enumerate(other_segment_intersections):
-                    # Build full intersection data
                     current_intersection_data: IntersectionData = IntersectionData(
                         knot=current_segment_intersections[k],
                         intersection_index=i,
@@ -388,6 +477,24 @@ def compute_intersections(image_segments: list[RationalFunction],
                                                           intersect_params.trim_amount)
                     contour_intersections_ref[i].append(other_intersection_data)
                     num_intersections += 1
+
+                # Comparing intermediate results
+                if INLINE_TESTING_ENABLED_CONTOUR_NETWORK:
+                    filepath: str = f"{ROOT_FOLDER}\\contour_network\\compute_intersections\\compute_intersections\\after_compute_curve_intersections\\"
+                    compare_list_list_varying_lengths_float(
+                        filepath+f"intersections\\{counter}.csv",
+                        intersections,
+                        1e-3)
+                    compare_list_list_varying_lengths(
+                        filepath+f"intersection_indices\\{counter}.csv",
+                        intersection_indices)
+                    compare_list_list_intersection_data_from_file(
+                        filepath+f"contour_intersections\\{counter}.json",
+                        contour_intersections_ref)
+                    compare_eigen_numpy_matrix(
+                        filepath+f"num_intersections\\{counter}.csv",
+                        np.array(num_intersections))
+                    counter += 1
 
     # Record intersection information
     intersection_call: int = intersection_stats.intersection_call

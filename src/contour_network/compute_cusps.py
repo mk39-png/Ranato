@@ -13,7 +13,7 @@ from src.contour_network.compute_ray_intersections_pencil_method import \
     solve_quadratic_quadratic_equation_pencil_method
 from src.core.common import (Matrix3x2f, Matrix3x3f, Matrix6x3f, PatchIndex,
                              PlanarPoint1d, Vector1D, Vector3f, Vector6f,
-                             float_equal, float_equal_zero)
+                             deprecated, float_equal, float_equal_zero, todo)
 from src.core.conic import Conic
 from src.core.polynomial_function import polynomial_real_roots
 from src.core.rational_function import RationalFunction
@@ -40,6 +40,8 @@ def compute_quadratic_surface_cusp_function(surface_mapping_coeffs: Matrix6x3f,
     :param contour_domain_curve_segment: [in] local parametric domain contour segment
     :return cusp_functions: implicit cusp function
     """
+    deprecated("Function does not appear to be used.")
+
     assert surface_mapping_coeffs.shape == (6, 3)
     assert normal_mapping_coeffs.shape == (6, 3)
     assert frame.shape == (3, 3)
@@ -113,6 +115,8 @@ def compute_spline_surface_cusp_functions(spline_surface: QuadraticSplineSurface
     :param patch_indices: [in] spline surface patch indices for the contour segments
     :return cusp_functions: implicit cusp functions per contour segment. degree 12, dimension 1.
     """
+    deprecated("Function does not appear to be used.")
+
     assert frame.shape == (3, 3)
     cusp_functions: list[RationalFunction] = []
 
@@ -328,7 +332,6 @@ def _compute_cusp_by_one_patch(spline_surface_patch: QuadraticSplineSurfacePatch
     Builds list of Conic by computing cusp by one patch.
     FIXME: this method likely to go wrong.
     """
-
     conics: list[float] = []
 
     normalized_surface_mapping_coeffs: Matrix6x3f
@@ -477,8 +480,8 @@ def _compute_cusp_start_end_points(spline_surface: QuadraticSplineSurface,
 
         tx: Vector6f = tangent_x(px, py)
         ty: Vector6f = _tangent_y(px, py)
-        nx: Vector6f = _normal_x(py, pz, )
-        ny: Vector6f = _normal_y(px, pz, )
+        nx: Vector6f = _normal_x(py, pz)
+        ny: Vector6f = _normal_y(px, pz)
 
         uv_start: PlanarPoint1d = conic.evaluate(t_start)
         uv_end: PlanarPoint1d = conic.evaluate(t_end)
