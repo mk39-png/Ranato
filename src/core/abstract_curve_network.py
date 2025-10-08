@@ -5,7 +5,8 @@ Used for contour_network.
 
 import logging
 
-from src.core.common import NodeIndex, SegmentIndex, logger, vector_contains
+from src.core.common import (CHECK_VALIDITY, NodeIndex, SegmentIndex, logger,
+                             vector_contains)
 
 
 class AbstractCurveNetwork():
@@ -41,7 +42,6 @@ class AbstractCurveNetwork():
                 # TODO: clear topology?
 
         # Build curve network
-        # init_abstract_curve_network()
         self.__next_array: list[SegmentIndex]  # = self.build_next_array(self.to_array, self.out_array)
         self.__prev_array: list[SegmentIndex]  # = self.build_prev_array(self.to_array, self.out_array)
         self.__from_array: list[NodeIndex]    # = self.build_from_array(self.to_array, self.out_array)
@@ -162,12 +162,13 @@ class AbstractCurveNetwork():
         """
         # Check input validity
         # FIXME: arent the below line of assert doing the opposite of what I want???
-        assert self._is_valid_minimal_curve_network_data(to_array,
-                                                         out_array,
-                                                         intersection_array)
-        if not self._is_valid_minimal_curve_network_data(to_array, out_array, intersection_array):
-            self._clear_topology()
-            raise ValueError("Could not build abstract curve network")
+        if CHECK_VALIDITY:
+            assert self._is_valid_minimal_curve_network_data(to_array,
+                                                             out_array,
+                                                             intersection_array)
+            if not self._is_valid_minimal_curve_network_data(to_array, out_array, intersection_array):
+                self._clear_topology()
+                raise ValueError("Could not build abstract curve network")
 
         # Set input arrays
         self.__to_array = to_array
@@ -178,9 +179,10 @@ class AbstractCurveNetwork():
         (self.__next_array, self.__prev_array,
          self.__from_array, self.__in_array) = self._init_abstract_curve_network()
 
-        if not self._is_valid_abstract_curve_network():
-            self._clear_topology()
-            raise ValueError("Inconsistent abstract curve network built")
+        if CHECK_VALIDITY:
+            if not self._is_valid_abstract_curve_network():
+                self._clear_topology()
+                raise ValueError("Inconsistent abstract curve network built")
 
     def is_boundary_node(self, node_index: NodeIndex) -> bool:
         """
@@ -377,15 +379,16 @@ class AbstractCurveNetwork():
 
         return next_array, prev_array, from_array, in_array
 
-    def _is_valid_curve_data(self,
-                             to_array: list[NodeIndex],
+    @staticmethod
+    def _is_valid_curve_data(to_array: list[NodeIndex],
                              out_array: list[SegmentIndex]) -> bool:
         """
         Check if input has valid indexing, meaning all to nodes are valid
         Note that out may be invalid for some nodes if they are terminal
-        @param[in] to_array: array mapping segments to their endpoints
-        @param[in] out_array: array mapping nodes to their outgoing segment
-        @return true iff the curve data is valid
+
+        :param to_array:  [in] array mapping segments to their endpoints
+        :param out_array: [in] array mapping nodes to their outgoing segment
+        :return: true iff the curve data is valid
         """
         num_segments: int = len(to_array)
         num_nodes: int = len(out_array)
@@ -396,8 +399,8 @@ class AbstractCurveNetwork():
 
         return True
 
-    def _is_valid_minimal_curve_network_data(self,
-                                             to_array: list[NodeIndex],
+    @staticmethod
+    def _is_valid_minimal_curve_network_data(to_array: list[NodeIndex],
                                              out_array: list[SegmentIndex],
                                              intersection_array: list[NodeIndex]) -> bool:
         """
@@ -422,7 +425,7 @@ class AbstractCurveNetwork():
 
         # Check all out nodes are valid (to and intersection array can have invalid
         # nodes)
-        if not self._is_valid_curve_data(to_array, out_array):
+        if not AbstractCurveNetwork._is_valid_curve_data(to_array, out_array):
             return False
 
         return True

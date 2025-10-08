@@ -291,7 +291,7 @@ def generate_monomial_to_bezier_matrix() -> Matrix6x6r:
         [1, 1, 0, 0, 1, 0],
         [1, 0, 1, 0, 0, 1],
         [1, 0, 0, 0, 0, 0]
-    ])
+    ], dtype=np.float64)
     assert change_of_basis_matrix.shape == (6, 6)
     return change_of_basis_matrix
 
