@@ -19,7 +19,7 @@ class Interval:
         """
 
         # *****************
-        # Private Members (in the C++ sense...)
+        # Private Members
         # *****************
         self.__t0: float = lower_bound
         self.__t1: float = upper_bound
@@ -28,11 +28,18 @@ class Interval:
         self.m_open_below: bool = True
         self.m_open_above: bool = True
 
+        # Case where values are passed into the constructor, calls special functions
+        if lower_bound != -float("inf"):
+            self.set_lower_bound(lower_bound)
+        if upper_bound != float("inf"):
+            self.set_upper_bound(upper_bound)
+
         # TODO: do I really need reset_bounds after everything above?
         # self.reset_bounds()
 
-    # NOTE: I'm including these getters and setters becuase they have more logic
+    # NOTE: I'm including these getters and setters because they have more logic
     # beyond simple getting and setting
+
     def set_lower_bound(self, lower_bound: float,  is_open: bool = False) -> None:
         """
         Sets t0 to lower_bound.
