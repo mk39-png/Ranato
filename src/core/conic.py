@@ -50,8 +50,8 @@ class Conic(RationalFunction):
         :param numerator_coeffs: shape (3, 2)
         :param denominator_coeffs: shape (3, ) 
         """
-        super().__init__(2, 2, numerator_coeffs, denominator_coeffs, domain)
         self.__type: ConicType = m_type
+        super().__init__(2, 2, numerator_coeffs, denominator_coeffs, domain)
         assert self.__is_valid()
 
     # ******
@@ -65,6 +65,36 @@ class Conic(RationalFunction):
         :return: type identifier
         """
         return self.__type
+
+    def split_at_knot_conic(self, knot: float) -> tuple["Conic", "Conic"]:
+        """
+        Split the Conic into two Conic at some knotin the domain.
+
+        Used by contour network.
+
+        :param knot: [in] point in the domain to split the conic at
+        :return lower_segment: [out] conic with lower domain
+        :return upper_segment: [out] conic with upper domain
+        """
+        #  Build lower segment
+        t0: float = self.domain.lower_bound
+        assert t0 <= knot
+
+        # TODO: when  building interval, need to set is_upper_bound and is_lower_bound
+        lower_domain = Interval(t0, knot)
+        lower_segment = Conic(numerator_coeffs=self.numerator_coeffs,
+                              denominator_coeffs=self.denominator_coeffs,
+                              domain=lower_domain)
+
+        # Build upper segment
+        t1: float = self.domain.upper_bound
+        assert knot <= t1
+        upper_domain = Interval(knot, t1)
+        upper_segment = Conic(numerator_coeffs=self.numerator_coeffs,
+                              denominator_coeffs=self.denominator_coeffs,
+                              domain=upper_domain)
+
+        return lower_segment, upper_segment
 
     def transform(self, rotation: Matrix2x2f, translation: PlanarPoint1d) -> None:
         """
