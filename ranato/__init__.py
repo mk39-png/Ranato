@@ -1,6 +1,7 @@
+import os
+import subprocess
+import sys
 from typing import Any
-
-import bpy
 
 from . import operators, panels
 
@@ -14,7 +15,26 @@ bl_info: dict[str, Any] = {
 }
 
 
-# TODO: include a function that installs dependencies
+# https://blenderartists.org/t/can-i-install-pandas-or-other-modules-into-blenders-python/1375122
+# NOTE: the below only works for Windows systems
+try:
+    import bpy
+    import igl
+    import matplotlib
+    import mpmath as mp
+except ImportError:
+    # Blender Python interpreter location
+    python_exe: str = os.path.join(sys.prefix, 'bin', 'python.exe')
+
+    # This is the folder that Blender automatically holds its installed addons
+    requirements_path: str = os.path.join(os.path.dirname(__file__), "requirements.txt")
+
+    # Pip Upgrade
+    subprocess.call([python_exe, "-m", "ensurepip"])
+    subprocess.call([python_exe, "-m", "pip", "install", "--upgrade", "pip"])
+
+    # Install Required Packages
+    subprocess.call([python_exe, "-m", "pip", "install", "-r", requirements_path])
 
 
 def register() -> None:
