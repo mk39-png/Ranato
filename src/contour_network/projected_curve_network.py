@@ -4,6 +4,7 @@ soup.
 """
 import copy
 import logging
+from typing import Literal
 
 import numpy as np
 import polyscope
@@ -745,7 +746,7 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
 
     def write(self,
               output_path: str,
-              color_mode: SVGOutputMode,
+              color_mode: Literal,
               show_nodes: bool = False) -> None:
         """
         Output visible planar curves as an SVG file, with visibility determined by

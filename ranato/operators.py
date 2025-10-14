@@ -11,6 +11,9 @@ from bpy.types import (Context, Depsgraph, Mesh, MeshUVLoopLayer, MeshVertices,
                        Object, RenderSettings, Scene)
 from mathutils import Matrix, Vector
 
+from ranato.src.exec.generate_algebraic_contours import \
+    generate_algebraic_contours
+
 # Resources helping with understanding what EnumProperty is all about
 # (and also understanding how "register" interacts with the rest of the addon)
 # https://blender.stackexchange.com/questions/247695/invoke-search-popup-for-a-simple-panel
@@ -167,6 +170,7 @@ class SearchMeshOperator(bpy.types.Operator):
 
             # Now, with the UV unwrapped mesh, we can now call the main program for
             # processing the whole mesh... from another folder.
+            generate_algebraic_contours(projection_matrix)
 
         else:
             # User mis-selected a non-mesh.
