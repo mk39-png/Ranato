@@ -11,9 +11,9 @@ from ranato.algebraic_contours.contour_network.intersection_data import \
     IntersectionData
 from ranato.algebraic_contours.core.abstract_curve_network import \
     AbstractCurveNetwork
-from ranato.algebraic_contours.core.common import (NodeIndex, SegmentIndex,
-                                                   arange, load_json, logger,
-                                                   vector_equal)
+from ranato.algebraic_contours.core.common import (LOGGER, NodeIndex,
+                                                   SegmentIndex, arange,
+                                                   load_json, vector_equal)
 from ranato.algebraic_contours.core.conic import Conic
 from ranato.algebraic_contours.core.rational_function import RationalFunction
 from ranato.algebraic_contours.utils.conic_testing_utils import (
@@ -199,16 +199,16 @@ class SegmentGeometry():
         t1: float = self.__planar_curve.domain.upper_bound
 
         if self.spatial_curve.domain.lower_bound != t0:
-            logger.error("Lower bound error")
+            LOGGER.error("Lower bound error")
             return False
         if self.parameter_curve.domain.lower_bound != t0:
-            logger.error("Lower bound error")
+            LOGGER.error("Lower bound error")
             return False
         if self.spatial_curve.domain.upper_bound != t1:
-            logger.error("Upper bound error")
+            LOGGER.error("Upper bound error")
             return False
         if self.parameter_curve.domain.upper_bound != t1:
-            logger.error("Upper bound error")
+            LOGGER.error("Upper bound error")
             return False
 
         return True
@@ -385,7 +385,7 @@ def build_projected_curve_network_without_intersections(parameter_segments: list
     nodes: list[NodeGeometry] = []
 
     # Initialize segments without intersections
-    logger.info("Initializing segment geometry without intersections")
+    LOGGER.info("Initializing segment geometry without intersections")
     for i in range(num_segments):
         segments.append(SegmentGeometry(parameter_segments[i],
                                         spatial_segments[i],
@@ -393,11 +393,11 @@ def build_projected_curve_network_without_intersections(parameter_segments: list
                                         segment_labels[i]))
 
     # Initializing node bases without intersections
-    logger.info("Initializing node bases without intersections")
+    LOGGER.info("Initializing node bases without intersections")
     for i in range(num_segments):
         nodes.append(NodeGeometry())
         if has_cusp_at_base[i]:
-            logger.info("Marking node %s as boundary cusp", i)
+            LOGGER.info("Marking node %s as boundary cusp", i)
             nodes[i].mark_as_boundary_cusp()
 
     # Initialize one node for the base of each segment. Since we assume all
@@ -563,7 +563,7 @@ def split_segment_at_knot(original_segment_index: SegmentIndex,
     lower_segment: SegmentGeometry
     upper_segment: SegmentGeometry
     lower_segment, upper_segment = segments_ref[original_segment_index].split_at_knot(knot)
-    logger.info("Segment %s split into %s and %s at %s",
+    LOGGER.info("Segment %s split into %s and %s at %s",
                 segments_ref[original_segment_index],
                 lower_segment,
                 upper_segment,
@@ -612,7 +612,7 @@ def split_segments_at_intersections(intersection_data: list[list[IntersectionDat
     :return split_segment_indices: 
     :return intersection_nodes:
     """
-    logger.info("Splitting segments at intersections")
+    LOGGER.info("Splitting segments at intersections")
     num_segments: int = len(segments_ref)
     num_nodes: int = len(nodes_ref)
     split_segment_indices: list[list[SegmentIndex]] = []
@@ -702,7 +702,7 @@ def split_segments_at_intersections(intersection_data: list[list[IntersectionDat
                 # Continue splitting upper segment
                 segment_index = upper_segment_index
 
-    logger.debug("Split %s segments with %s nodes into %s segments with %s nodes",
+    LOGGER.debug("Split %s segments with %s nodes into %s segments with %s nodes",
                  num_segments,
                  num_nodes,
                  len(segments_ref),
@@ -729,7 +729,7 @@ def connect_segment_intersections(
     :param intersection_array_ref: [out]
     :param nodes_ref: [out]
     """
-    logger.info("Connecting segments intersections")
+    LOGGER.info("Connecting segments intersections")
 
     for i, _ in enumerate(intersection_nodes):
         if len(intersection_nodes[i]) == 0:
@@ -777,7 +777,7 @@ def split_segments_at_cusps(interior_cusps: list[list[float]],
     :param segments_ref: [out]
     :param nodes_ref:    [out]
     """
-    logger.info("Splitting segments at cusps")
+    LOGGER.info("Splitting segments at cusps")
 
     num_segments: int = len(segments_ref)
     num_nodes: int = len(nodes_ref)
@@ -811,7 +811,7 @@ def split_segments_at_cusps(interior_cusps: list[list[float]],
                                                               segments_ref,
                                                               nodes_ref)
                     # Mark new node as interior cusp
-                    logger.info("Marking node %s as interior cusp", knot_node_index)
+                    LOGGER.info("Marking node %s as interior cusp", knot_node_index)
                     nodes_ref[knot_node_index].mark_as_interior_cusp()
 
                     # Add trivial intersection information
@@ -832,7 +832,7 @@ def split_segments_at_cusps(interior_cusps: list[list[float]],
                     original_segment_indices_ref[upper_segment_index] = i
                     break
 
-    logger.debug("Split %s segments with %s nodes into %s segments with %s nodes",
+    LOGGER.debug("Split %s segments with %s nodes into %s segments with %s nodes",
                  num_segments,
                  num_nodes,
                  len(segments_ref),
@@ -840,7 +840,7 @@ def split_segments_at_cusps(interior_cusps: list[list[float]],
 
     # Check consistency of out and intersection arrays
     if len(out_array_ref) != len(intersection_array_ref):
-        logger.error("Inconsistent number of intersections and nodes after cusps are split")
+        LOGGER.error("Inconsistent number of intersections and nodes after cusps are split")
         return
 
 
@@ -853,18 +853,18 @@ def is_valid_next_prev_pair(next_: list[int], prev: list[int]) -> bool:
 
     #  Check for consistent sizes
     if next_size != prev_size:
-        logger.error("Inconsistent prev/next sizes")
+        LOGGER.error("Inconsistent prev/next sizes")
         return False
 
     for i in range(next_size):
         #  Check prev[next] is the identity where it is defined
         if (next_[i] != -1) and (prev[next_[i]] != i):
-            logger.error("prev[next] is not the identity")
+            LOGGER.error("prev[next] is not the identity")
             return False
 
         # Check next[prev] is the identity where it is defined
         if (prev[i] != -1) and (next_[prev[i]] != i):
-            logger.error("next[prev] is not the identity")
+            LOGGER.error("next[prev] is not the identity")
             return False
 
     return True

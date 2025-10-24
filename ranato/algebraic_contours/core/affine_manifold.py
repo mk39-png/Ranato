@@ -10,7 +10,7 @@ import numpy as np
 import polyscope as ps
 
 from ranato.algebraic_contours.core.common import (CHECK_VALIDITY, COLS,
-                                                   GOLD_YELLOW,
+                                                   GOLD_YELLOW, LOGGER,
                                                    PLACEHOLDER_BOOL,
                                                    PLACEHOLDER_INDEX,
                                                    PLACEHOLDER_VALUE, ROWS,
@@ -25,7 +25,7 @@ from ranato.algebraic_contours.core.common import (CHECK_VALIDITY, COLS,
                                                    float_equal,
                                                    float_equal_zero,
                                                    formatted_vector,
-                                                   is_manifold, logger,
+                                                   is_manifold,
                                                    matrix_contains_nan,
                                                    reflect_across_x_axis,
                                                    remove_mesh_faces,
@@ -156,18 +156,18 @@ class AffineManifold:
         # Check the input
         if CHECK_VALIDITY:
             if not is_manifold(F):
-                logger.error("Input mesh is not manifold")
+                LOGGER.error("Input mesh is not manifold")
                 self.clear()
                 return
 
             if not is_manifold(F_uv):
-                logger.error("Input mesh is not manifold")
+                LOGGER.error("Input mesh is not manifold")
                 self.clear()
                 return
 
             # Comparing row sizes
             if F_uv.shape[ROWS] != F.shape[ROWS]:
-                logger.error("Input mesh and uv mesh have different sizes")
+                LOGGER.error("Input mesh and uv mesh have different sizes")
                 self.clear()
                 return
 
@@ -207,7 +207,7 @@ class AffineManifold:
 
         # Check validity
         if not self._is_valid_affine_manifold():
-            logger.error("Could not build a cone manifold")
+            LOGGER.error("Could not build a cone manifold")
             self.clear()
 
     @property
@@ -533,7 +533,7 @@ class AffineManifold:
         for vertex_index in range(self.num_vertices):
             # FIXME: something wrong with is_flat
             if not self.is_flat(vertex_index):
-                logger.debug("Getting cone %s of curvature %s",
+                LOGGER.debug("Getting cone %s of curvature %s",
                              vertex_index, self.compute_curvature(vertex_index))
                 cones.append(vertex_index)
         return cones
@@ -730,7 +730,7 @@ class AffineManifold:
 
         # Take the screenshot
         ps.screenshot(filename)
-        logger.info("Screenshot saved to %s", filename)
+        LOGGER.info("Screenshot saved to %s", filename)
         ps.remove_all_structures()
 
     def clear(self) -> None:
@@ -998,7 +998,7 @@ class AffineManifold:
         Layout the one ring around the given vertex from the lengths
         """
         one_ring_uv_positions: MatrixNx2f = np.ndarray(shape=(len(vertex_one_ring), 2))
-        logger.info("Building layout for one ring: %s", vertex_one_ring)
+        LOGGER.info("Building layout for one ring: %s", vertex_one_ring)
 
         #  Initialize first vertex to position (l0, 0), where l0 is the length of the
         #  edge
@@ -1012,8 +1012,8 @@ class AffineManifold:
         for i, f in enumerate(face_one_ring):
             # Get current face and the index of the vertex in it
             j: int = find_face_vertex_index(F[f, :], vertex_index)
-            logger.info("Laying out vertex for face %s", F[f, :])
-            logger.info("Face lengths are %s", l[f])
+            LOGGER.info("Laying out vertex for face %s", F[f, :])
+            LOGGER.info("Face lengths are %s", l[f])
 
             # Get the lengths of the triangle edges
             next_edge_length: float = l[f][j]
@@ -1025,8 +1025,8 @@ class AffineManifold:
             one_ring_uv_positions[i + 1, :] = self._layout_next_vertex(one_ring_uv_positions[i, :],
                                                                        next_edge_length,
                                                                        prev_edge_length)
-            if logger.getEffectiveLevel() != logging.INFO:
-                logger.info("Next vertex is %s",
+            if LOGGER.getEffectiveLevel() != logging.INFO:
+                LOGGER.info("Next vertex is %s",
                             one_ring_uv_positions[i + 1, :])
 
             assert float_equal(next_edge_length, np.linalg.norm(
@@ -1034,7 +1034,7 @@ class AffineManifold:
             assert float_equal(prev_edge_length, np.linalg.norm(
                 one_ring_uv_positions[i + 1, :]))
 
-        logger.info("Final layout:\n%s", one_ring_uv_positions)
+        LOGGER.info("Final layout:\n%s", one_ring_uv_positions)
 
         assert not matrix_contains_nan(one_ring_uv_positions)
         return one_ring_uv_positions
@@ -1127,16 +1127,16 @@ class AffineManifold:
         for _, ci in enumerate(cones):
             self.__vertex_charts[ci].is_cone = True
             chart: VertexManifoldChart = self.get_vertex_chart(ci)
-            logger.debug("Marking cone at %s", ci)
+            LOGGER.debug("Marking cone at %s", ci)
 
             # Mark vertices adjacent to cones
-            logger.debug("Marking cone at adjacent vertices at %s",
+            LOGGER.debug("Marking cone at adjacent vertices at %s",
                          formatted_vector(chart.vertex_one_ring, ", "))
             for _, vj in enumerate(chart.vertex_one_ring):
                 self.__vertex_charts[vj].is_cone_adjacent = True
 
             # Mark faces adjacent to cones
-            logger.debug("Marking cone adjacent faces at %s",
+            LOGGER.debug("Marking cone adjacent faces at %s",
                          formatted_vector(chart.face_one_ring, ", "))
             for _, fj in enumerate(chart.face_one_ring):
                 self.__face_charts[fj].is_cone_adjacent = True
@@ -1199,7 +1199,7 @@ class AffineManifold:
                 edge_uv_length: float = self._compute_corner_uv_length(fi, j)
 
                 if not float_equal(edge_length, edge_uv_length, length_threshold):
-                    logger.error("Inconsistent edge length %s and uv length %s for corner %s, %s",
+                    LOGGER.error("Inconsistent edge length %s and uv length %s for corner %s, %s",
                                  edge_length, edge_uv_length, fi, j)
                     raise ValueError("Inconsistent edge length %s and uv length %s for corner %s, %s",
                                      edge_length, edge_uv_length, fi, j)
@@ -1216,7 +1216,7 @@ class AffineManifold:
                 # Check uvs are the same for the opposite corners
                 opposite_edge_uv_length: float = self._compute_corner_uv_length(fi_opp, j_opp)
                 if not float_equal(edge_length, opposite_edge_uv_length, length_threshold):
-                    logger.error("Inconsistent opposite uv length for corners %s, %s and %s, %s",
+                    LOGGER.error("Inconsistent opposite uv length for corners %s, %s and %s, %s",
                                  fi, j, fi_opp, j_opp)
                     raise ValueError("Inconsistent opposite uv length for corners %s, %s and %s, %s",
                                      fi, j, fi_opp, j_opp)
@@ -1254,14 +1254,14 @@ class AffineManifold:
 
                 # Check that each local uv length is compatible with the given metric
                 # FIXME: pretty sure the below is not the way to go for logging with a set level
-                if logger.getEffectiveLevel != logger.level:
-                    logger.info("Face lengths: %s",
+                if LOGGER.getEffectiveLevel != LOGGER.level:
+                    LOGGER.info("Face lengths: %s",
                                 formatted_vector(self.__l[face_index]))
 
                 if not edge_has_length(zero,
                                        chart.one_ring_uv_positions[i, :],
                                        self.__l[face_index][(face_vertex_index + 2) % 3]):
-                    logger.error("uv position %s in chart %s does not expect norm %s",
+                    LOGGER.error("uv position %s in chart %s does not expect norm %s",
                                  chart.one_ring_uv_positions[i, :],
                                  vertex_index,
                                  self.__l[face_index][(face_vertex_index + 2) % 3])
@@ -1274,7 +1274,7 @@ class AffineManifold:
                 if not edge_has_length(chart.one_ring_uv_positions[i + 1, :],
                                        chart.one_ring_uv_positions[i, :],
                                        self.__l[face_index][(face_vertex_index + 0) % 3]):
-                    logger.error("uv positions %s and %s in chart %s do not have expected length %s",
+                    LOGGER.error("uv positions %s and %s in chart %s do not have expected length %s",
                                  chart.one_ring_uv_positions[i + 1, :],
                                  chart.one_ring_uv_positions[i, :],
                                  vertex_index, self.__l[face_index][(face_vertex_index + 0) % 3])
@@ -1287,7 +1287,7 @@ class AffineManifold:
                 if not edge_has_length(zero,
                                        chart.one_ring_uv_positions[i + 1, :],
                                        self.__l[face_index][(face_vertex_index + 1) % 3]):
-                    logger.error("uv position %s in chart %s does not have the expected norm %s",
+                    LOGGER.error("uv position %s in chart %s does not have the expected norm %s",
                                  chart.one_ring_uv_positions[i + 1, :],
                                  vertex_index,
                                  self.__l[face_index][(face_vertex_index + 1) % 3])
@@ -1363,7 +1363,7 @@ class ParametricAffineManifold(AffineManifold):
                 assert global_uv_difference.shape == (2, )
 
                 if not vector_equal(global_uv_difference, local_uv_difference):
-                    logger.error(
+                    LOGGER.error(
                         "Global uv coordinates %s and %s do not have expected difference %s",
                         self.global_uv[vi, :],
                         self.global_uv[vertex_index, :],
@@ -1392,7 +1392,7 @@ def remove_cones(V: np.ndarray,
     # TODO: why do we even need to pass in cones if they're just going to be removed anyways?
     cones = affine_manifold.compute_cones()
     # TODO: implement with proper formatted_vector() function
-    logger.debug("Remove cones at %s", cones)
+    LOGGER.debug("Remove cones at %s", cones)
 
     # Create boolean arrays of cone adjacent vertices
     is_cone_adjacent_vertex: list[bool] = [PLACEHOLDER_BOOL] * affine_manifold.num_vertices

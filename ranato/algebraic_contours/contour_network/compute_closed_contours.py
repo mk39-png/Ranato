@@ -7,8 +7,8 @@ import numpy as np
 import numpy.testing as npt
 
 from ranato.algebraic_contours.core.common import (
-    INLINE_TESTING_ENABLED_CONTOUR_NETWORK, PLACEHOLDER_VALUE, SpatialVector1d,
-    compare_eigen_numpy_matrix, float_equal_zero, logger, todo)
+    INLINE_TESTING_ENABLED_CONTOUR_NETWORK, LOGGER, PLACEHOLDER_VALUE,
+    SpatialVector1d, compare_eigen_numpy_matrix, float_equal_zero, todo)
 from ranato.algebraic_contours.core.rational_function import RationalFunction
 
 # *******
@@ -100,7 +100,7 @@ def _is_valid_contours(contours: list[list[int]],
         for j in range(1, len(contours[i])):
             if not _are_overlapping_points(contour_end_points[contours[i][j - 1]],
                                            contour_start_points[contours[i][j]]):
-                logger.error("Segment %s in contour %s not adjacent to segment %s", j - 1, i, j)
+                LOGGER.error("Segment %s in contour %s not adjacent to segment %s", j - 1, i, j)
                 return False
 
     return True
@@ -323,7 +323,7 @@ def compute_closed_contours(contour_segments: list[RationalFunction]) -> tuple[l
                 break
 
         if closed_contour:
-            logger.debug("Closed contour of size %s found", len(current_contour))
+            LOGGER.debug("Closed contour of size %s found", len(current_contour))
             # TODO: check to see if function below modifies by reference properly.
             _add_contour(current_contour, contours, contour_labels)
         else:

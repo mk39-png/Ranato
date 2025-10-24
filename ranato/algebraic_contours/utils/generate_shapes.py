@@ -384,7 +384,7 @@ def generate_mesh_from_grid(point_grid: list[list[SpatialVector]],
             assert len(l[2*flatten(i, j, N)]) == 3
             assert len(l[2*flatten(i, j, N) + 1]) == 3
 
-    logger.debug("Faces:\n%s", F)
+    LOGGER.debug("Faces:\n%s", F)
 
     assert len(l) == 2 * N * N
 

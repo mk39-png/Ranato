@@ -12,9 +12,9 @@ from ranato.algebraic_contours.core.bivariate_quadratic_function import (
     evaluate_quadratic_mapping, generate_monomial_to_bezier_matrix,
     generate_quadratic_coordinate_domain_triangle_normalization_matrix)
 from ranato.algebraic_contours.core.common import (
-    ROWS, Matrix2x2f, Matrix3x2r, Matrix6x3f, Matrix6x3r, Matrix6x6r,
+    LOGGER, ROWS, Matrix2x2f, Matrix3x2r, Matrix6x3f, Matrix6x3r, Matrix6x6r,
     MatrixNx2f, PlanarPoint1d, SpatialVector, SpatialVector1d, Vector3f,
-    compute_point_cloud_bounding_box, load_json, logger, todo, unimplemented)
+    compute_point_cloud_bounding_box, load_json, todo, unimplemented)
 from ranato.algebraic_contours.core.convex_polygon import ConvexPolygon
 from ranato.algebraic_contours.core.evaluate_surface_normal import \
     generate_quadratic_surface_normal_coeffs
@@ -580,10 +580,10 @@ class QuadraticSplineSurfacePatch:
         :param filepath: file path to write serialized patch to.
         :type filepath: str
         """
-        logger.info("Writing spline patch to %s", filepath)
+        LOGGER.info("Writing spline patch to %s", filepath)
 
         if os.path.isfile(filepath):
-            logger.warning("Overwriting file at %s.", filepath)
+            LOGGER.warning("Overwriting file at %s.", filepath)
 
         with open(filepath, 'w', encoding='utf-8') as output_file:
             self.serialize(output_file)

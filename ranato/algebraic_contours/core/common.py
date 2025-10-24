@@ -12,8 +12,11 @@ import numpy.linalg as LA
 import numpy.testing as npt
 import numpy.typing as npty
 
-logger: logging.Logger = logging.getLogger(__name__)
+LOGGER: logging.Logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG)
+logging.disable(logging.DEBUG)
+logging.disable(logging.INFO)
+
 
 # *******
 # GLOBALS
@@ -48,7 +51,8 @@ OneFormXr = np.ndarray  # TODO: what shape is this... I forget
 PlanarPoint = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (1, 2)
 # PlanarPoint1d = np.ndarray[tuple[int], np.dtype[np.float64]]  # shape (2, )
 PlanarPoint1d = np.ndarray  # shape (2, )
-SpatialVector = np.ndarray[tuple[int, int], np.dtype[np.float64]]  # shape (1, 3)
+SpatialVector = np.ndarray[tuple[int, int],
+                           np.dtype[np.float64]]  # shape (1, 3)
 SpatialVector1d = np.ndarray  # shape (3, )
 Index = int
 FaceIndex = int
@@ -72,7 +76,8 @@ Vector9f = np.ndarray
 Vector12f = np.ndarray
 Vector13f = np.ndarray
 Vector36f = np.ndarray
-VectorX = np.ndarray  # shape (n, )... sometimes. Oftentimes it's shape (n, 1) or (1, n)...
+# shape (n, )... sometimes. Oftentimes it's shape (n, 1) or (1, n)...
+VectorX = np.ndarray
 # shape (1, n) (or sometimes shape (n, 1) as in the case of optimize_spline_surface)... might just be easier to flatten and use Vector1D... I don't see the point of having Vector2D if it will just be more confusing.
 Vector2D = np.ndarray
 Vector1D = np.ndarray  # shape (n, )
@@ -145,6 +150,7 @@ PLACEHOLDER_BOOL = False
 # ***********************
 # TESTING FLAGS
 CHECK_VALIDITY: bool = False
+
 # Source folder for control vlaues for testing
 TESTING_FOLDER_SOURCE = "spot_control"
 # Used to determine whether to compare files for testing and whatnot
@@ -152,7 +158,7 @@ INLINE_TESTING_ENABLED_CONTOUR_NETWORK: bool = False
 INLINE_TESTING_ENABLED_QI: bool = False
 # Used to determine whether to skip certain functions and use deserialized results instead.
 # Primarily used to save time on runtime for testing purposes.
-USE_DESERIALIZED_VALUES: bool = True
+USE_DESERIALIZED_VALUES: bool = False
 
 #
 # ***********************
@@ -327,7 +333,8 @@ def compare_eigen_numpy_matrix(filename: str,
     Standardized function for comparing matrices for testing.
     Takes a filename and creates an absolute filepath to src/tests/
     """
-    eigen_array: np.ndarray = deserialize_eigen_matrix_csv_to_numpy(filename, make_3d)
+    eigen_array: np.ndarray = deserialize_eigen_matrix_csv_to_numpy(
+        filename, make_3d)
     npt.assert_allclose(numpy_array, eigen_array)
 
 
@@ -350,7 +357,8 @@ def compare_intersection_points(filename: str,
     But we only care about the first row since this only has 1 intersection.
     """
     eigen_array: np.ndarray = deserialize_eigen_matrix_csv_to_numpy(filename)
-    npt.assert_allclose(numpy_array[:num_intersections], eigen_array[:num_intersections], atol=1e-5)
+    npt.assert_allclose(
+        numpy_array[:num_intersections], eigen_array[:num_intersections], atol=1e-5)
 
 
 def deserialize_eigen_matrix_csv_to_numpy(filename: str, make_3d: bool = False) -> np.ndarray:
@@ -372,14 +380,16 @@ def deserialize_eigen_matrix_csv_to_numpy(filename: str, make_3d: bool = False) 
             # In "3D" files, sections are separated by double newlines
             file_lines: list[str] = file_lines_raw.split("\n\n")
 
-            arr_list: list[np.ndarray] = []  # build this list 3d then convert to np
+            # build this list 3d then convert to np
+            arr_list: list[np.ndarray] = []
             for line_raw in file_lines:
                 # NOTE: sometimes the last line can be '' empty string since we remove "\n\n"
                 if len(line_raw) == 0:
                     continue
                 # convert to stringio because that's what loadtxt works with
                 s = StringIO(line_raw)
-                line: np.ndarray = np.loadtxt(s, delimiter=',')  # get matrix values to put in list of matrices
+                # get matrix values to put in list of matrices
+                line: np.ndarray = np.loadtxt(s, delimiter=',')
                 arr_list.append(line)
 
             arr = np.array(arr_list)
@@ -591,7 +601,8 @@ def reflect_across_x_axis(vector: PlanarPoint1d) -> PlanarPoint1d:
     @return reflected vector of shape (1, 2)
     """
     assert vector.shape == (2, )
-    reflected_vector: PlanarPoint1d = np.array([vector[0], -vector[1]], dtype=np.float64)
+    reflected_vector: PlanarPoint1d = np.array(
+        [vector[0], -vector[1]], dtype=np.float64)
     return reflected_vector
 
 
@@ -708,7 +719,8 @@ def remove_vector_values(indices_to_remove: list[Index], vec: list) -> list:
     # Removes indices from vev
 
     # Remove faces adjacent to cones
-    indices_to_keep: list[Index] = index_vector_complement(indices_to_remove, len(vec))
+    indices_to_keep: list[Index] = index_vector_complement(
+        indices_to_remove, len(vec))
     subvec: list = []
 
     # TODO: double check logic here with ASOC code
@@ -883,22 +895,24 @@ def is_manifold(F: MatrixXi) -> bool:
     # Checks the tuple of elements that are returned.
     # first element tells us if all edges are manifold or not.
     if not igl.is_edge_manifold(F)[0]:
-        logger.error("Mesh is not edge manifold")
+        LOGGER.error("Mesh is not edge manifold")
         return False
 
     # Check vertex manifold condition
 
-    invalid_vertices: np.ndarray = np.asarray(igl.is_vertex_manifold(F), dtype=np.bool)
+    invalid_vertices: np.ndarray = np.asarray(
+        igl.is_vertex_manifold(F), dtype=np.bool)
     if not invalid_vertices.any():
-        logger.error("Mesh is not vertex manifold")
+        LOGGER.error("Mesh is not vertex manifold")
         return False
 
     # Check single component
     # TODO: check datatype on component_ids and if it's a numpy array
-    component_ids: np.ndarray = np.asarray(igl.vertex_components(F), dtype=np.int64)
+    component_ids: np.ndarray = np.asarray(
+        igl.vertex_components(F), dtype=np.int64)
 
     if (component_ids.max() - component_ids.min()) > 0:
-        logger.error("Mesh has multiple components")
+        LOGGER.error("Mesh has multiple components")
         return False
 
     # Manifold otherwise
@@ -934,7 +948,8 @@ def area_from_positions() -> None:
     :return: triangle area
     """
     # p0: PlanarPoint, p1: PlanarPoint, p2: PlanarPoint) -> float:
-    deprecated("Method only used in generate_twelve_split_domain_areas, which is no longer in use.")
+    deprecated(
+        "Method only used in generate_twelve_split_domain_areas, which is no longer in use.")
 
     # assert p0.shape == (1, 2)
     # assert p1.shape == (1, 2)
@@ -1071,11 +1086,13 @@ def remove_mesh_faces(V: MatrixNx3f,
     :return: tuple of V and F submeshes (V, F)
     :rtype: tuple[np.ndarray, np.ndarray]
     """
-    faces_to_keep: list[FaceIndex] = index_vector_complement(faces_to_remove, F.shape[ROWS])  # rows
+    faces_to_keep: list[FaceIndex] = index_vector_complement(
+        faces_to_remove, F.shape[ROWS])  # rows
 
     # TODO: in the ASOC code, this F_unsimplified_submesh was initialized to shape
     # (faces_to_keep.size(), F.cols()) and then immediately resized.
-    F_unsimplified_submesh: np.ndarray = np.ndarray(shape=(len(faces_to_keep), 3), dtype=int)
+    F_unsimplified_submesh: np.ndarray = np.ndarray(
+        shape=(len(faces_to_keep), 3), dtype=int)
 
     for i, _ in enumerate(faces_to_keep):
         F_unsimplified_submesh[i, :] = F[faces_to_keep[i], :]
@@ -1087,7 +1104,7 @@ def remove_mesh_faces(V: MatrixNx3f,
     # TODO: Pylint shows error with igl not having member, but I'm sure it is fine.
     F_submesh, V_submesh, _, _ = igl.remove_unreferenced(F, V)
 
-    logger.info("Final mesh has %s faces and %s vertices",
+    LOGGER.info("Final mesh has %s faces and %s vertices",
                 F_submesh.shape[ROWS], V_submesh.shape[ROWS])
 
     return V_submesh, F_submesh
@@ -1112,7 +1129,7 @@ def remove_mesh_vertices(V: MatrixNx3f,
     of face indices that were removed
     :rtype: tuple[np.ndarray, np.ndarray, list[FaceIndex]]
     """
-    logger.info("Removing %s vertices from mesh with %s faces and %s vertices",
+    LOGGER.info("Removing %s vertices from mesh with %s faces and %s vertices",
                 len(vertices_to_remove), F.shape[ROWS], V.shape[ROWS])
 
     # Tag faces adjacent to the vertices to remove
@@ -1125,7 +1142,7 @@ def remove_mesh_vertices(V: MatrixNx3f,
             if contains_vertex(F[face_index, :], vertices_to_remove[i]):
                 faces_to_remove.append(face_index)
                 break
-    logger.info("Remove %s faces", len(faces_to_remove))
+    LOGGER.info("Remove %s faces", len(faces_to_remove))
 
     # Remove faces adjacent to cones
     V_submesh: np.ndarray

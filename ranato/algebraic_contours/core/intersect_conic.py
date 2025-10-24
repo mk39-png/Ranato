@@ -4,9 +4,9 @@ Conic intersections.
 
 import copy
 
-from ranato.algebraic_contours.core.common import (Matrix3x1r, Matrix3x2f,
-                                                   PlanarPoint1d, Vector2f,
-                                                   Vector3f, logger, todo)
+from ranato.algebraic_contours.core.common import (LOGGER, Matrix3x1r,
+                                                   Matrix3x2f, PlanarPoint1d,
+                                                   Vector2f, Vector3f, todo)
 from ranato.algebraic_contours.core.conic import Conic
 from ranato.algebraic_contours.core.convex_polygon import ConvexPolygon
 from ranato.algebraic_contours.core.polynomial_function import \
@@ -109,7 +109,7 @@ def intersect_conic_with_convex_polygon(conic: Conic,
             indexed_intersections.append((intersections_poly[j], i))
         assert len(indexed_intersections) == len(intersections_poly)
 
-    logger.debug("Intersections: %s", intersections_poly)
+    LOGGER.debug("Intersections: %s", intersections_poly)
     indexed_intersections.sort()
 
     if len(indexed_intersections) == 0:
@@ -136,7 +136,7 @@ def intersect_conic_with_convex_polygon(conic: Conic,
     t1 = indexed_intersections[0][0]
     t_sample = max(0.5 * (t0 + t1), t1 - 1)
     p_sample = conic(t_sample).flatten()
-    logger.debug("Sampling at %s", t_sample)
+    LOGGER.debug("Sampling at %s", t_sample)
     if convex_polygon.contains(p_sample):
         conic_segment: Conic = copy.deepcopy(conic)
         conic_segment.domain.set_upper_bound(t1, False)
@@ -149,7 +149,7 @@ def intersect_conic_with_convex_polygon(conic: Conic,
         t1 = indexed_intersections[i + 1][0]
         t_sample = 0.5 * (t0 + t1)
         p_sample = conic(t_sample)
-        logger.debug("Sampling at %s", t_sample)
+        LOGGER.debug("Sampling at %s", t_sample)
         if convex_polygon.contains(p_sample):
             # FIXME: double check that this does not modify original conic...
             # i.e. actually makes a deep copy
@@ -164,7 +164,7 @@ def intersect_conic_with_convex_polygon(conic: Conic,
     t0 = indexed_intersections[-1][0]
     t1 = conic.domain.upper_bound
     t_sample = min(0.5 * (t0 + t1), t0 + 1)
-    logger.debug("Sampling at %s", t_sample)
+    LOGGER.debug("Sampling at %s", t_sample)
     p_sample = conic(t_sample)
     if convex_polygon.contains(p_sample):
         conic_segment: Conic = copy.deepcopy(conic)
@@ -216,11 +216,11 @@ def intersect_conic_in_cone_patch(conic: Conic,
 
     # Check that there are precisely two intersections
     if len(intersections) > 1:
-        logger.error("More than two intersections found in cone patch")
+        LOGGER.error("More than two intersections found in cone patch")
         return False, None, None
 
     if len(intersections) == 0:
-        logger.error("No intersection of the ray with the opposing line")
+        LOGGER.error("No intersection of the ray with the opposing line")
         return False, None, None
 
     # Split the conic at the intersection (depending on what kind of ray it is)
@@ -236,7 +236,7 @@ def intersect_conic_in_cone_patch(conic: Conic,
         conic_segment.domain.set_upper_bound(t, False)
         line_intersection_indices = (-1, polygon_boundary_index)
     else:
-        logger.error("Cone conic is a line, not the expected ray")
+        LOGGER.error("Cone conic is a line, not the expected ray")
         return False, None, None
 
     return True, conic_segment, line_intersection_indices

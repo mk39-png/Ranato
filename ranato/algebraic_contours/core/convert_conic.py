@@ -8,9 +8,9 @@ from typing import Any
 import numpy as np
 import numpy.testing as npt
 
-from ranato.algebraic_contours.core.common import (Matrix2x2f, PlanarPoint1d,
-                                                   Vector2f, Vector6f,
-                                                   float_equal, logger, todo)
+from ranato.algebraic_contours.core.common import (LOGGER, Matrix2x2f,
+                                                   PlanarPoint1d, Vector2f,
+                                                   Vector6f, float_equal, todo)
 
 
 def compute_symmetric_matrix_eigen_decomposition(A: Matrix2x2f) -> tuple[Vector2f,
@@ -128,7 +128,7 @@ def convert_conic_to_standard_form(conic_coeffs: Vector6f) -> tuple[Vector6f,
 
     if float_equal(singular_values[0], 0.0) or float_equal(singular_values[1], 0.0):
         # FIXME Add warning so we know this case is occurring
-        logger.warning("Singular conic with det %s  and singular values %s , %s ",
+        LOGGER.warning("Singular conic with det %s  and singular values %s , %s ",
                        det,
                        singular_values[0],
                        singular_values[1])
@@ -175,17 +175,17 @@ def convert_conic_to_standard_form(conic_coeffs: Vector6f) -> tuple[Vector6f,
                 conic_standard_form[1] = Ub[0]
             # Translate a parabola so that its vertex is at the origin
             else:
-                logger.debug("Parabola is %s  u^2 + %s  u + %s  v + %s ",
+                LOGGER.debug("Parabola is %s  u^2 + %s  u + %s  v + %s ",
                              0.5 * singular_values[0],
                              Ub[0],
                              Ub[1],
                              c)
                 translation[0] = -Ub[0] / singular_values[0]
                 translation[1] = -(c - 0.5 * singular_values[0] * Ub[0] * Ub[0]) / (Ub[1])
-                logger.debug("Using translation %s for parabola", translation)
+                LOGGER.debug("Using translation %s for parabola", translation)
 
                 translation = translation @ rotation
-                logger.debug("Rotating to translation %s", translation)
+                LOGGER.debug("Rotating to translation %s", translation)
                 conic_standard_form[2] = Ub[1]
 
             # Ensure nonzero quadratic term is positive
@@ -205,8 +205,8 @@ def convert_conic_to_standard_form(conic_coeffs: Vector6f) -> tuple[Vector6f,
         conic_standard_form[5] = 0.5 * singular_values[1]
         # todo("double check the matmul above")
 
-    logger.debug("Standard form: %s", conic_standard_form)
-    logger.debug("Rotation:\n%s", rotation)
-    logger.debug("Translation:\n%s", translation)
+    LOGGER.debug("Standard form: %s", conic_standard_form)
+    LOGGER.debug("Rotation:\n%s", rotation)
+    LOGGER.debug("Translation:\n%s", translation)
 
     return conic_standard_form, rotation, translation

@@ -7,26 +7,27 @@ from datetime import datetime
 
 import numpy as np
 
-from ranato.src.contour_network.compute_rational_bezier_curve_intersection import (
+from ranato.algebraic_contours.contour_network.compute_rational_bezier_curve_intersection import (
     find_intersections_bezier_clipping,
     split_bezier_curve_no_self_intersection)
-from ranato.src.contour_network.intersection_data import IntersectionData
-from ranato.src.contour_network.intersection_heuristics import (
+from ranato.algebraic_contours.contour_network.intersection_data import \
+    IntersectionData
+from ranato.algebraic_contours.contour_network.intersection_heuristics import (
     IntersectionStats, are_nonintersecting_by_heuristic_bounding_box,
     compute_bezier_bounding_box, compute_bounding_box_hash_table,
     compute_homogeneous_bezier_points_over_interval)
-from ranato.src.core.common import (
+from ranato.algebraic_contours.core.common import (
     FIND_INTERSECTIONS_BEZIER_CLIPPING_PRECISION,
-    INLINE_TESTING_ENABLED_CONTOUR_NETWORK, Matrix5x3f, PlanarPoint1d,
+    INLINE_TESTING_ENABLED_CONTOUR_NETWORK, LOGGER, Matrix5x3f, PlanarPoint1d,
     SpatialVector1d, compare_eigen_numpy_matrix,
     compare_list_list_varying_lengths, compare_list_list_varying_lengths_float,
-    float_equal_zero, interval_lerp, load_json, logger)
-from ranato.src.core.rational_function import RationalFunction
-from ranato.src.tests.test_compute_rational_bezier_curve_intersections import \
+    float_equal_zero, interval_lerp, load_json)
+from ranato.algebraic_contours.core.rational_function import RationalFunction
+from ranato.algebraic_contours.tests.test_compute_rational_bezier_curve_intersections import \
     ROOT_FOLDER
-from ranato.src.utils.compute_intersections_testing_utils import (
+from ranato.algebraic_contours.utils.compute_intersections_testing_utils import (
     compare_intersection_stats, compare_list_list_intersection_data_from_file)
-from ranato.src.utils.rational_function_testing_utils import \
+from ranato.algebraic_contours.utils.rational_function_testing_utils import \
     compare_rational_functions_from_file
 
 
@@ -173,7 +174,7 @@ def _compute_planar_curve_intersections_from_bounding_box(
 
     intersection_stats_ref.num_intersection_tests += 1
     t1: datetime = datetime.now()
-    logger.debug("Finding intersections for %s and %s",
+    LOGGER.debug("Finding intersections for %s and %s",
                  first_planar_curve,
                  second_planar_curve)
 
@@ -197,7 +198,7 @@ def _compute_planar_curve_intersections_from_bounding_box(
             first_bezier_control_points,
             second_bezier_control_points)
     except Exception as e:
-        logger.error("Failed to find intersection points %s", e)
+        LOGGER.error("Failed to find intersection points %s", e)
         # FIXME: raising another error to just end the program whenever theres a big failure
         # But change back to exception for the final release build
         raise ValueError(e)
@@ -220,7 +221,7 @@ def _compute_planar_curve_intersections_from_bounding_box(
 
     t2: datetime = datetime.now()
     total_time: int = (t2 - t1).microseconds
-    logger.debug("Finding intersections took %s ms", total_time)
+    LOGGER.debug("Finding intersections took %s ms", total_time)
 
 
 def compute_planar_curve_intersections(first_planar_curve: RationalFunction,
@@ -392,7 +393,7 @@ def compute_intersections(image_segments: list[RationalFunction],
                 visited[i] = True
 
                 # Iterate over image segments with lower indices
-                logger.debug("Computing segments %s, %s out of %s",
+                LOGGER.debug("Computing segments %s, %s out of %s",
                              image_segment_index,
                              i,
                              len(image_segments))
@@ -496,9 +497,9 @@ def compute_intersections(image_segments: list[RationalFunction],
 
     # Record intersection information
     intersection_call: int = intersection_stats.intersection_call
-    logger.info("Number of intersection tests: %s",
+    LOGGER.info("Number of intersection tests: %s",
                 intersection_stats.num_intersection_tests)
-    logger.info("Number of nonoverlapping Bezier boxes: %s",
+    LOGGER.info("Number of nonoverlapping Bezier boxes: %s",
                 intersection_stats.num_bezier_nonoverlaps)
 
     return (intersections,

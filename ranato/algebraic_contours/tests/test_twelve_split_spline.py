@@ -14,10 +14,9 @@ from ranato.algebraic_contours.core.affine_manifold import (
 from ranato.algebraic_contours.core.bivariate_quadratic_function import \
     evaluate_quadratic_mapping
 from ranato.algebraic_contours.core.common import (
-    DISCRETIZATION_LEVEL, SKY_BLUE, Matrix3x2f, Matrix6x3r, MatrixNx3f,
+    DISCRETIZATION_LEVEL, LOGGER, SKY_BLUE, Matrix3x2f, Matrix6x3r, MatrixNx3f,
     MatrixXf, MatrixXi, PlanarPoint1d, SpatialVector, SpatialVector1d,
-    compare_eigen_numpy_matrix, initialize_spot_control_mesh, logger,
-    vector_equal)
+    compare_eigen_numpy_matrix, initialize_spot_control_mesh, vector_equal)
 from ranato.algebraic_contours.core.convex_polygon import ConvexPolygon
 from ranato.algebraic_contours.quadratic_spline_surface.optimize_spline_surface import (
     OptimizationParameters, build_twelve_split_spline_energy_system,
@@ -55,7 +54,7 @@ def initialize_twelve_split_spline_from_spot_mesh() -> tuple[TwelveSplitSplineSu
     optimization_params: OptimizationParameters = OptimizationParameters()
 
     # Set logger level
-    logger.setLevel(log_level)
+    LOGGER.setLevel(log_level)
 
     # Get input mesh
     V: MatrixXf = np.ndarray(shape=(0, 0), dtype=np.float64)
@@ -70,7 +69,7 @@ def initialize_twelve_split_spline_from_spot_mesh() -> tuple[TwelveSplitSplineSu
     V, uv, N, F, FT, FN = igl.readOBJ(filepath)
 
     # Generate quadratic spline
-    logger.info("Computing spline surface")
+    LOGGER.info("Computing spline surface")
     # NOTE: must input a mesh that is already UV unwrapped....
     affine_manifold: AffineManifold = AffineManifold(F, uv, FT)
     spline_surface: TwelveSplitSplineSurface = TwelveSplitSplineSurface(V,
@@ -256,7 +255,7 @@ def test_view_spot_mesh() -> None:
     num_subdivisions: int = DISCRETIZATION_LEVEL
     optimization_params: OptimizationParameters = OptimizationParameters()
     # Set logger level
-    logger.setLevel(log_level)
+    LOGGER.setLevel(log_level)
 
     # Get input mesh
     V, uv, F, FT = initialize_spot_control_mesh()
@@ -282,7 +281,7 @@ def test_patches_spot_mesh() -> None:
     optimization_params: OptimizationParameters = OptimizationParameters()
 
     # Set logger level
-    logger.setLevel(log_level)
+    LOGGER.setLevel(log_level)
 
     # Get input mesh
     V: MatrixXf = np.ndarray(shape=(0, 0), dtype=np.float64)
@@ -297,7 +296,7 @@ def test_patches_spot_mesh() -> None:
     V, uv, N, F, FT, FN = igl.readOBJ(filepath)
 
     # Generate quadratic spline
-    logger.info("Computing spline surface")
+    LOGGER.info("Computing spline surface")
     # NOTE: must input a mesh that is already UV unwrapped....
     affine_manifold: AffineManifold = AffineManifold(F, uv, FT)
     spline_surface: TwelveSplitSplineSurface = TwelveSplitSplineSurface(V, affine_manifold,  optimization_params)

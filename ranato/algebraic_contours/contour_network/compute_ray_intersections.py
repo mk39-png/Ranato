@@ -10,11 +10,12 @@ import numpy as np
 from ranato.algebraic_contours.contour_network.compute_ray_intersections_pencil_method import \
     compute_spline_surface_patch_ray_intersections_pencil_method
 from ranato.algebraic_contours.core.common import (INLINE_TESTING_ENABLED_QI,
+                                                   LOGGER,
                                                    MAX_PATCH_RAY_INTERSECTIONS,
                                                    Matrix2x3f, PatchIndex,
                                                    PlanarPoint1d,
                                                    SpatialVector1d,
-                                                   float_equal, logger)
+                                                   float_equal)
 from ranato.algebraic_contours.quadratic_spline_surface.quadratic_spline_surface import \
     QuadraticSplineSurface
 
@@ -48,7 +49,7 @@ def compute_spline_surface_ray_intersections(spline_surface: QuadraticSplineSurf
     surface_intersections: list[PlanarPoint1d] = []
     ray_intersections: list[float] = []
 
-    logger.info("Computing intersections for spline surface with %s patches and ray %s",
+    LOGGER.info("Computing intersections for spline surface with %s patches and ray %s",
                 spline_surface.num_patches,
                 ray_mapping_coeffs)
 
@@ -82,20 +83,20 @@ def compute_spline_surface_ray_intersections(spline_surface: QuadraticSplineSurf
         # Add patch intersections to surface intersections arrays
         if num_intersections > MAX_PATCH_RAY_INTERSECTIONS:
             # TODO: raise value error here?
-            logger.error("More than four intersections found of a ray with a patch")
+            LOGGER.error("More than four intersections found of a ray with a patch")
             raise ValueError("More than four intersections found of a ray with a patch")
 
         for j in range(num_intersections):
             patch_indices.append(i)
             surface_intersections.append(patch_surface_intersections[j])
             ray_intersections.append(patch_ray_intersections[j])
-            logger.info("Patch ray intersection at t=%s found, out of %s",
+            LOGGER.info("Patch ray intersection at t=%s found, out of %s",
                         patch_ray_intersections[j],
                         num_intersections)
 
-    logger.info("%s surface ray intersections found", len(surface_intersections))
-    logger.info("Spline surface intersection points: %s", surface_intersections)
-    logger.info("Ray intersection points: %s", ray_intersections)
+    LOGGER.info("%s surface ray intersections found", len(surface_intersections))
+    LOGGER.info("Spline surface intersection points: %s", surface_intersections)
+    LOGGER.info("Ray intersection points: %s", ray_intersections)
 
     return (patch_indices,
             surface_intersections,
@@ -125,7 +126,7 @@ def partition_ray_intersections(ray_mapping_coeffs: Matrix2x3f,
     ray_intersections_above: list[float] = []
     ray_intersections_below: list[float] = []
     num_intersections: PatchIndex = len(ray_intersections)
-    logger.info("Partitioning intersections %s on ray %s around point %s",
+    LOGGER.info("Partitioning intersections %s on ray %s around point %s",
                 ray_intersections,
                 ray_mapping_coeffs,
                 comparison_point)
@@ -138,7 +139,7 @@ def partition_ray_intersections(ray_mapping_coeffs: Matrix2x3f,
     assert direction.shape == (3, )
     assert difference.shape == (3, )
     point_parameter: float = np.linalg.norm(difference) / np.linalg.norm(direction)
-    logger.info("Point parameter: %s", point_parameter)
+    LOGGER.info("Point parameter: %s", point_parameter)
 
     # Partition intersections into points above and below the comparison point
     for i in range(num_intersections):
@@ -149,7 +150,7 @@ def partition_ray_intersections(ray_mapping_coeffs: Matrix2x3f,
             ray_intersections_below.append(ray_intersection)
         else:
             ray_intersections_above.append(ray_intersection)
-    logger.info("Intersections below: %s", ray_intersections_below)
-    logger.info("Intersections above: %s", ray_intersections_above)
+    LOGGER.info("Intersections below: %s", ray_intersections_below)
+    LOGGER.info("Intersections above: %s", ray_intersections_above)
 
     return ray_intersections_below, ray_intersections_above

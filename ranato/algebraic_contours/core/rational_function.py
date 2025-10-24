@@ -8,9 +8,9 @@ import numpy as np
 import polyscope
 
 from ranato.algebraic_contours.core.common import (
-    COLS, MatrixXf, Vector1D, Vector2D, convert_nested_vector_to_matrix,
-    convert_polylines_to_edges, interval_lerp, logger, todo, unimplemented,
-    unreachable)
+    COLS, LOGGER, MatrixXf, Vector1D, Vector2D,
+    convert_nested_vector_to_matrix, convert_polylines_to_edges, interval_lerp,
+    todo, unimplemented, unreachable)
 from ranato.algebraic_contours.core.interval import Interval
 from ranato.algebraic_contours.core.polynomial_function import (
     compute_polynomial_mapping_derivative, compute_polynomial_mapping_product,
@@ -140,9 +140,9 @@ class RationalFunction:
             function.
         """
         # Compute the derivatives of the numerator and denominator polynomials
-        logger.info("Taking derivative of rational function")
-        logger.info("Numerator:\n%s", self.m_numerator_coeffs)
-        logger.info("Denominator:\n%s", self.m_denominator_coeffs)
+        LOGGER.info("Taking derivative of rational function")
+        LOGGER.info("Numerator:\n%s", self.m_numerator_coeffs)
+        LOGGER.info("Denominator:\n%s", self.m_denominator_coeffs)
         numerator_deriv_coeffs: MatrixXf = compute_polynomial_mapping_derivative(
             self.m_degree, self.m_dimension, self.m_numerator_coeffs)
         assert numerator_deriv_coeffs.shape == (self.m_degree, self.m_dimension)
@@ -150,8 +150,8 @@ class RationalFunction:
         denominator_deriv_coeffs: Vector1D = compute_polynomial_mapping_derivative(
             self.m_degree, 1, self.m_denominator_coeffs).flatten()
         assert denominator_deriv_coeffs.shape == (self.m_degree, )
-        logger.info("Numerator derivative:\n%s", numerator_deriv_coeffs)
-        logger.info("Denominator derivative:\n%s", denominator_deriv_coeffs)
+        LOGGER.info("Numerator derivative:\n%s", numerator_deriv_coeffs)
+        LOGGER.info("Denominator derivative:\n%s", denominator_deriv_coeffs)
 
         # FIXME (ASOC): 0 degree case?
 
@@ -170,8 +170,8 @@ class RationalFunction:
                                                                      self.m_numerator_coeffs)
         assert term_1.shape == (2 * self.m_degree, self.m_dimension)
 
-        logger.info("First term: \n%s", term_0)
-        logger.info("Second term: \n%s", term_1)
+        LOGGER.info("First term: \n%s", term_0)
+        LOGGER.info("Second term: \n%s", term_1)
 
         num_coeffs: MatrixXf = np.zeros(shape=(2 * self.m_degree + 1, self.m_dimension),
                                         dtype=np.float64)
@@ -393,7 +393,7 @@ class RationalFunction:
         :param curve_name: [in] name to assign the curve in the viewer
         """
         if (self.m_dimension != 3):
-            logger.error("Cannot view nonspatial curve")
+            LOGGER.error("Cannot view nonspatial curve")
 
         # Generate curve discretization
         curve_disc_params = CurveDiscretizationParameters()

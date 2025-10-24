@@ -15,12 +15,12 @@ from scipy.sparse import csr_matrix
 from ranato.algebraic_contours.core.affine_manifold import (
     AffineManifold, VertexManifoldChart)
 from ranato.algebraic_contours.core.common import (COLS, DISCRETIZATION_LEVEL,
-                                                   ROWS, SKY_BLUE, Index,
-                                                   Matrix6x3f, Matrix6x12f,
-                                                   Matrix12x3f, MatrixNx3f,
-                                                   MatrixXf, MatrixXi,
-                                                   Vector1D, Vector3f, logger,
-                                                   unimplemented)
+                                                   LOGGER, ROWS, SKY_BLUE,
+                                                   Index, Matrix6x3f,
+                                                   Matrix6x12f, Matrix12x3f,
+                                                   MatrixNx3f, MatrixXf,
+                                                   MatrixXi, Vector1D,
+                                                   Vector3f, unimplemented)
 from ranato.algebraic_contours.core.compute_boundaries import \
     compute_face_boundary_edges
 from ranato.algebraic_contours.core.convex_polygon import ConvexPolygon
@@ -433,7 +433,7 @@ def compute_twelve_split_spline_patch_boundary_edges(F: MatrixXi,
 
     :return patch_boundary_edges: edges of the patch triangle domains that are boundaries
     """
-    logger.info("Computing patch boundary edges for mesh with %s faces", F.shape[ROWS])  # rows
+    LOGGER.info("Computing patch boundary edges for mesh with %s faces", F.shape[ROWS])  # rows
     patch_boundary_edges: list[tuple[int, int]] = []
 
     # Validate input

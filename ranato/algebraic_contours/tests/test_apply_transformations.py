@@ -5,8 +5,8 @@ import numpy as np
 from ranato.algebraic_contours.core.apply_transformation import \
     apply_camera_frame_transformation_to_vertices
 from ranato.algebraic_contours.core.common import (
-    Matrix3x3f, compare_eigen_numpy_matrix, initialize_spot_control_mesh,
-    logger)
+    LOGGER, Matrix3x3f, compare_eigen_numpy_matrix,
+    initialize_spot_control_mesh)
 
 
 def test_apply_camera_frame_transformation_to_vertices():
@@ -15,7 +15,7 @@ def test_apply_camera_frame_transformation_to_vertices():
     frame: Matrix3x3f = np.array([[1, 0, 0],
                                   [0, 1, 0],
                                   [0, 0, 1]])
-    logger.info("Projecting onto frame:\n%s", frame)
+    LOGGER.info("Projecting onto frame:\n%s", frame)
     V, uv, F, FT = initialize_spot_control_mesh()
     V_copy = apply_camera_frame_transformation_to_vertices(V, frame)
     compare_eigen_numpy_matrix(

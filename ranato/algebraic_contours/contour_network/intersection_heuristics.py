@@ -11,9 +11,9 @@ import numpy as np
 import numpy.testing as npt
 
 from ranato.algebraic_contours.core.common import (
-    PLANAR_BOUNDING_BOX_PRECISION, ROWS, Matrix4x2f, Matrix5x2f, Matrix5x3f,
-    Matrix5x5f, PlanarPoint1d, Vector5f, compute_point_cloud_bounding_box,
-    float_equal, logger)
+    LOGGER, PLANAR_BOUNDING_BOX_PRECISION, ROWS, Matrix4x2f, Matrix5x2f,
+    Matrix5x3f, Matrix5x5f, PlanarPoint1d, Vector5f,
+    compute_point_cloud_bounding_box, float_equal)
 from ranato.algebraic_contours.core.rational_function import RationalFunction
 
 
@@ -88,7 +88,7 @@ def _is_valid_bounding_box(planar_curve: RationalFunction,
     test_point_2: PlanarPoint1d = planar_curve(t_avg)
     test_point_3: PlanarPoint1d = planar_curve(t_max - 1e-6)
 
-    logger.debug("Testing points on curve at %s, %s, %s: %s, %s, %s",
+    LOGGER.debug("Testing points on curve at %s, %s, %s: %s, %s, %s",
                  t_min,
                  t_avg,
                  t_max,
@@ -98,19 +98,19 @@ def _is_valid_bounding_box(planar_curve: RationalFunction,
 
     # Check all points
     if not is_in_bounding_box(test_point_1, lower_left_point, upper_right_point):
-        logger.warning("Point %s at %s not in bounding box %s, %s",
+        LOGGER.warning("Point %s at %s not in bounding box %s, %s",
                        test_point_1,
                        t_min,
                        lower_left_point,
                        upper_right_point)
     if not is_in_bounding_box(test_point_2, lower_left_point, upper_right_point):
-        logger.warning("Point %s at %s not in bounding box %s, %s",
+        LOGGER.warning("Point %s at %s not in bounding box %s, %s",
                        test_point_2,
                        t_avg,
                        lower_left_point,
                        upper_right_point)
     if not is_in_bounding_box(test_point_3, lower_left_point, upper_right_point):
-        logger.warning("Point %s at %s not in bounding box %s, %s",
+        LOGGER.warning("Point %s at %s not in bounding box %s, %s",
                        test_point_3,
                        t_max,
                        lower_left_point,
@@ -172,7 +172,7 @@ def _compute_homogeneous_bezier_points(planar_curve: RationalFunction) -> Matrix
     assert planar_curve.degree == 4
     assert planar_curve.dimension == 2
 
-    logger.info("Computing Bezier coefficients")
+    LOGGER.info("Computing Bezier coefficients")
 
     # Compute matrix to go from monomial coefficients to Bezier coefficients
     # TODO: double check order of matrix creation
@@ -209,7 +209,7 @@ def compute_homogeneous_bezier_points_over_interval(planar_curve: RationalFuncti
     """
     assert (planar_curve.degree, planar_curve.dimension) == (4, 2)
 
-    logger.debug("Computing Bezier coefficients for interval [%s, %s]", t_min, t_max)
+    LOGGER.debug("Computing Bezier coefficients for interval [%s, %s]", t_min, t_max)
     r: float = t_max - t_min
 
     # Compute matrix to go from monomial coefficients to Bezier coefficients
@@ -265,7 +265,7 @@ def _compute_bezier_bounding_box_over_domain(planar_curve: RationalFunction,
     points
     """
     assert (planar_curve.degree,  planar_curve.dimension) == (4, 2)
-    logger.debug("Computing bezier bounding box for %s over [%s, %s]",
+    LOGGER.debug("Computing bezier bounding box for %s over [%s, %s]",
                  planar_curve,
                  t_min,
                  t_max)
@@ -304,11 +304,11 @@ def _compute_bezier_bounding_box_over_domain(planar_curve: RationalFunction,
 
     # Build lower left point
     lower_left_point: PlanarPoint1d = np.array([x_min, y_min])
-    logger.debug("Lower left point: %s", lower_left_point)
+    LOGGER.debug("Lower left point: %s", lower_left_point)
 
     # Build upper right point
     upper_right_point: PlanarPoint1d = np.array([x_max, y_max])
-    logger.debug("Upper right point: %s", upper_right_point)
+    LOGGER.debug("Upper right point: %s", upper_right_point)
 
     # Check validity
     assert _is_valid_bounding_box(planar_curve, t_min, t_max, lower_left_point,
@@ -515,7 +515,7 @@ def are_nonintersecting_by_heuristic_planar_curve(first_planar_curve: RationalFu
     # Check bezier bounding boxes
     if _are_disjoint_bezier_bounding_boxes_planar_curves(first_planar_curve,
                                                          second_planar_curve):
-        logger.info("Bezier bounding boxes do not overlap")
+        LOGGER.info("Bezier bounding boxes do not overlap")
         intersection_stats_ref.num_bezier_nonoverlaps += 1
         return True
 
@@ -541,7 +541,7 @@ def are_nonintersecting_by_heuristic_bounding_box(
     # Check bezier bounding boxes
     if _are_disjoint_bezier_bounding_boxes_bounding_boxes(first_bounding_box,
                                                           second_bounding_box):
-        logger.info("Bezier bounding boxes do not overlap")
+        LOGGER.info("Bezier bounding boxes do not overlap")
         intersection_stats_ref.num_bezier_nonoverlaps += 1
         return True
 

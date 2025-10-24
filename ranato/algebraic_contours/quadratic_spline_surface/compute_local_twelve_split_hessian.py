@@ -5,9 +5,9 @@ Used by optimize_spline_surface.py
 import numpy as np
 import numpy.linalg as LA
 
-from ranato.algebraic_contours.core.common import (Matrix2x2f, Matrix3x2r,
-                                                   Matrix12x12r, Vector1D,
-                                                   logger)
+from ranato.algebraic_contours.core.common import (LOGGER, Matrix2x2f,
+                                                   Matrix3x2r, Matrix12x12r,
+                                                   Vector1D)
 from ranato.algebraic_contours.quadratic_spline_surface.PS12_patch_coeffs import \
     PS12_patch_coeffs
 

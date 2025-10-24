@@ -3,8 +3,8 @@ import numpy as np
 
 from ranato.algebraic_contours.core.bivariate_quadratic_function import (
     evaluate_quadratic, evaluate_quadratic_mapping)
-from ranato.algebraic_contours.core.common import (PlanarPoint1d, Vector6f,
-                                                   float_equal, logger, todo)
+from ranato.algebraic_contours.core.common import (LOGGER, PlanarPoint1d,
+                                                   Vector6f, float_equal, todo)
 from ranato.algebraic_contours.core.conic import Conic, ConicType
 from ranato.algebraic_contours.core.parametrize_conic import (
     identify_conic, parametrize_conic)
@@ -14,7 +14,7 @@ def _test_parametrization(C_coeffs: Vector6f) -> bool:
     """
     """
     assert C_coeffs.shape == (6, )
-    logger.info("Testing conic with equation %s", C_coeffs)
+    LOGGER.info("Testing conic with equation %s", C_coeffs)
 
     conics: list[Conic] = parametrize_conic(C_coeffs)
     for conic in conics:

@@ -7,10 +7,10 @@ import numpy as np
 
 from ranato.algebraic_contours.core.bivariate_quadratic_function import \
     formatted_bivariate_quadratic_mapping
-from ranato.algebraic_contours.core.common import (COLS, Matrix2x2f,
+from ranato.algebraic_contours.core.common import (COLS, LOGGER, Matrix2x2f,
                                                    Matrix3x2f, Matrix6xNi,
                                                    PlanarPoint1d, Vector1D,
-                                                   Vector2D, Vector3f, logger)
+                                                   Vector2D, Vector3f)
 from ranato.algebraic_contours.core.interval import Interval
 from ranato.algebraic_contours.core.polynomial_function import (
     compute_polynomial_mapping_product, formatted_polynomial)
@@ -124,7 +124,7 @@ class Conic(RationalFunction):
         assert F_coeffs.shape == (6, dimension)
         assert F_coeffs.dtype == np.float64
 
-        logger.debug("Pulling back conic by quadratic function %s",
+        LOGGER.debug("Pulling back conic by quadratic function %s",
                      formatted_bivariate_quadratic_mapping(dimension, F_coeffs))
 
         # Separate the individual polynomial coefficients from the rational function
@@ -137,10 +137,10 @@ class Conic(RationalFunction):
         assert v_coeffs.shape == (3, )
         assert Q_coeffs.shape == (3, )
 
-        logger.debug("u function before pullback: (%s)/(%s)",
+        LOGGER.debug("u function before pullback: (%s)/(%s)",
                      u_coeffs, Q_coeffs)
 
-        logger.debug("v function before pullback: (%s)/(%s)",
+        LOGGER.debug("v function before pullback: (%s)/(%s)",
                      v_coeffs, Q_coeffs)
         # formatted_polynomial(self.get_degree, self.get_dimension, u_coeffs),
         # formatted_polynomial(self.get_degree, self.get_dimension, Q_coeffs))
@@ -178,17 +178,17 @@ class Conic(RationalFunction):
                                     uu_coeffs,
                                     vv_coeffs]).T
         assert monomial_coeffs.shape == (5, 6)
-        logger.debug("Monomial coefficients matrix:\n%s", monomial_coeffs)
+        LOGGER.debug("Monomial coefficients matrix:\n%s", monomial_coeffs)
 
         # Compute the pulled back rational function numerator
-        logger.debug("Quadratic coefficient matrix:\n%s", F_coeffs)
+        LOGGER.debug("Quadratic coefficient matrix:\n%s", F_coeffs)
         pullback_coeffs = monomial_coeffs @ F_coeffs
         assert pullback_coeffs.shape == (5, dimension)
 
-        logger.debug("Pullback numerator: %s",
+        LOGGER.debug("Pullback numerator: %s",
                      pullback_coeffs)
         # formatted_polynomial(self.get_degree, self.get_dimension, pullback_coeffs))
-        logger.debug("Pullback denominator: %s",
+        LOGGER.debug("Pullback denominator: %s",
                      QQ_coeffs)
         # formatted_polynomial(self.get_degree, self.get_dimension, QQ_coeffs))
 

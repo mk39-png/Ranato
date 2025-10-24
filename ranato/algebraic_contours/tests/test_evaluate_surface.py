@@ -1,10 +1,11 @@
 """
 This file basically test bivariate_quadratic_function.py
 """
+import numpy as np
 import pytest
 
-from ..core.bivariate_quadratic_function import *
-from ..core.common import *
+from ranato.algebraic_contours.core.bivariate_quadratic_function import \
+    generate_quadratic_monomials
 
 
 def test_patch_monomials() -> None:
