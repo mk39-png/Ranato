@@ -6,4 +6,6 @@ multipledispatch
 scipy
 polyscope
 svg.py
+pytest
+src/utils/cholespy
 bpy==4.5.3

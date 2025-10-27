@@ -1,22 +1,9 @@
-# bl_info = {
-#     "name": "Ranato",
-#     "author": "Kevin Ha",
-#     "version": (0, 0, 1, 'Alpha'),
-#     "blender": (4, 5, 0),
-#     "description": "Blender implementation of Algebraic Smooth Occluding Contours paper",
-#     "location": "Render -> Ranato",
-#     "warning": "",
-#     "doc_url": "",
-#     "tracker_url": "",
-#     "category": "Render"
-# }
-
 import os
 import subprocess
 import sys
-from typing import Any
 
 from .panels import OBJECT_PT_ranato_panel
+from .pipeline import OBJECT_OT_pipeline
 from .preferences import OBJECT_OT_addon_preferences, RanatoPreferences
 from .search_mesh import OBJECT_OT_search_mesh_operator
 
@@ -48,7 +35,9 @@ except ImportError:
 
 
 classes: list = [OBJECT_OT_search_mesh_operator,
+                 OBJECT_OT_pipeline,
                  OBJECT_OT_addon_preferences,
                  OBJECT_PT_ranato_panel,
                  RanatoPreferences,]
+
 register, unregister = bpy.utils.register_classes_factory(classes)
