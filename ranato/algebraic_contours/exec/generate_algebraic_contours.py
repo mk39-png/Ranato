@@ -2,29 +2,24 @@
 This is the user-facing interface to input a mesh and generate the algebraic contours.
 """
 import os
-import sys
-from asyncio import base_events
 
 import igl
 import numpy as np
 from mathutils import Matrix
 from numpy.typing import ArrayLike
 
-from ranato.algebraic_contours.contour_network.compute_intersections import \
-    IntersectionParameters
-from ranato.algebraic_contours.contour_network.contour_network import (
-    ContourNetwork, InvisibilityParameters)
-from ranato.algebraic_contours.core.affine_manifold import AffineManifold
-from ranato.algebraic_contours.core.apply_transformation import \
-    apply_transformation_to_vertices
-from ranato.algebraic_contours.core.common import MatrixNx3f
-from ranato.algebraic_contours.quadratic_spline_surface.optimize_spline_surface import \
+from ...common import DIRECTORY_TEMP
+from ..contour_network.compute_intersections import IntersectionParameters
+from ..contour_network.contour_network import (ContourNetwork,
+                                               InvisibilityParameters)
+from ..core.affine_manifold import AffineManifold
+from ..core.apply_transformation import apply_transformation_to_vertices
+from ..core.common import MatrixNx3f
+from ..quadratic_spline_surface.optimize_spline_surface import \
     OptimizationParameters
-from ranato.algebraic_contours.quadratic_spline_surface.twelve_split_spline import (
+from ..quadratic_spline_surface.twelve_split_spline import (
     TwelveSplitSplineSurface, compute_twelve_split_spline_patch_boundary_edges)
-from ranato.algebraic_contours.utils.projected_curve_networks_utils import \
-    SVGOutputMode
-from ranato.common import DIRECTORY_TEMP
+from ..utils.projected_curve_networks_utils import SVGOutputMode
 
 
 # NOTE: this should also take some file...
@@ -51,6 +46,16 @@ def generate_algebraic_contours(projection_matrix: Matrix) -> None:
     FT: ArrayLike
     FN: ArrayLike
     V, uv, N, F, FT, FN = igl.readOBJ(os.path.join(DIRECTORY_TEMP, "temp_out.obj"))
+    print(projection_matrix)
+
+    # Set up the camera
+    # FIXME: probably using the WRONG PROJECTION MATRIX, hence we get missclassification.
+    # Though, export .obj to original ASOC code to see how it runs
+    # FIXME: also run with matrix to compare in ASOC code.
+    # frame = np.array([[1, 0, 0],
+    #                   [0, 1, 0],
+    #                   [0, 0, 1]])
+    # V_transformed: MatrixNx3f = apply_camera_frame_transformation_to_vertices(V, frame)
     print(projection_matrix)
 
     # Preparing mesh data for use in contours calculation

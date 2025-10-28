@@ -7,8 +7,8 @@ import os
 from typing import Any
 
 import bpy
-from bpy.props import EnumProperty
-from bpy.types import Context, Mesh, Object
+import bpy.props
+import bpy.types
 
 from .common import DIRECTORY_TEMP
 
@@ -41,11 +41,11 @@ class OBJECT_OT_search_mesh_operator(bpy.types.Operator):
     bl_property = "user_search"
 
     # https://blenderartists.org/t/menu-enumproperty/1446897
-    user_search: EnumProperty(items=ops_get_objects)
+    user_search: bpy.props.EnumProperty(items=ops_get_objects)
 
     # https://docs.blender.org/api/current/bpy.types.Depsgraph.html
 
-    def execute(self, context: Context) -> set:
+    def execute(self, context: bpy.types.Context) -> set:
         """
         Execute the operator.
         Grabs the objects within the dependency graph.
@@ -57,8 +57,8 @@ class OBJECT_OT_search_mesh_operator(bpy.types.Operator):
         # Retrieve the mesh object
         #
         # Based off user selection, retrieve reference to Blender object
-        selected_object: Object = bpy.data.objects[self.user_search]
-        selected_mesh: Mesh = bpy.data.meshes[self.user_search]
+        selected_object: bpy.types.Object = bpy.data.objects[self.user_search]
+        selected_mesh: bpy.types.Mesh = bpy.data.meshes[self.user_search]
 
         #
         # Error handling when user selects a non-mesh

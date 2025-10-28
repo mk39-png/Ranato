@@ -11,8 +11,8 @@ from typing import Any
 import bpy.types
 from mathutils import Matrix
 
-# from .algebraic_contours.exec.generate_algebraic_contours import \
-#     generate_algebraic_contours
+from .algebraic_contours.exec.generate_algebraic_contours import \
+    generate_algebraic_contours
 from .common import DIRECTORY_TEMP, FILEPATH_UV_UNWRAPPER
 
 
@@ -52,6 +52,9 @@ def get_projection_matrix(context: bpy.types.Context) -> Matrix:
     # print(camera.data.view_frame())
 
     modelview_matrix: Any | Matrix = camera.matrix_world.inverted()
+    print(modelview_matrix)
+    # TODO: print out the camera matrix as well for debugging...
+
     projection_matrix: Matrix = camera.calc_matrix_camera(
         depsgraph,
         x=render.resolution_x,
@@ -79,11 +82,11 @@ class OBJECT_OT_pipeline(bpy.types.Operator):
         """
         # Now with these two in the temp folder, we can call the uv_unwrapper
         self.report({'INFO'}, "Calling UV unwrapper...")
-        call_uv_unwrapper()
+        # call_uv_unwrapper()
 
         # Now, with the UV unwrapped mesh, we can now call the main program for
         # processing the whole mesh... from another folder.
         projection_matrix: Matrix = get_projection_matrix(context)
         self.report({'INFO'}, "Generating algebraic contours...")
-        # generate_algebraic_contours(projection_matrix)
+        generate_algebraic_contours(projection_matrix)
         return {"FINISHED"}
