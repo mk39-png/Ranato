@@ -5,6 +5,7 @@ __pycache__/
 .src/utils/cholespy/
 cholespy/
 spot_control/
+default_cube/
 uv_unwrapper/
 *.blend
 *.obj

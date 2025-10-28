@@ -1,7 +1,6 @@
 import bpy
 import bpy.props
 import bpy.types
-from bpy.props import StringProperty
 
 # https://blender.stackexchange.com/questions/202570/multi-files-to-addon
 # Setting up addon with multiple files
