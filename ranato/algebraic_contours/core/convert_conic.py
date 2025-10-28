@@ -8,9 +8,8 @@ from typing import Any
 import numpy as np
 import numpy.testing as npt
 
-from ranato.algebraic_contours.core.common import (LOGGER, Matrix2x2f,
-                                                   PlanarPoint1d, Vector2f,
-                                                   Vector6f, float_equal, todo)
+from ..core.common import (LOGGER, Matrix2x2f, PlanarPoint1d, Vector2f,
+                           Vector6f, float_equal, todo)
 
 
 def compute_symmetric_matrix_eigen_decomposition(A: Matrix2x2f) -> tuple[Vector2f,

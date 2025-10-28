@@ -4,13 +4,15 @@ from typing import Any
 import numpy as np
 import numpy.testing as npt
 
-from ranato.algebraic_contours.core.affine_manifold import (
-    AffineManifold, EdgeManifoldChart, FaceManifoldChart,
-    ParametricAffineManifold, VertexManifoldChart)
-from ranato.algebraic_contours.core.common import (
-    FLOAT_EQUAL_PRECISION, Index, Matrix2x2f, MatrixXf, MatrixXi, PlanarPoint,
-    Vector1D, compare_eigen_numpy_matrix, float_equal,
-    initialize_spot_control_mesh, load_json, vector_equal)
+from ..core.affine_manifold import (AffineManifold, EdgeManifoldChart,
+                                    FaceManifoldChart,
+                                    ParametricAffineManifold,
+                                    VertexManifoldChart)
+from ..core.common import (FLOAT_EQUAL_PRECISION, Index, Matrix2x2f, MatrixXf,
+                           MatrixXi, PlanarPoint, Vector1D,
+                           compare_eigen_numpy_matrix, float_equal,
+                           initialize_spot_control_mesh, load_json,
+                           vector_equal)
 
 # ********************
 # Helper Methods
@@ -61,10 +63,13 @@ def compare_edge_charts(edge_charts_control: list[dict],
         control_right_vert_idx: int = chart_control.get("right_vertex_index")
         control_top_vert_idx: int = chart_control.get("top_vertex_index")
         control_bot_vert_idx: int = chart_control.get("bottom_vertex_index")
-        control_left_vert_uv_posn: np.ndarray = np.array(chart_control.get("left_vertex_uv_position"))
-        control_right_vert_uv_posn: np.ndarray = np.array(chart_control.get("right_vertex_uv_position"))
+        control_left_vert_uv_posn: np.ndarray = np.array(
+            chart_control.get("left_vertex_uv_position"))
+        control_right_vert_uv_posn: np.ndarray = np.array(
+            chart_control.get("right_vertex_uv_position"))
         control_top_vert_uv_posn: np.ndarray = np.array(chart_control.get("top_vertex_uv_position"))
-        control_bottom_vert_uv_posn: np.ndarray = np.array(chart_control.get("bottom_vertex_uv_position"))
+        control_bottom_vert_uv_posn: np.ndarray = np.array(
+            chart_control.get("bottom_vertex_uv_position"))
         control_is_boundary_control: bool = chart_control.get("is_boundary")
 
         edge_chart_test: EdgeManifoldChart = edge_charts_test[i]
@@ -123,7 +128,9 @@ def compare_face_charts(face_charts_control: list[dict],
 
         assert control_is_boundary == chart_test.is_boundary, f"Boundary flag mismatch at face {i}"
         assert control_is_cone_adjacent == chart_test.is_cone_adjacent, f"Cone-adjacent flag mismatch at face {i}"
-        npt.assert_array_equal(np.array(chart_test.is_cone_corner), np.array(control_is_cone_corner))
+        npt.assert_array_equal(
+            np.array(chart_test.is_cone_corner),
+            np.array(control_is_cone_corner))
 
 
 def initialize_affine_manifold_from_spot_control() -> AffineManifold:
@@ -148,8 +155,10 @@ def test_compute_cone_corners_from_spot_control() -> None:
     """
     affine_manifold: AffineManifold = initialize_affine_manifold_from_spot_control()
 
-    is_cone_corner: list[list[bool]] = affine_manifold.compute_cone_corners()  # list[bool] of length 3
-    compare_eigen_numpy_matrix("spot_control\\12_split_spline\\is_cone_corner.csv", np.array(is_cone_corner))
+    # list[bool] of length 3
+    is_cone_corner: list[list[bool]] = affine_manifold.compute_cone_corners()
+    compare_eigen_numpy_matrix(
+        "spot_control\\12_split_spline\\is_cone_corner.csv", np.array(is_cone_corner))
 
 
 def test_compute_cones_from_spot_control() -> None:

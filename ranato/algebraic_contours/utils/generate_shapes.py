@@ -3,8 +3,8 @@ import math
 
 import numpy as np
 
-from ranato.algebraic_contours.core.common import *
-from ranato.algebraic_contours.core.conic import Conic
+from ..core.common import *
+from ..core.conic import Conic
 
 
 def generate_circle(radius: float) -> Conic:
@@ -120,7 +120,9 @@ def generate_tetrahedron_VF() -> tuple[np.ndarray, np.ndarray]:
     return V, F
 
 
-def generate_minimal_torus_VF(major_radius: float = 3.0, minor_radius: float = 1.0) -> tuple[np.ndarray, np.ndarray]:
+def generate_minimal_torus_VF(
+        major_radius: float = 3.0, minor_radius: float = 1.0) -> tuple[
+        np.ndarray, np.ndarray]:
     """
     Generate simple torus mesh.
 

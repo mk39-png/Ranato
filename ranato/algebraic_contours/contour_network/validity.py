@@ -6,9 +6,8 @@ File for methods validating specific objects related to contours
 
 import numpy as np
 
-from ranato.algebraic_contours.core.common import (COLS, Matrix3x3f,
-                                                   Matrix6x3f, float_equal)
-from ranato.algebraic_contours.core.rational_function import RationalFunction
+from ..core.common import COLS, Matrix3x3f, Matrix6x3f, float_equal
+from ..core.rational_function import RationalFunction
 
 
 def is_valid_spatial_mapping(spatial_mapping_coeffs: Matrix6x3f) -> bool:

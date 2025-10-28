@@ -6,8 +6,7 @@ Methods to generate projective transformation matrices.
 
 import numpy as np
 
-from ranato.algebraic_contours.core.common import (Matrix3x3f, Matrix4x4f,
-                                                   SpatialVector1d, todo)
+from ..core.common import Matrix3x3f, Matrix4x4f, SpatialVector1d, todo
 
 
 def get_frame():

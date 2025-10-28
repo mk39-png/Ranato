@@ -6,10 +6,10 @@ Methods to chain contour segments into closed contours.
 import numpy as np
 import numpy.testing as npt
 
-from ranato.algebraic_contours.core.common import (
-    INLINE_TESTING_ENABLED_CONTOUR_NETWORK, LOGGER, PLACEHOLDER_VALUE,
-    SpatialVector1d, compare_eigen_numpy_matrix, float_equal_zero, todo)
-from ranato.algebraic_contours.core.rational_function import RationalFunction
+from ..core.common import (INLINE_TESTING_ENABLED_CONTOUR_NETWORK, LOGGER,
+                           PLACEHOLDER_VALUE, SpatialVector1d,
+                           compare_eigen_numpy_matrix, float_equal_zero, todo)
+from ..core.rational_function import RationalFunction
 
 # *******
 # Helpers

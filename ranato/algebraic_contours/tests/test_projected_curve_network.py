@@ -4,25 +4,21 @@ Projected Curve Network testing
 
 import numpy as np
 
-from ranato.algebraic_contours.contour_network.intersection_data import \
-    IntersectionData
-from ranato.algebraic_contours.contour_network.projected_curve_network import \
-    ProjectedCurveNetwork
-from ranato.algebraic_contours.core.abstract_curve_network import \
-    AbstractCurveNetwork
-from ranato.algebraic_contours.core.common import (
-    NodeIndex, SegmentIndex, compare_eigen_numpy_matrix,
-    compare_list_list_varying_lengths, deserialize_eigen_matrix_csv_to_numpy,
-    deserialize_list_list_varying_lengths,
-    deserialize_list_list_varying_lengths_float)
-from ranato.algebraic_contours.core.conic import Conic
-from ranato.algebraic_contours.core.rational_function import RationalFunction
-from ranato.algebraic_contours.utils.compute_intersections_testing_utils import (
+from ..contour_network.intersection_data import IntersectionData
+from ..contour_network.projected_curve_network import ProjectedCurveNetwork
+from ..core.abstract_curve_network import AbstractCurveNetwork
+from ..core.common import (NodeIndex, SegmentIndex, compare_eigen_numpy_matrix,
+                           compare_list_list_varying_lengths,
+                           deserialize_eigen_matrix_csv_to_numpy,
+                           deserialize_list_list_varying_lengths,
+                           deserialize_list_list_varying_lengths_float)
+from ..core.conic import Conic
+from ..core.rational_function import RationalFunction
+from ..utils.compute_intersections_testing_utils import (
     compare_list_list_intersection_data,
     deserialize_list_list_intersection_data)
-from ranato.algebraic_contours.utils.conic_testing_utils import \
-    deserialize_conics
-from ranato.algebraic_contours.utils.projected_curve_networks_utils import (
+from ..utils.conic_testing_utils import deserialize_conics
+from ..utils.projected_curve_networks_utils import (
     NodeGeometry, SegmentGeometry, _deserialize_list_node_geometry,
     _deserialize_list_segment_geometry,
     build_projected_curve_network_without_intersections,
@@ -30,7 +26,7 @@ from ranato.algebraic_contours.utils.projected_curve_networks_utils import (
     connect_segment_intersections, deserialize_segment_labels,
     remove_redundant_intersections, split_segments_at_cusps,
     split_segments_at_intersections)
-from ranato.algebraic_contours.utils.rational_function_testing_utils import \
+from ..utils.rational_function_testing_utils import \
     deserialize_rational_functions
 
 # ************************

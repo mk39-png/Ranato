@@ -8,20 +8,16 @@ import math
 import numpy as np
 import numpy.testing as npt
 
-from ranato.algebraic_contours.core.bivariate_quadratic_function import (
+from ..core.bivariate_quadratic_function import (
     evaluate_line, generate_quadratic_coordinate_affine_transformation_matrix,
     is_conic_standard_form, u_derivative_matrix, v_derivative_matrix)
-from ranato.algebraic_contours.core.common import (LOGGER, Matrix2x2f,
-                                                   Matrix3x2f, Matrix6x6r,
-                                                   PlanarPoint1d, Vector3f,
-                                                   Vector6f,
-                                                   compute_discriminant,
-                                                   float_equal)
-from ranato.algebraic_contours.core.conic import Conic, ConicType
-from ranato.algebraic_contours.core.convert_conic import \
-    convert_conic_to_standard_form
-from ranato.algebraic_contours.core.interval import Interval
-from ranato.algebraic_contours.core.rational_function import RationalFunction
+from ..core.common import (LOGGER, Matrix2x2f, Matrix3x2f, Matrix6x6r,
+                           PlanarPoint1d, Vector3f, Vector6f,
+                           compute_discriminant, float_equal)
+from ..core.conic import Conic, ConicType
+from ..core.convert_conic import convert_conic_to_standard_form
+from ..core.interval import Interval
+from ..core.rational_function import RationalFunction
 
 # **************
 # Helper Methods

@@ -7,14 +7,15 @@ import igl
 import numpy as np
 import polyscope
 
-from ranato.algebraic_contours.core.common import (
-    COLS, DISCRETIZATION_LEVEL, HASH_TABLE_SIZE, LOGGER, ROWS, SKY_BLUE,
-    Matrix3x2f, Matrix6x3f, MatrixNx3f, MatrixNx3i, MatrixXf, PatchIndex,
-    PlanarPoint, PlanarPoint1d, SpatialVector, SpatialVector1d, Vector1D,
-    convert_nested_vector_to_matrix, convert_polylines_to_edges, todo)
-from ranato.algebraic_contours.core.convex_polygon import ConvexPolygon
-from ranato.algebraic_contours.core.line_segment import LineSegment
-from ranato.algebraic_contours.quadratic_spline_surface.quadratic_spline_surface_patch import \
+from ..core.common import (COLS, DISCRETIZATION_LEVEL, HASH_TABLE_SIZE, LOGGER,
+                           ROWS, SKY_BLUE, Matrix3x2f, Matrix6x3f, MatrixNx3f,
+                           MatrixNx3i, MatrixXf, PatchIndex, PlanarPoint,
+                           PlanarPoint1d, SpatialVector, SpatialVector1d,
+                           Vector1D, convert_nested_vector_to_matrix,
+                           convert_polylines_to_edges, todo)
+from ..core.convex_polygon import ConvexPolygon
+from ..core.line_segment import LineSegment
+from ..quadratic_spline_surface.quadratic_spline_surface_patch import \
     QuadraticSplineSurfacePatch
 
 
@@ -131,7 +132,8 @@ class QuadraticSplineSurface:
         assert surface_point.shape == (1, 3)
         return surface_point
 
-    def evaluate_patch_normal(self, patch_index: PatchIndex, domain_point: PlanarPoint) -> SpatialVector:
+    def evaluate_patch_normal(
+            self, patch_index: PatchIndex, domain_point: PlanarPoint) -> SpatialVector:
         """
         Evaluate the surface normal at a given patch and domain point.
 
@@ -499,9 +501,15 @@ class QuadraticSplineSurface:
 
             # TODO: use regex to verify cx, cy, cz pattern
             # Read coordinates (skipping the label and reading the float data)
-            cx: Vector1D = np.array(list(map(float, patch_info_lines[i + 1].split()[1:])), dtype=np.float64)
-            cy: Vector1D = np.array(list(map(float, patch_info_lines[i + 2].split()[1:])), dtype=np.float64)
-            cz: Vector1D = np.array(list(map(float, patch_info_lines[i + 3].split()[1:])), dtype=np.float64)
+            cx: Vector1D = np.array(
+                list(map(float, patch_info_lines[i + 1].split()[1:])),
+                dtype=np.float64)
+            cy: Vector1D = np.array(
+                list(map(float, patch_info_lines[i + 2].split()[1:])),
+                dtype=np.float64)
+            cz: Vector1D = np.array(
+                list(map(float, patch_info_lines[i + 3].split()[1:])),
+                dtype=np.float64)
             surface_mapping_coeffs: Matrix6x3f = np.stack((cx, cy, cz), axis=1, dtype=np.float64)
             assert surface_mapping_coeffs.shape == (6, 3)
 
@@ -624,9 +632,11 @@ class QuadraticSplineSurface:
         # Hash into each box
         for i in range(num_patch):
             left_x: int = int((patches_ref[i].get_bbox_x_min() - eps - x_min) / x_interval)
-            right_x: int = int(hash_size_x - int((x_max - patches_ref[i].get_bbox_x_max() - eps) / x_interval) - 1)
+            right_x: int = int(
+                hash_size_x - int((x_max - patches_ref[i].get_bbox_x_max() - eps) / x_interval) - 1)
             left_y: int = int((patches_ref[i].get_bbox_y_min() - eps - y_min) / y_interval)
-            right_y: int = int(hash_size_y - int((y_max - patches_ref[i].get_bbox_y_max() - eps) / y_interval) - 1)
+            right_y: int = int(
+                hash_size_y - int((y_max - patches_ref[i].get_bbox_y_max() - eps) / y_interval) - 1)
 
             for j in range(left_x, right_x + 1):
                 for k in range(left_y, right_y + 1):

@@ -12,31 +12,25 @@ import polyscope as ps
 from cholespy import CholeskySolverD
 from scipy.sparse import csr_matrix
 
-from ranato.algebraic_contours.core.affine_manifold import (
-    AffineManifold, VertexManifoldChart)
-from ranato.algebraic_contours.core.common import (COLS, DISCRETIZATION_LEVEL,
-                                                   LOGGER, ROWS, SKY_BLUE,
-                                                   Index, Matrix6x3f,
-                                                   Matrix6x12f, Matrix12x3f,
-                                                   MatrixNx3f, MatrixXf,
-                                                   MatrixXi, Vector1D,
-                                                   Vector3f, unimplemented)
-from ranato.algebraic_contours.core.compute_boundaries import \
-    compute_face_boundary_edges
-from ranato.algebraic_contours.core.convex_polygon import ConvexPolygon
-from ranato.algebraic_contours.quadratic_spline_surface.optimize_spline_surface import (
+from ..core.affine_manifold import AffineManifold, VertexManifoldChart
+from ..core.common import (COLS, DISCRETIZATION_LEVEL, LOGGER, ROWS, SKY_BLUE,
+                           Index, Matrix6x3f, Matrix6x12f, Matrix12x3f,
+                           MatrixNx3f, MatrixXf, MatrixXi, Vector1D, Vector3f,
+                           unimplemented)
+from ..core.compute_boundaries import compute_face_boundary_edges
+from ..core.convex_polygon import ConvexPolygon
+from ..quadratic_spline_surface.optimize_spline_surface import (
     OptimizationParameters, build_twelve_split_spline_energy_system,
     generate_optimized_twelve_split_position_data)
-from ranato.algebraic_contours.quadratic_spline_surface.position_data import (
+from ..quadratic_spline_surface.position_data import (
     TriangleCornerData, TriangleMidpointData, generate_corner_data_matrices,
     generate_midpoint_data_matrices)
-from ranato.algebraic_contours.quadratic_spline_surface.PS12_patch_coeffs import \
-    PS12_patch_coeffs
-from ranato.algebraic_contours.quadratic_spline_surface.PS12tri_bounds_coeffs import \
+from ..quadratic_spline_surface.PS12_patch_coeffs import PS12_patch_coeffs
+from ..quadratic_spline_surface.PS12tri_bounds_coeffs import \
     PS12tri_bounds_coeffs
-from ranato.algebraic_contours.quadratic_spline_surface.quadratic_spline_surface import \
+from ..quadratic_spline_surface.quadratic_spline_surface import \
     QuadraticSplineSurface
-from ranato.algebraic_contours.quadratic_spline_surface.quadratic_spline_surface_patch import \
+from ..quadratic_spline_surface.quadratic_spline_surface_patch import \
     QuadraticSplineSurfacePatch
 
 
@@ -116,7 +110,8 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
                                                       self.__midpoint_data)
 
         # Get cone corners
-        is_cone_corner: list[list[bool]] = affine_manifold.compute_cone_corners()  # list[bool] of length 3
+        # list[bool] of length 3
+        is_cone_corner: list[list[bool]] = affine_manifold.compute_cone_corners()
 
         # Initialize position data and patches.
         face_to_patch_indices: list[list[int]]
@@ -359,7 +354,8 @@ class TwelveSplitSplineSurface(QuadraticSplineSurface):
         patches: list[QuadraticSplineSurfacePatch] = []
         for face_index in range(num_faces):
             # Get surface mappings
-            surface_mappings: list[Matrix6x3f]  # list of length 12 with matrices of shape (6, 3). dtype float
+            # list of length 12 with matrices of shape (6, 3). dtype float
+            surface_mappings: list[Matrix6x3f]
 
             # FIXME: surface mappings is wrong...
             surface_mappings = generate_twelve_split_spline_patch_surface_mapping(
@@ -615,9 +611,9 @@ def generate_twelve_split_data_matrix(corner_data: dict[int, TriangleCornerData]
     return twelve_split_data
 
 
-def generate_twelve_split_spline_patch_surface_mapping(corner_data: dict[int, TriangleCornerData],
-                                                       midpoint_data: dict[int, TriangleMidpointData]
-                                                       ) -> list[Matrix6x3f]:
+def generate_twelve_split_spline_patch_surface_mapping(
+        corner_data: dict[int, TriangleCornerData],
+        midpoint_data: dict[int, TriangleMidpointData]) -> list[Matrix6x3f]:
     """
     Generate twelve spline surface patch mapping coefficient matrix from corner
     and midpoint data according to the twelve-split Powell-Sabin formula.

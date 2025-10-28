@@ -6,13 +6,11 @@ Methods for writing contour data to SVG file.
 import numpy as np
 import svg
 
-from ranato.algebraic_contours.contour_network.discretize import \
-    discretize_curve_segments
-from ranato.algebraic_contours.core.common import (Color, Matrix3x3f,
-                                                   PlanarPoint1d,
-                                                   SpatialVector1d, Vector2f)
-from ranato.algebraic_contours.core.rational_function import (
-    CurveDiscretizationParameters, RationalFunction)
+from ..contour_network.discretize import discretize_curve_segments
+from ..core.common import (Color, Matrix3x3f, PlanarPoint1d, SpatialVector1d,
+                           Vector2f)
+from ..core.rational_function import (CurveDiscretizationParameters,
+                                      RationalFunction)
 
 
 def _project_point(p: SpatialVector1d, frame: Matrix3x3f, scale: int, offset: int) -> Vector2f:

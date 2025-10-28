@@ -12,11 +12,9 @@ Utility methods for testing compute_intersections.
 
 import numpy.testing as npt
 
-from ranato.algebraic_contours.contour_network.intersection_data import \
-    IntersectionData
-from ranato.algebraic_contours.contour_network.intersection_heuristics import \
-    IntersectionStats
-from ranato.algebraic_contours.core.common import float_equal, load_json
+from ..contour_network.intersection_data import IntersectionData
+from ..contour_network.intersection_heuristics import IntersectionStats
+from ..core.common import float_equal, load_json
 
 
 def compare_intersection_stats(filename: str, intersection_stats_test: IntersectionStats) -> None:

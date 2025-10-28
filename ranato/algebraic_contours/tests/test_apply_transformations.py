@@ -2,11 +2,10 @@
 
 import numpy as np
 
-from ranato.algebraic_contours.core.apply_transformation import \
+from ..core.apply_transformation import \
     apply_camera_frame_transformation_to_vertices
-from ranato.algebraic_contours.core.common import (
-    LOGGER, Matrix3x3f, compare_eigen_numpy_matrix,
-    initialize_spot_control_mesh)
+from ..core.common import (LOGGER, Matrix3x3f, compare_eigen_numpy_matrix,
+                           initialize_spot_control_mesh)
 
 
 def test_apply_camera_frame_transformation_to_vertices():
@@ -19,4 +18,5 @@ def test_apply_camera_frame_transformation_to_vertices():
     V, uv, F, FT = initialize_spot_control_mesh()
     V_copy = apply_camera_frame_transformation_to_vertices(V, frame)
     compare_eigen_numpy_matrix(
-        "spot_control\\core\\apply_transformations\\apply_camera_frame_transformation_to_vertices\\V_transformed.csv", V_copy)
+        "spot_control\\core\\apply_transformations\\apply_camera_frame_transformation_to_vertices\\V_transformed.csv",
+        V_copy)

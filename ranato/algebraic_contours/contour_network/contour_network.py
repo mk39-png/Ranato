@@ -13,47 +13,45 @@ import numpy as np
 import polyscope
 import svg
 
-from ranato.algebraic_contours.contour_network.compute_closed_contours import \
-    compute_closed_contours
-from ranato.algebraic_contours.contour_network.compute_contours import (
+from ..contour_network.compute_closed_contours import compute_closed_contours
+from ..contour_network.compute_contours import (
     compute_spline_surface_contours_and_boundaries, pad_contours)
-from ranato.algebraic_contours.contour_network.compute_cusps import \
-    compute_spline_surface_cusps
-from ranato.algebraic_contours.contour_network.compute_intersections import (
-    IntersectionParameters, compute_intersections)
-from ranato.algebraic_contours.contour_network.compute_ray_intersections import (
+from ..contour_network.compute_cusps import compute_spline_surface_cusps
+from ..contour_network.compute_intersections import (IntersectionParameters,
+                                                     compute_intersections)
+from ..contour_network.compute_ray_intersections import (
     compute_spline_surface_ray_intersections, partition_ray_intersections)
-from ranato.algebraic_contours.contour_network.intersection_data import \
-    IntersectionData
-from ranato.algebraic_contours.contour_network.project_curves import \
-    project_curves
-from ranato.algebraic_contours.contour_network.projected_curve_network import (
-    ProjectedCurveNetwork, SegmentChainIterator)
-from ranato.algebraic_contours.contour_network.write_output import \
-    write_contours_with_annotations
-from ranato.algebraic_contours.core.common import (
-    DISCRETIZATION_LEVEL, INLINE_TESTING_ENABLED_CONTOUR_NETWORK,
-    INLINE_TESTING_ENABLED_QI, LOGGER, OFF_WHITE, TESTING_FOLDER_SOURCE,
-    USE_DESERIALIZED_VALUES, Matrix2x3f, Matrix3x3f, MatrixNx3f, NodeIndex,
-    PatchIndex, PlanarPoint1d, SegmentIndex, SpatialVector1d, Vector3f,
-    Vector3i, compare_eigen_numpy_matrix, compare_list_list_varying_lengths,
-    compare_list_list_varying_lengths_float,
-    deserialize_eigen_matrix_csv_to_numpy,
-    deserialize_list_list_varying_lengths,
-    deserialize_list_list_varying_lengths_float, dot_product, float_equal,
-    nested_vector_size, vector_contains)
-from ranato.algebraic_contours.core.conic import Conic
-from ranato.algebraic_contours.core.rational_function import (
-    CurveDiscretizationParameters, RationalFunction)
-from ranato.algebraic_contours.quadratic_spline_surface.quadratic_spline_surface import \
+from ..contour_network.intersection_data import IntersectionData
+from ..contour_network.project_curves import project_curves
+from ..contour_network.projected_curve_network import (ProjectedCurveNetwork,
+                                                       SegmentChainIterator)
+from ..contour_network.write_output import write_contours_with_annotations
+from ..core.common import (DISCRETIZATION_LEVEL,
+                           INLINE_TESTING_ENABLED_CONTOUR_NETWORK,
+                           INLINE_TESTING_ENABLED_QI, LOGGER, OFF_WHITE,
+                           TESTING_FOLDER_SOURCE, USE_DESERIALIZED_VALUES,
+                           Matrix2x3f, Matrix3x3f, MatrixNx3f, NodeIndex,
+                           PatchIndex, PlanarPoint1d, SegmentIndex,
+                           SpatialVector1d, Vector3f, Vector3i,
+                           compare_eigen_numpy_matrix,
+                           compare_list_list_varying_lengths,
+                           compare_list_list_varying_lengths_float,
+                           deserialize_eigen_matrix_csv_to_numpy,
+                           deserialize_list_list_varying_lengths,
+                           deserialize_list_list_varying_lengths_float,
+                           dot_product, float_equal, nested_vector_size,
+                           vector_contains)
+from ..core.conic import Conic
+from ..core.rational_function import (CurveDiscretizationParameters,
+                                      RationalFunction)
+from ..quadratic_spline_surface.quadratic_spline_surface import \
     QuadraticSplineSurface
-from ranato.algebraic_contours.utils.compute_intersections_testing_utils import \
+from ..utils.compute_intersections_testing_utils import \
     deserialize_list_list_intersection_data
-from ranato.algebraic_contours.utils.conic_testing_utils import (
-    compare_conics_from_file, deserialize_conics)
-from ranato.algebraic_contours.utils.projected_curve_networks_utils import \
-    deserialize_segment_labels
-from ranato.algebraic_contours.utils.rational_function_testing_utils import (
+from ..utils.conic_testing_utils import (compare_conics_from_file,
+                                         deserialize_conics)
+from ..utils.projected_curve_networks_utils import deserialize_segment_labels
+from ..utils.rational_function_testing_utils import (
     compare_rational_functions, compare_rational_functions_from_file,
     deserialize_rational_function, deserialize_rational_functions)
 
@@ -281,7 +279,8 @@ class ContourNetwork(ProjectedCurveNetwork):
 
         if INLINE_TESTING_ENABLED_CONTOUR_NETWORK:
             filepath: str = "spot_control\\contour_network\\project_curves\\"
-            compare_rational_functions_from_file(filepath+"planar_curves.json", planar_contour_segments)
+            compare_rational_functions_from_file(
+                filepath+"planar_curves.json", planar_contour_segments)
 
         # Chain the contour segments into closed contours
         # FIXME: compute_closed_contours looks good
@@ -305,7 +304,8 @@ class ContourNetwork(ProjectedCurveNetwork):
             filepath: str = "spot_control\\contour/_network\\compute_contours\\pad_contours\\"
             compare_conics_from_file(filepath+"contour_domain_curve_segments_PADDED.json",
                                      contour_domain_curve_segments)
-            compare_rational_functions_from_file(filepath+"contour_segments_PADDED.json", contour_segments)
+            compare_rational_functions_from_file(
+                filepath+"contour_segments_PADDED.json", contour_segments)
             compare_rational_functions_from_file(
                 filepath+"planar_contour_segments_PADDED.json", planar_contour_segments)
 

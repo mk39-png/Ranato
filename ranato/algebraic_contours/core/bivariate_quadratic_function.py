@@ -3,15 +3,11 @@ Methods to operate on bivariate quadratics represented by coefficient vectors.
 """
 import numpy as np
 
-from ranato.algebraic_contours.core.common import (Matrix2x2f, Matrix3x3r,
-                                                   Matrix3x6r, Matrix6x3f,
-                                                   Matrix6x6r, MatrixXf,
-                                                   PlanarPoint, PlanarPoint1d,
-                                                   SpatialVector1d, Vector1D,
-                                                   Vector2D, Vector3f,
-                                                   Vector6f, cross_product,
-                                                   float_equal, unimplemented)
-from ranato.algebraic_contours.core.polynomial_function import formatted_term
+from ..core.common import (Matrix2x2f, Matrix3x3r, Matrix3x6r, Matrix6x3f,
+                           Matrix6x6r, MatrixXf, PlanarPoint, PlanarPoint1d,
+                           SpatialVector1d, Vector1D, Vector2D, Vector3f,
+                           Vector6f, cross_product, float_equal, unimplemented)
+from ..core.polynomial_function import formatted_term
 
 
 def const_coeffs(dimension: int, quadratic_coeffs: np.ndarray, col: int) -> float:

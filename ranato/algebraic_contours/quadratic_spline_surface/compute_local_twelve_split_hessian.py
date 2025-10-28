@@ -5,11 +5,9 @@ Used by optimize_spline_surface.py
 import numpy as np
 import numpy.linalg as LA
 
-from ranato.algebraic_contours.core.common import (LOGGER, Matrix2x2f,
-                                                   Matrix3x2r, Matrix12x12r,
-                                                   Vector1D)
-from ranato.algebraic_contours.quadratic_spline_surface.PS12_patch_coeffs import \
-    PS12_patch_coeffs
+from ..core.common import (LOGGER, Matrix2x2f, Matrix3x2r, Matrix12x12r,
+                           Vector1D)
+from ..quadratic_spline_surface.PS12_patch_coeffs import PS12_patch_coeffs
 
 
 def get_C_gl(uv: Matrix3x2r,
@@ -118,7 +116,8 @@ def get_C_gl(uv: Matrix3x2r,
     d02: Vector1D = e02[0] * gu_0 + e02[1] * gv_0  # FIXME loss of precision b/c of e02 in 2e-17
     d10: Vector1D = e10[0] * gu_1 + e10[1] * gv_1
     d12: Vector1D = e12[0] * gu_1 + e12[1] * gv_1
-    d20: Vector1D = e20[0] * gu_2 + e20[1] * gv_2  # FIXME: element 08 is -3.99e-17 rather than -6.93e-17
+    # FIXME: element 08 is -3.99e-17 rather than -6.93e-17
+    d20: Vector1D = e20[0] * gu_2 + e20[1] * gv_2
     d21: Vector1D = e21[0] * gu_2 + e21[1] * gv_2  # FIXME:
     assert d01.shape == (12, )
 

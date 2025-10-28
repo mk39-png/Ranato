@@ -6,7 +6,7 @@ TODO: only need implement one function, which is generate_random_category_colorm
 
 import numpy as np
 
-from ranato.algebraic_contours.core.common import MatrixXr, Vector3f
+from ..core.common import MatrixXr, Vector3f
 
 
 def _generate_random_color() -> Vector3f:

@@ -1,32 +1,32 @@
-# This needs various things to work...
-
-
 import logging
 import os
 
 import numpy as np
+import pytest
 
-from ranato.algebraic_contours.contour_network.compute_intersections import \
-    IntersectionParameters
-from ranato.algebraic_contours.contour_network.contour_network import (
-    ContourNetwork, InvisibilityMethod, InvisibilityParameters,
-    _build_contour_labels)
-from ranato.algebraic_contours.core.affine_manifold import AffineManifold
-from ranato.algebraic_contours.core.apply_transformation import \
-    apply_camera_frame_transformation_to_vertices
-from ranato.algebraic_contours.core.common import (
-    LOGGER, Matrix3x3f, MatrixNx3f, deserialize_eigen_matrix_csv_to_numpy,
-    initialize_spot_control_mesh)
-from ranato.algebraic_contours.quadratic_spline_surface.optimize_spline_surface import \
+from ..contour_network.compute_intersections import IntersectionParameters
+from ..contour_network.contour_network import (ContourNetwork,
+                                               InvisibilityMethod,
+                                               InvisibilityParameters,
+                                               _build_contour_labels)
+from ..core.affine_manifold import AffineManifold
+from ..core.apply_transformation import apply_transformation_to_vertices
+from ..core.common import (LOGGER, Matrix3x3f, MatrixNx3f,
+                           deserialize_eigen_matrix_csv_to_numpy,
+                           initialize_spot_control_mesh)
+from ..quadratic_spline_surface.optimize_spline_surface import \
     OptimizationParameters
-from ranato.algebraic_contours.quadratic_spline_surface.quadratic_spline_surface import \
-    QuadraticSplineSurface
-from ranato.algebraic_contours.quadratic_spline_surface.twelve_split_spline import (
+from ..quadratic_spline_surface.twelve_split_spline import (
     TwelveSplitSplineSurface, compute_twelve_split_spline_patch_boundary_edges)
-from ranato.algebraic_contours.tests.test_compute_rational_bezier_curve_intersections import \
+from ..tests.test_compute_rational_bezier_curve_intersections import \
     ROOT_FOLDER
-from ranato.algebraic_contours.utils.projected_curve_networks_utils import (
-    SVGOutputMode, compare_list_segment_geometry, compare_segment_labels)
+from ..utils.projected_curve_networks_utils import (SVGOutputMode,
+                                                    compare_segment_labels)
+from .utils_testing import (initialize_affine_manifold,
+                            initialize_contour_network,
+                            initialize_twelve_split_spline_transformed,
+                            load_mesh_testing, obj_filepaths,
+                            projection_matrices, projection_on_vertices)
 
 # TODO: the deserialization of rational functions and then printing of rational functions should be the same as the whole rational functions.txt file
 
@@ -75,7 +75,14 @@ def test_contour_network() -> None:
     F:  np.ndarray
     FT: np.ndarray
     V, uv, F, FT = initialize_spot_control_mesh()
-    V_transformed: MatrixNx3f = apply_camera_frame_transformation_to_vertices(V, frame)
+    # V_transformed: MatrixNx3f = apply_camera_frame_transformation_to_vertices(V, frame)
+    projection_matrix = np.array([
+        [2.777777671813965, 0.0, 0.0, 0.0],
+        [0.0, 4.938271522521973, 0.0, 0.0],
+        [0.0, 0.0, -1.0020020008087158, -0.20020020008087158],
+        [0.0, 0.0, -1.0, 0.0]], dtype=np.float64)
+
+    V_transformed: MatrixNx3f = apply_transformation_to_vertices(V, np.array(projection_matrix))
 
     # Generate quadratic spline
     LOGGER.info("Computing spline surface")
@@ -103,3 +110,14 @@ def test_contour_network() -> None:
     contour_network_file: str = "contours.svg"
     contour_network_path: str = os.path.abspath(f"src\\tests\\spot_control\\{contour_network_file}")
     contour_network.write(contour_network_path, svg_output_mode, show_nodes)
+
+
+def test_contour_network_pytest(initialize_contour_network) -> None:
+    """
+    Utilizing Pytest utility methods.
+    """
+    contour_network: ContourNetwork = initialize_contour_network
+    contour_network_file: str = "contours.svg"
+    contour_network_path: str = os.path.abspath(f"\\spot_control\\{contour_network_file}")
+    print(contour_network_path)
+    # contour_network.write(contour_network_path, svg_output_mode, show_nodes)

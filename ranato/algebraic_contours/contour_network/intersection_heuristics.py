@@ -10,11 +10,11 @@ from dataclasses import dataclass
 import numpy as np
 import numpy.testing as npt
 
-from ranato.algebraic_contours.core.common import (
-    LOGGER, PLANAR_BOUNDING_BOX_PRECISION, ROWS, Matrix4x2f, Matrix5x2f,
-    Matrix5x3f, Matrix5x5f, PlanarPoint1d, Vector5f,
-    compute_point_cloud_bounding_box, float_equal)
-from ranato.algebraic_contours.core.rational_function import RationalFunction
+from ..core.common import (LOGGER, PLANAR_BOUNDING_BOX_PRECISION, ROWS,
+                           Matrix4x2f, Matrix5x2f, Matrix5x3f, Matrix5x5f,
+                           PlanarPoint1d, Vector5f,
+                           compute_point_cloud_bounding_box, float_equal)
+from ..core.rational_function import RationalFunction
 
 
 @dataclass

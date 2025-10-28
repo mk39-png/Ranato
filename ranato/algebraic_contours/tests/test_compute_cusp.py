@@ -6,29 +6,24 @@ Testing compute_cusp
 
 import numpy as np
 
-from ranato.algebraic_contours.contour_network.compute_cusps import (
+from ..contour_network.compute_cusps import (
     compute_boundary_cusps_testing, compute_cusp_by_one_patch_testing,
     compute_cusp_start_end_points_testing, compute_spline_surface_cusps)
-from ranato.algebraic_contours.contour_network.compute_intersections import \
-    IntersectionParameters
-from ranato.algebraic_contours.contour_network.contour_network import \
-    InvisibilityParameters
-from ranato.algebraic_contours.core.common import (
-    Matrix3x3f, Vector1D, compare_eigen_numpy_matrix,
-    compare_list_list_varying_lengths_float,
-    deserialize_eigen_matrix_csv_to_numpy,
-    deserialize_list_list_varying_lengths)
-from ranato.algebraic_contours.core.conic import Conic
-from ranato.algebraic_contours.core.rational_function import RationalFunction
-from ranato.algebraic_contours.quadratic_spline_surface.quadratic_spline_surface import \
+from ..contour_network.compute_intersections import IntersectionParameters
+from ..contour_network.contour_network import InvisibilityParameters
+from ..core.common import (Matrix3x3f, Vector1D, compare_eigen_numpy_matrix,
+                           compare_list_list_varying_lengths_float,
+                           deserialize_eigen_matrix_csv_to_numpy,
+                           deserialize_list_list_varying_lengths)
+from ..core.conic import Conic
+from ..core.rational_function import RationalFunction
+from ..quadratic_spline_surface.quadratic_spline_surface import \
     QuadraticSplineSurface
-from ranato.algebraic_contours.quadratic_spline_surface.twelve_split_spline import \
+from ..quadratic_spline_surface.twelve_split_spline import \
     TwelveSplitSplineSurface
-from ranato.algebraic_contours.tests.test_compute_contours import \
-    _initialize_contour_info_spot_mesh
-from ranato.algebraic_contours.utils.conic_testing_utils import \
-    deserialize_conics
-from ranato.algebraic_contours.utils.rational_function_testing_utils import \
+from ..tests.test_compute_contours import _initialize_contour_info_spot_mesh
+from ..utils.conic_testing_utils import deserialize_conics
+from ..utils.rational_function_testing_utils import \
     deserialize_rational_functions
 
 # def test_tangent_x_spot_mesh():
@@ -89,16 +84,20 @@ def test_compute_cusp_by_one_patch_spot_control() -> None:
     Testing according to method usage in compute_spline_surface_cusps()
     """
     filepath: str = "spot_control\\contour_network\\compute_cusps\\compute_cusp_by_one_patch\\"
-    contour_domain_curve_segments: list[Conic] = deserialize_conics(filepath+"contour_domain_curve_segments.json")
-    patch_indices: Vector1D = np.array(deserialize_eigen_matrix_csv_to_numpy(filepath+"patch_indices.csv"),
-                                       dtype=np.int64)
+    contour_domain_curve_segments: list[Conic] = deserialize_conics(
+        filepath + "contour_domain_curve_segments.json")
+    patch_indices: Vector1D = np.array(
+        deserialize_eigen_matrix_csv_to_numpy(
+            filepath + "patch_indices.csv"),
+        dtype=np.int64)
     spline_surface: TwelveSplitSplineSurface
     spline_surface, _, _, _, _ = _initialize_contour_info_spot_mesh()
 
     interior_cusps: list[list[float]] = []
     for i, _ in enumerate(contour_domain_curve_segments):
-        cusp: list[float] = compute_cusp_by_one_patch_testing(spline_surface.get_patch(patch_indices[i]),
-                                                              contour_domain_curve_segments[i])
+        cusp: list[float] = compute_cusp_by_one_patch_testing(
+            spline_surface.get_patch(patch_indices[i]),
+            contour_domain_curve_segments[i])
         interior_cusps.append(cusp)
 
     compare_list_list_varying_lengths_float(filepath+"interior_cusps.csv", interior_cusps)
@@ -131,12 +130,9 @@ def test_compute_cusp_start_end_points_spot_control() -> None:
     function_end_points: list[float]
     function_start_points_param: list[float]
     function_end_points_param: list[float]
-    (function_start_points,
-     function_end_points,
-     function_start_points_param,
+    (function_start_points, function_end_points, function_start_points_param,
      function_end_points_param) = compute_cusp_start_end_points_testing(spline_surface,
-                                                                        contour_domain_curve_segments,
-                                                                        patch_indices)
+                                                                        contour_domain_curve_segments, patch_indices)
 
     compare_eigen_numpy_matrix(filepath+"function_start_points.csv",
                                np.array(function_start_points))

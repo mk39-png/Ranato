@@ -1,18 +1,19 @@
 import numpy as np
 import pytest
 
-from ranato.algebraic_contours.core.affine_manifold import AffineManifold
-from ranato.algebraic_contours.core.common import (
-    ROWS, Index, Matrix2x3r, SpatialVector, SpatialVector1d, Vector1D,
-    compare_eigen_numpy_matrix, float_equal, index_vector_complement,
-    initialize_spot_control_mesh)
-from ranato.algebraic_contours.core.halfedge import Halfedge
-from ranato.algebraic_contours.quadratic_spline_surface.optimize_spline_surface import (
+from ..core.affine_manifold import AffineManifold
+from ..core.common import (ROWS, Index, Matrix2x3r, SpatialVector,
+                           SpatialVector1d, Vector1D,
+                           compare_eigen_numpy_matrix, float_equal,
+                           index_vector_complement,
+                           initialize_spot_control_mesh)
+from ..core.halfedge import Halfedge
+from ..quadratic_spline_surface.optimize_spline_surface import (
     generate_zero_edge_gradients, generate_zero_vertex_gradients)
-from ranato.algebraic_contours.quadratic_spline_surface.powell_sabin_local_to_global_indexing import (
+from ..quadratic_spline_surface.powell_sabin_local_to_global_indexing import (
     build_variable_edge_indices_map, build_variable_vertex_indices_map,
     generate_twelve_split_variable_value_vector)
-from ranato.algebraic_contours.tests.test_affine_manifold import \
+from ..tests.test_affine_manifold import \
     initialize_affine_manifold_from_spot_control
 
 
@@ -55,13 +56,14 @@ def test_generate_twelve_split_variable_value_vector_spot_mesh():
     variable_vertices: list[int] = index_vector_complement(fixed_vertices, num_vertices)
     variable_edges: list[int] = index_vector_complement(fixed_edges, num_edges)
 
-    initial_variable_values: Vector1D = generate_twelve_split_variable_value_vector(vertex_positions,
-                                                                                    vertex_gradients,
-                                                                                    edge_gradients,
-                                                                                    variable_vertices,
-                                                                                    variable_edges,
-                                                                                    halfedge,
-                                                                                    he_to_corner)
+    initial_variable_values: Vector1D = generate_twelve_split_variable_value_vector(
+        vertex_positions,
+        vertex_gradients,
+        edge_gradients,
+        variable_vertices,
+        variable_edges,
+        halfedge,
+        he_to_corner)
 
     filepath = "spot_control\\optimize_spline_surface\\optimize_twelve_split_spline_surface\\"
     compare_eigen_numpy_matrix(filepath+"initial_variable_values.csv", initial_variable_values)
@@ -80,7 +82,8 @@ def test_build_variable_vertex_indices_map_spot_mesh() -> None:
     variable_vertices: list[int] = index_vector_complement(fixed_vertices, num_vertices)
     # variable_edges: list[int] = index_vector_complement(fixed_edges, num_edges)
 
-    global_vertex_indices: list[int] = build_variable_vertex_indices_map(num_vertices, variable_vertices)
+    global_vertex_indices: list[int] = build_variable_vertex_indices_map(
+        num_vertices, variable_vertices)
 
     compare_eigen_numpy_matrix(
         "spot_control\\optimize_spline_surface\\build_twelve_split_spline_energy_system\\fit\\global_vertex_indices.csv",

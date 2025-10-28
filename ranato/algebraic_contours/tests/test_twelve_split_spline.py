@@ -6,31 +6,32 @@ from collections import defaultdict
 import igl
 import numpy as np
 import numpy.testing as npt
+import pytest
 from cholespy import CholeskySolverD
 from scipy.sparse import csr_matrix
 
-from ranato.algebraic_contours.core.affine_manifold import (
-    AffineManifold, ParametricAffineManifold)
-from ranato.algebraic_contours.core.bivariate_quadratic_function import \
-    evaluate_quadratic_mapping
-from ranato.algebraic_contours.core.common import (
-    DISCRETIZATION_LEVEL, LOGGER, SKY_BLUE, Matrix3x2f, Matrix6x3r, MatrixNx3f,
-    MatrixXf, MatrixXi, PlanarPoint1d, SpatialVector, SpatialVector1d,
-    compare_eigen_numpy_matrix, initialize_spot_control_mesh, vector_equal)
-from ranato.algebraic_contours.core.convex_polygon import ConvexPolygon
-from ranato.algebraic_contours.quadratic_spline_surface.optimize_spline_surface import (
+from ..core.affine_manifold import AffineManifold, ParametricAffineManifold
+from ..core.bivariate_quadratic_function import evaluate_quadratic_mapping
+from ..core.common import (DISCRETIZATION_LEVEL, LOGGER, SKY_BLUE, Matrix3x2f,
+                           Matrix6x3r, MatrixNx3f, MatrixXf, MatrixXi,
+                           PlanarPoint1d, SpatialVector, SpatialVector1d,
+                           compare_eigen_numpy_matrix,
+                           initialize_spot_control_mesh, vector_equal)
+from ..core.convex_polygon import ConvexPolygon
+from ..quadratic_spline_surface.optimize_spline_surface import (
     OptimizationParameters, build_twelve_split_spline_energy_system,
     generate_optimized_twelve_split_position_data)
-from ranato.algebraic_contours.quadratic_spline_surface.quadratic_spline_surface import \
+from ..quadratic_spline_surface.quadratic_spline_surface import \
     QuadraticSplineSurface
-from ranato.algebraic_contours.quadratic_spline_surface.quadratic_spline_surface_patch import \
+from ..quadratic_spline_surface.quadratic_spline_surface_patch import \
     QuadraticSplineSurfacePatch
-from ranato.algebraic_contours.quadratic_spline_surface.twelve_split_spline import (  # generate_affine_manifold_corner_data,; generate_affine_manifold_midpoint_data,
+from ..quadratic_spline_surface.twelve_split_spline import (  # generate_affine_manifold_corner_data,; generate_affine_manifold_midpoint_data,
     TriangleCornerData, TriangleMidpointData, TwelveSplitSplineSurface,
     generate_twelve_split_spline_patch_patch_boundaries,
     generate_twelve_split_spline_patch_patch_to_corner_map,
     generate_twelve_split_spline_patch_surface_mapping)
-from ranato.algebraic_contours.utils.generate_position_data import (
+from ..tests.utils_testing import initialize_twelve_split_spline_transformed
+from ..utils.generate_position_data import (
     QuadraticGradientFunction, QuadraticPositionFunction,
     generate_parametric_affine_manifold_corner_data,
     generate_parametric_affine_manifold_midpoint_data)
@@ -39,8 +40,11 @@ from ranato.algebraic_contours.utils.generate_position_data import (
 # Helper Methods
 # ****************
 
+# Then, create a fixture taking in that input.
 
-def initialize_twelve_split_spline_from_spot_mesh() -> tuple[TwelveSplitSplineSurface, AffineManifold, MatrixXf]:
+
+def initialize_twelve_split_spline_from_spot_mesh() -> tuple[TwelveSplitSplineSurface,
+                                                             AffineManifold, MatrixXf]:
     """
     This is used to test the member variables of TwevleSplitSplineSurface().
     Helper function that initialized TwelveSplitSplineSurface from the spot_control mesh.
@@ -299,7 +303,8 @@ def test_patches_spot_mesh() -> None:
     LOGGER.info("Computing spline surface")
     # NOTE: must input a mesh that is already UV unwrapped....
     affine_manifold: AffineManifold = AffineManifold(F, uv, FT)
-    spline_surface: TwelveSplitSplineSurface = TwelveSplitSplineSurface(V, affine_manifold,  optimization_params)
+    spline_surface: TwelveSplitSplineSurface = TwelveSplitSplineSurface(
+        V, affine_manifold,  optimization_params)
 
     # TODO: Making sure that the 12 split spline patches are the same as quadratic patch...
     # First open files to convert into list[QuadraticSplineSurfacePatch]
@@ -307,9 +312,11 @@ def test_patches_spot_mesh() -> None:
     filepath_control: str = os.path.abspath(f"src\\tests\\spot_control\\{filename_control}")
 
     # NOTE: need the placeholder to utilize its deserialize() method
-    spline_surface_placeholder: QuadraticSplineSurface = QuadraticSplineSurface.from_file(filepath_control)
+    spline_surface_placeholder: QuadraticSplineSurface = QuadraticSplineSurface.from_file(
+        filepath_control)
     with open(filepath_control, "r", encoding="utf-8") as file_control:
-        control_patches: list[QuadraticSplineSurfacePatch] = spline_surface_placeholder.deserialize(file_control)
+        control_patches: list[QuadraticSplineSurfacePatch] = spline_surface_placeholder.deserialize(
+            file_control)
         file_control.close()
 
     # Now, grabbing the patches made from twelve_split_spline (i.e. our patches to test)
@@ -319,7 +326,8 @@ def test_patches_spot_mesh() -> None:
 
     # Now, checking the values that have been saved
     for i in range(num_patches):
-        surface_mapping_coeffs_control: Matrix6x3r = control_patches[i].surface_mapping  # cx, cy, cz
+        # cx, cy, cz
+        surface_mapping_coeffs_control: Matrix6x3r = control_patches[i].surface_mapping
         domain_control: ConvexPolygon = control_patches[i].domain
         vertices_control: Matrix3x2f = domain_control.vertices  # p1, p2, p3
 
@@ -366,13 +374,10 @@ def twelve_split_quadratic_reproduction(
 
     # Generate function data
     corner_data: dict[int, dict[int, TriangleCornerData]] = generate_parametric_affine_manifold_corner_data(
-        position_func,
-        gradient_func,
-        parametric_affine_manifold)
+        position_func, gradient_func, parametric_affine_manifold)
 
     midpoint_data: dict[int, dict[int, TriangleMidpointData]] = generate_parametric_affine_manifold_midpoint_data(
-        gradient_func,
-        parametric_affine_manifold)
+        gradient_func, parametric_affine_manifold)
 
     surface_mappings: list[Matrix6x3r] = generate_twelve_split_spline_patch_surface_mapping(
         corner_data[0],

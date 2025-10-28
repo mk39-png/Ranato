@@ -7,21 +7,23 @@ import pytest
 from cholespy import CholeskySolverD
 from scipy.sparse import csr_matrix
 
-from ranato.algebraic_contours.core.affine_manifold import AffineManifold
-from ranato.algebraic_contours.core.common import (
-    COLS, ROWS, Matrix2x3f, MatrixXf, SpatialVector, SpatialVector1d, Vector1D,
-    compare_eigen_numpy_matrix, deserialize_eigen_matrix_csv_to_numpy,
-    float_equal, index_vector_complement, initialize_spot_control_mesh)
-from ranato.algebraic_contours.core.halfedge import Halfedge
-from ranato.algebraic_contours.quadratic_spline_surface.optimize_spline_surface import (  # generate_twelve_split_variable_value_vector,
+from ..core.affine_manifold import AffineManifold
+from ..core.common import (COLS, ROWS, Matrix2x3f, MatrixXf, SpatialVector,
+                           SpatialVector1d, Vector1D,
+                           compare_eigen_numpy_matrix,
+                           deserialize_eigen_matrix_csv_to_numpy, float_equal,
+                           index_vector_complement,
+                           initialize_spot_control_mesh)
+from ..core.halfedge import Halfedge
+from ..quadratic_spline_surface.optimize_spline_surface import (  # generate_twelve_split_variable_value_vector,
     OptimizationParameters, TriangleCornerData, TriangleMidpointData,
     build_twelve_split_spline_energy_system,
     generate_optimized_twelve_split_position_data,
     generate_zero_edge_gradients, generate_zero_vertex_gradients,
     optimize_twelve_split_spline_surface, shift_array)
-from ranato.algebraic_contours.quadratic_spline_surface.twelve_split_spline import \
+from ..quadratic_spline_surface.twelve_split_spline import \
     TwelveSplitSplineSurface
-from ranato.algebraic_contours.tests.test_affine_manifold import \
+from ..tests.test_affine_manifold import \
     initialize_affine_manifold_from_spot_control
 
 # ********
@@ -416,10 +418,8 @@ def test_optimize_twelve_split_spline_surface_spot_mesh() -> None:
     energy_hessian_inverse: CholeskySolverD
     optimization_params_full: OptimizationParameters = OptimizationParameters(
         parametrized_quadratic_surface_mapping_factor=1.0)
-    _, _, _, energy_hessian_inverse = build_twelve_split_spline_energy_system(V,
-                                                                              N,
-                                                                              affine_manifold,
-                                                                              optimization_params_full)
+    _, _, _, energy_hessian_inverse = build_twelve_split_spline_energy_system(
+        V, N, affine_manifold, optimization_params_full)
 
     optimized_V, optimized_vertex_gradients, optimized_reduced_edge_gradients = optimize_twelve_split_spline_surface(
         V,
@@ -637,8 +637,10 @@ def test_build_twelve_split_spline_energy_system_spot_mesh() -> None:
     # Get input mesh
     V, uv, F, FT = initialize_spot_control_mesh()
     affine_manifold: AffineManifold = AffineManifold(F, uv, FT)
-    optimization_params_fit = OptimizationParameters(parametrized_quadratic_surface_mapping_factor=0.0)
-    optimization_params_full = OptimizationParameters(parametrized_quadratic_surface_mapping_factor=1.0)
+    optimization_params_fit = OptimizationParameters(
+        parametrized_quadratic_surface_mapping_factor=0.0)
+    optimization_params_full = OptimizationParameters(
+        parametrized_quadratic_surface_mapping_factor=1.0)
     N: MatrixXf = TwelveSplitSplineSurface.generate_face_normals(V, affine_manifold)
 
     # ** Fit Energy Case **

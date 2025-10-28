@@ -4,41 +4,40 @@ import os
 
 import numpy as np
 
-from ranato.algebraic_contours.contour_network.compute_contours import (
+from ..contour_network.compute_contours import (
     compute_spline_surface_boundaries,
     compute_spline_surface_boundary_intersections,
     compute_spline_surface_contours,
     compute_spline_surface_contours_and_boundaries, pad_contours)
-from ranato.algebraic_contours.contour_network.compute_intersections import \
-    IntersectionParameters
-from ranato.algebraic_contours.contour_network.contour_network import (
-    ContourNetwork, InvisibilityMethod, InvisibilityParameters)
-from ranato.algebraic_contours.contour_network.intersection_data import \
-    IntersectionData
-from ranato.algebraic_contours.core.affine_manifold import AffineManifold
-from ranato.algebraic_contours.core.apply_transformation import \
+from ..contour_network.compute_intersections import IntersectionParameters
+from ..contour_network.contour_network import (ContourNetwork,
+                                               InvisibilityMethod,
+                                               InvisibilityParameters)
+from ..contour_network.intersection_data import IntersectionData
+from ..core.affine_manifold import AffineManifold
+from ..core.apply_transformation import \
     apply_camera_frame_transformation_to_vertices
-from ranato.algebraic_contours.core.common import (
-    LOGGER, Matrix3x3f, MatrixNx3f, PatchIndex, compare_eigen_numpy_matrix,
-    deserialize_eigen_matrix_csv_to_numpy, initialize_spot_control_mesh,
-    unimplemented)
-from ranato.algebraic_contours.core.conic import Conic
-from ranato.algebraic_contours.core.rational_function import RationalFunction
-from ranato.algebraic_contours.quadratic_spline_surface.optimize_spline_surface import \
+from ..core.common import (LOGGER, Matrix3x3f, MatrixNx3f, PatchIndex,
+                           compare_eigen_numpy_matrix,
+                           deserialize_eigen_matrix_csv_to_numpy,
+                           initialize_spot_control_mesh, unimplemented)
+from ..core.conic import Conic
+from ..core.rational_function import RationalFunction
+from ..quadratic_spline_surface.optimize_spline_surface import \
     OptimizationParameters
-from ranato.algebraic_contours.quadratic_spline_surface.quadratic_spline_surface import \
+from ..quadratic_spline_surface.quadratic_spline_surface import \
     QuadraticSplineSurface
-from ranato.algebraic_contours.quadratic_spline_surface.twelve_split_spline import (
+from ..quadratic_spline_surface.twelve_split_spline import (
     TwelveSplitSplineSurface, compute_twelve_split_spline_patch_boundary_edges)
-from ranato.algebraic_contours.utils.compute_intersections_testing_utils import (
+from ..utils.compute_intersections_testing_utils import (
     compare_list_list_intersection_data,
     compare_list_list_intersection_data_from_file,
     deserialize_list_list_intersection_data)
-from ranato.algebraic_contours.utils.conic_testing_utils import (
-    compare_conics, compare_conics_from_file, deserialize_conics)
-from ranato.algebraic_contours.utils.projected_curve_networks_utils import \
-    SVGOutputMode
-from ranato.algebraic_contours.utils.rational_function_testing_utils import (
+from ..utils.conic_testing_utils import (compare_conics,
+                                         compare_conics_from_file,
+                                         deserialize_conics)
+from ..utils.projected_curve_networks_utils import SVGOutputMode
+from ..utils.rational_function_testing_utils import (
     compare_rational_functions, compare_rational_functions_from_file,
     deserialize_rational_functions)
 
@@ -220,7 +219,8 @@ def test_compute_spline_surface_boundaries_spot_control() -> None:
         filepath+"boundary_segments.json")
     compare_conics(boundary_domain_curve_segments_control, boundary_domain_curve_segments)
     compare_rational_functions(boundary_segments_control, boundary_segments)
-    compare_eigen_numpy_matrix(filepath+"boundary_patch_indices.csv", np.array(boundary_patch_indices))
+    compare_eigen_numpy_matrix(filepath+"boundary_patch_indices.csv",
+                               np.array(boundary_patch_indices))
 
 
 def test_compute_spline_surface_boundary_intersections_spot_control() -> None:
@@ -246,8 +246,7 @@ def test_compute_spline_surface_boundary_intersections_spot_control() -> None:
         filepath+"contour_patch_indices.csv"),
         dtype=np.int64).tolist()
     line_intersection_indices: list[tuple[int, int]] = np.array(deserialize_eigen_matrix_csv_to_numpy(
-        filepath+"line_intersection_indices.csv"),
-        dtype=np.int64).tolist()
+        filepath+"line_intersection_indices.csv"), dtype=np.int64).tolist()
     boundary_domain_curve_segments: list[Conic] = deserialize_conics(
 
         filepath+"boundary_domain_curve_segments.json")

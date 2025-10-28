@@ -5,7 +5,7 @@ and Eitan Grinspun.
 ORIGINAL PURPOSE: So, this file focuses on utilizing automatic differentiation via JAX. 
 UPDATED PURPOSE: the methods in this class do not seem to be used elsewhere aside from testing.
 """
-from ranato.algebraic_contours.core.common import unimplemented
+from ..core.common import unimplemented
 
 
 def generate_local_variable_matrix_index(row: int, col: int, dimension=3) -> int:

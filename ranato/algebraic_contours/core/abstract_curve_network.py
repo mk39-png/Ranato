@@ -5,9 +5,8 @@ Used for contour_network.
 
 import logging
 
-from ranato.algebraic_contours.core.common import (CHECK_VALIDITY, LOGGER,
-                                                   NodeIndex, SegmentIndex,
-                                                   vector_contains)
+from ..core.common import (CHECK_VALIDITY, LOGGER, NodeIndex, SegmentIndex,
+                           vector_contains)
 
 
 class AbstractCurveNetwork():
@@ -43,9 +42,12 @@ class AbstractCurveNetwork():
                 # TODO: clear topology?
 
         # Build curve network
-        self.__next_array: list[SegmentIndex]  # = self.build_next_array(self.to_array, self.out_array)
-        self.__prev_array: list[SegmentIndex]  # = self.build_prev_array(self.to_array, self.out_array)
-        self.__from_array: list[NodeIndex]    # = self.build_from_array(self.to_array, self.out_array)
+        # = self.build_next_array(self.to_array, self.out_array)
+        self.__next_array: list[SegmentIndex]
+        # = self.build_prev_array(self.to_array, self.out_array)
+        self.__prev_array: list[SegmentIndex]
+        # = self.build_from_array(self.to_array, self.out_array)
+        self.__from_array: list[NodeIndex]
         self.__in_array: list[SegmentIndex]   # = self.build_in_array(self.to_array, self.out_array)
         (self.__next_array,
          self.__prev_array,
@@ -167,7 +169,8 @@ class AbstractCurveNetwork():
             assert self._is_valid_minimal_curve_network_data(to_array,
                                                              out_array,
                                                              intersection_array)
-            if not self._is_valid_minimal_curve_network_data(to_array, out_array, intersection_array):
+            if not self._is_valid_minimal_curve_network_data(
+                    to_array, out_array, intersection_array):
                 self._clear_topology()
                 raise ValueError("Could not build abstract curve network")
 

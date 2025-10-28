@@ -7,27 +7,27 @@ from datetime import datetime
 
 import numpy as np
 
-from ranato.algebraic_contours.contour_network.compute_rational_bezier_curve_intersection import (
+from ..contour_network.compute_rational_bezier_curve_intersection import (
     find_intersections_bezier_clipping,
     split_bezier_curve_no_self_intersection)
-from ranato.algebraic_contours.contour_network.intersection_data import \
-    IntersectionData
-from ranato.algebraic_contours.contour_network.intersection_heuristics import (
+from ..contour_network.intersection_data import IntersectionData
+from ..contour_network.intersection_heuristics import (
     IntersectionStats, are_nonintersecting_by_heuristic_bounding_box,
     compute_bezier_bounding_box, compute_bounding_box_hash_table,
     compute_homogeneous_bezier_points_over_interval)
-from ranato.algebraic_contours.core.common import (
-    FIND_INTERSECTIONS_BEZIER_CLIPPING_PRECISION,
-    INLINE_TESTING_ENABLED_CONTOUR_NETWORK, LOGGER, Matrix5x3f, PlanarPoint1d,
-    SpatialVector1d, compare_eigen_numpy_matrix,
-    compare_list_list_varying_lengths, compare_list_list_varying_lengths_float,
-    float_equal_zero, interval_lerp, load_json)
-from ranato.algebraic_contours.core.rational_function import RationalFunction
-from ranato.algebraic_contours.tests.test_compute_rational_bezier_curve_intersections import \
+from ..core.common import (FIND_INTERSECTIONS_BEZIER_CLIPPING_PRECISION,
+                           INLINE_TESTING_ENABLED_CONTOUR_NETWORK, LOGGER,
+                           Matrix5x3f, PlanarPoint1d, SpatialVector1d,
+                           compare_eigen_numpy_matrix,
+                           compare_list_list_varying_lengths,
+                           compare_list_list_varying_lengths_float,
+                           float_equal_zero, interval_lerp, load_json)
+from ..core.rational_function import RationalFunction
+from ..tests.test_compute_rational_bezier_curve_intersections import \
     ROOT_FOLDER
-from ranato.algebraic_contours.utils.compute_intersections_testing_utils import (
+from ..utils.compute_intersections_testing_utils import (
     compare_intersection_stats, compare_list_list_intersection_data_from_file)
-from ranato.algebraic_contours.utils.rational_function_testing_utils import \
+from ..utils.rational_function_testing_utils import \
     compare_rational_functions_from_file
 
 
@@ -351,7 +351,8 @@ def compute_intersections(image_segments: list[RationalFunction],
     #
     # Hash by uv
     num_interval: int = 50
-    hash_table: dict[int, dict[int, list[int]]]  # FIXME Make global: change both here and num_interval
+    # FIXME Make global: change both here and num_interval
+    hash_table: dict[int, dict[int, list[int]]]
     reverse_hash_table: list[list[int]]
     hash_table, reverse_hash_table = compute_bounding_box_hash_table(image_segments_bounding_box)
 
@@ -405,20 +406,23 @@ def compute_intersections(image_segments: list[RationalFunction],
                 # Testing to see if parameters into the function below are correct
                 if INLINE_TESTING_ENABLED_CONTOUR_NETWORK:
                     filepath: str = f"{ROOT_FOLDER}\\contour_network\\compute_intersections\\compute_planar_curve_intersections\\"
-                    compare_rational_functions_from_file(filepath+f"first_planar_curve\\{counter}.json",
-                                                         [image_segments[image_segment_index]])
-                    compare_rational_functions_from_file(filepath+f"second_planar_curve\\{counter}.json",
-                                                         [image_segments[i]])
+                    compare_rational_functions_from_file(
+                        filepath + f"first_planar_curve\\{counter}.json",
+                        [image_segments[image_segment_index]])
+                    compare_rational_functions_from_file(
+                        filepath+f"second_planar_curve\\{counter}.json", [image_segments[i]])
                     compare_intersection_stats(filepath+f"intersection_stats_in\\{counter}.json",
                                                intersection_stats)
                     compare_eigen_numpy_matrix(filepath+f"first_bounding_box\\{counter}.csv",
                                                np.array(image_segments_bounding_box[image_segment_index]))
                     compare_eigen_numpy_matrix(filepath+f"second_bounding_box\\{counter}.csv",
                                                np.array(image_segments_bounding_box[i]))
-                    compare_eigen_numpy_matrix(filepath+f"first_bezier_control_points\\{counter}.csv",
-                                               image_segments_bezier_control_points[image_segment_index])
-                    compare_eigen_numpy_matrix(filepath+f"second_bezier_control_points\\{counter}.csv",
-                                               image_segments_bezier_control_points[i])
+                    compare_eigen_numpy_matrix(
+                        filepath + f"first_bezier_control_points\\{counter}.csv",
+                        image_segments_bezier_control_points[image_segment_index])
+                    compare_eigen_numpy_matrix(
+                        filepath + f"second_bezier_control_points\\{counter}.csv",
+                        image_segments_bezier_control_points[i])
 
                 #
                 # FIXME: method below is providing more segment intersections than we would like

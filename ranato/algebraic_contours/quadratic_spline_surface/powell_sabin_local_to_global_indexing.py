@@ -15,16 +15,11 @@ from typing import Literal
 
 import numpy as np
 
-from ranato.algebraic_contours.core.common import (COLS, LOGGER,
-                                                   PLACEHOLDER_VALUE, ROWS,
-                                                   Index, Matrix2x3r,
-                                                   SpatialVector1d,
-                                                   TwelveSplitGradient,
-                                                   TwelveSplitHessian,
-                                                   Vector1D)
-from ranato.algebraic_contours.core.differentiable_variable import \
-    generate_local_variable_matrix_index
-from ranato.algebraic_contours.core.halfedge import Halfedge
+from ..core.common import (COLS, LOGGER, PLACEHOLDER_VALUE, ROWS, Index,
+                           Matrix2x3r, SpatialVector1d, TwelveSplitGradient,
+                           TwelveSplitHessian, Vector1D)
+from ..core.differentiable_variable import generate_local_variable_matrix_index
+from ..core.halfedge import Halfedge
 
 # *******************
 # Local block indices
@@ -335,13 +330,13 @@ def generate_six_split_variable_value_vector(vertex_positions: list[SpatialVecto
     return variable_values
 
 
-def generate_twelve_split_variable_value_vector(vertex_positions: list[SpatialVector1d],
-                                                vertex_gradients: list[Matrix2x3r],
-                                                edge_gradients: list[list[SpatialVector1d]],
-                                                variable_vertices: list[int],
-                                                variable_edges: list[int],
-                                                halfedge: Halfedge,
-                                                he_to_corner: list[tuple[Index, Index]]) -> Vector1D:
+def generate_twelve_split_variable_value_vector(
+        vertex_positions: list[SpatialVector1d],
+        vertex_gradients: list[Matrix2x3r],
+        edge_gradients: list[list[SpatialVector1d]],
+        variable_vertices: list[int],
+        variable_edges: list[int],
+        halfedge: Halfedge, he_to_corner: list[tuple[Index, Index]]) -> Vector1D:
     """
     Used in optimize_spline_surface.py
 

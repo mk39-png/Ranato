@@ -10,21 +10,16 @@ import sys
 
 import numpy as np
 
-from ranato.algebraic_contours.contour_network.intersection_heuristics import \
-    is_in_bounding_box
-from ranato.algebraic_contours.core.common import (LOGGER,
-                                                   MAX_PATCH_RAY_INTERSECTIONS,
-                                                   Matrix2x2f, Matrix2x3f,
-                                                   Matrix6x3f, PlanarPoint1d,
-                                                   SpatialVector1d, Vector2f,
-                                                   Vector3f, Vector4f,
-                                                   Vector6f)
-from ranato.algebraic_contours.core.convex_polygon import ConvexPolygon
-from ranato.algebraic_contours.core.polynomial_function import \
-    polynomial_real_roots
-from ranato.algebraic_contours.quadratic_spline_surface.quadratic_spline_surface import \
+from ..contour_network.intersection_heuristics import is_in_bounding_box
+from ..core.common import (LOGGER, MAX_PATCH_RAY_INTERSECTIONS, Matrix2x2f,
+                           Matrix2x3f, Matrix6x3f, PlanarPoint1d,
+                           SpatialVector1d, Vector2f, Vector3f, Vector4f,
+                           Vector6f)
+from ..core.convex_polygon import ConvexPolygon
+from ..core.polynomial_function import polynomial_real_roots
+from ..quadratic_spline_surface.quadratic_spline_surface import \
     QuadraticSplineSurface
-from ranato.algebraic_contours.quadratic_spline_surface.quadratic_spline_surface_patch import \
+from ..quadratic_spline_surface.quadratic_spline_surface_patch import \
     QuadraticSplineSurfacePatch
 
 
@@ -478,7 +473,8 @@ def pencil_first_part(coeff_F: Vector6f,
                     # res = libc.pow(c1, c1)
 
                     # discriminant = math.pow(c1, 2) - (4.0 * (c0 * c2))  # FIXME: discriminant is wrong for 1046
-                    discriminant = (c1 * c1) - (4.0 * (c0 * c2))  # FIXME: discriminant is wrong for 1046
+                    # FIXME: discriminant is wrong for 1046
+                    discriminant = (c1 * c1) - (4.0 * (c0 * c2))
 
                     # discriminant = math.pow(c1, 2) - (4.0 * (c0 * c2))  # FIXME: discriminant is wrong for 1046
                     # discriminant = ((ctypes.c_double(c1) * ctypes.c_double(c1)) -
@@ -658,7 +654,8 @@ def compute_spline_surface_patch_ray_intersections_pencil_method(
 
     # Get all intersections of the quadratic normalized surface and the ray
     num_intersections_all: int
-    normalized_surface_intersections_all: list[PlanarPoint1d] = []  # length MAX_PATCH_RAY_INTERSECTIONS
+    # length MAX_PATCH_RAY_INTERSECTIONS
+    normalized_surface_intersections_all: list[PlanarPoint1d] = []
     normalized_surface_intersections: list[PlanarPoint1d] = []  # length MAX_PATCH_RAY_INTERSECTIONS
     normalized_ray_intersections: list[float] = []  # length MAX_PATCH_RAY_INTERSECTIONS
     _, num_intersections_all, normalized_surface_intersections_all = pencil_first_part(

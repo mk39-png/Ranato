@@ -9,14 +9,11 @@ NOTE: a lot of the methods in this file modify by reference.
 
 import numpy as np
 
-from ranato.algebraic_contours.core.affine_manifold import (
-    AffineManifold, EdgeManifoldChart, VertexManifoldChart)
-from ranato.algebraic_contours.core.common import (LOGGER, ROWS, Matrix2x3r,
-                                                   MatrixNx3f, MatrixNx3i,
-                                                   PlanarPoint,
-                                                   SpatialVector1d, Vector2f,
-                                                   find_face_vertex_index,
-                                                   unimplemented, unreachable)
+from ..core.affine_manifold import (AffineManifold, EdgeManifoldChart,
+                                    VertexManifoldChart)
+from ..core.common import (LOGGER, ROWS, Matrix2x3r, MatrixNx3f, MatrixNx3i,
+                           PlanarPoint, SpatialVector1d, Vector2f,
+                           find_face_vertex_index, unimplemented, unreachable)
 
 
 class TriangleCornerData:
@@ -183,9 +180,9 @@ def generate_affine_manifold_corner_data(V: MatrixNx3f,
     # TODO: check list amount of elements added to corner_data_ref... should do something with affine_manifold.num_faces
 
 
-def generate_affine_manifold_midpoint_data(affine_manifold: AffineManifold,
-                                           edge_gradients: dict[int, dict[int, Matrix2x3r]],
-                                           midpoint_data_ref: dict[int, dict[int, TriangleMidpointData]]) -> None:
+def generate_affine_manifold_midpoint_data(
+        affine_manifold: AffineManifold, edge_gradients: dict[int, dict[int, Matrix2x3r]],
+        midpoint_data_ref: dict[int, dict[int, TriangleMidpointData]]) -> None:
     """
     Generate midpoint position data for a mesh with an affine manifold structure and
     per edge gradients.

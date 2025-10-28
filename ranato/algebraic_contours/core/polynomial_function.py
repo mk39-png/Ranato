@@ -21,12 +21,9 @@ from venv import logger
 
 import numpy as np
 
-from ranato.algebraic_contours.core.common import (COLS, ROWS, MatrixNx3f,
-                                                   MatrixXf, Vector1D,
-                                                   Vector2D, Vector2f,
-                                                   Vector3f, float_equal,
-                                                   float_equal_zero,
-                                                   unimplemented)
+from ..core.common import (COLS, ROWS, MatrixNx3f, MatrixXf, Vector1D,
+                           Vector2D, Vector2f, Vector3f, float_equal,
+                           float_equal_zero, unimplemented)
 
 
 def remove_polynomial_trailing_coefficients(A_coeffs_ref: Vector1D) -> Vector1D:
@@ -401,7 +398,8 @@ def formatted_polynomial(degree: int, dimension: int,
     try:
         polynomial_coeffs = polynomial_coeffs_ref.reshape(degree + 1, dimension)
     except ValueError as e:
-        logger.info(f"{e} Invalid degree {degree}, dimension {dimension} for polynomial coeffs {polynomial_coeffs_ref}")
+        logger.info(
+            f"{e} Invalid degree {degree}, dimension {dimension} for polynomial coeffs {polynomial_coeffs_ref}")
         return ""
 
     assert np.shape(polynomial_coeffs) == (degree + 1, dimension)

@@ -6,11 +6,9 @@ Given a rational spatial curve and view direction, project the curve to a planar
 
 import numpy as np
 
-from ranato.algebraic_contours.contour_network.validity import is_valid_frame
-from ranato.algebraic_contours.core.common import (LOGGER, Matrix3x3f,
-                                                   Matrix5x2f, Matrix5x3f,
-                                                   Vector5f)
-from ranato.algebraic_contours.core.rational_function import RationalFunction
+from ..contour_network.validity import is_valid_frame
+from ..core.common import LOGGER, Matrix3x3f, Matrix5x2f, Matrix5x3f, Vector5f
+from ..core.rational_function import RationalFunction
 
 
 def _project_curve(spatial_curve: RationalFunction, frame: Matrix3x3f) -> RationalFunction:

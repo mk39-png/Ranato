@@ -9,33 +9,20 @@ from dataclasses import dataclass
 import numpy as np
 import polyscope as ps
 
-from ranato.algebraic_contours.core.common import (CHECK_VALIDITY, COLS,
-                                                   GOLD_YELLOW, LOGGER,
-                                                   PLACEHOLDER_BOOL,
-                                                   PLACEHOLDER_INDEX,
-                                                   PLACEHOLDER_VALUE, ROWS,
-                                                   Index, Matrix2x2f,
-                                                   Matrix3x2f, MatrixNx2f,
-                                                   MatrixNx3f, MatrixNx3i,
-                                                   MatrixXf, MatrixXi,
-                                                   PlanarPoint1d, Vector3i,
-                                                   angle_from_positions,
-                                                   area_from_length,
-                                                   find_face_vertex_index,
-                                                   float_equal,
-                                                   float_equal_zero,
-                                                   formatted_vector,
-                                                   is_manifold,
-                                                   matrix_contains_nan,
-                                                   reflect_across_x_axis,
-                                                   remove_mesh_faces,
-                                                   remove_mesh_vertices,
-                                                   remove_vector_values,
-                                                   unimplemented,
-                                                   vector_contains_nan,
-                                                   vector_equal)
-from ranato.algebraic_contours.core.halfedge import Halfedge
-from ranato.algebraic_contours.core.vertex_circulator import VertexCirculator
+from ..core.common import (CHECK_VALIDITY, COLS, GOLD_YELLOW, LOGGER,
+                           PLACEHOLDER_BOOL, PLACEHOLDER_INDEX,
+                           PLACEHOLDER_VALUE, ROWS, Index, Matrix2x2f,
+                           Matrix3x2f, MatrixNx2f, MatrixNx3f, MatrixNx3i,
+                           MatrixXf, MatrixXi, PlanarPoint1d, Vector3i,
+                           angle_from_positions, area_from_length,
+                           find_face_vertex_index, float_equal,
+                           float_equal_zero, formatted_vector, is_manifold,
+                           matrix_contains_nan, reflect_across_x_axis,
+                           remove_mesh_faces, remove_mesh_vertices,
+                           remove_vector_values, unimplemented,
+                           vector_contains_nan, vector_equal)
+from ..core.halfedge import Halfedge
+from ..core.vertex_circulator import VertexCirculator
 
 
 @dataclass
@@ -181,8 +168,8 @@ class AffineManifold:
         self.__corner_to_he: list[list[Index]] = self.__halfedge.corner_to_he
         self.__he_to_corner: list[tuple[Index, Index]] = self.__halfedge.he_to_corner
 
-        self.__corner_to_edge: list[list[Index]] = self._build_corner_to_edge_map(self.__corner_to_he,
-                                                                                  he_to_edge)
+        self.__corner_to_edge: list[list[Index]] = self._build_corner_to_edge_map(
+            self.__corner_to_he, he_to_edge)
 
         # *** Global metric information ***
         self.__global_uv: np.ndarray = global_uv
@@ -191,12 +178,11 @@ class AffineManifold:
         # ** Build edge lengths and charts from the global uv **
         self.__l: list[list[float]] = self._build_lengths_from_global_uv(F_uv, global_uv)
         # * Local metric information *
-        self.__vertex_charts: list[VertexManifoldChart] = self._build_vertex_charts_from_lengths(F,
-                                                                                                 self.__l)
+        self.__vertex_charts: list[VertexManifoldChart] = self._build_vertex_charts_from_lengths(
+            F, self.__l)
 
-        self.__edge_charts: list[EdgeManifoldChart] = self._build_edge_charts_from_lengths(F,
-                                                                                           self.__halfedge,
-                                                                                           self.__l)
+        self.__edge_charts: list[EdgeManifoldChart] = self._build_edge_charts_from_lengths(
+            F, self.__halfedge, self.__l)
         self.__face_charts: list[FaceManifoldChart] = self._build_face_charts(F, global_uv, F_uv)
 
         # Align charts with the input parameterization
@@ -1201,8 +1187,9 @@ class AffineManifold:
                 if not float_equal(edge_length, edge_uv_length, length_threshold):
                     LOGGER.error("Inconsistent edge length %s and uv length %s for corner %s, %s",
                                  edge_length, edge_uv_length, fi, j)
-                    raise ValueError("Inconsistent edge length %s and uv length %s for corner %s, %s",
-                                     edge_length, edge_uv_length, fi, j)
+                    raise ValueError(
+                        "Inconsistent edge length %s and uv length %s for corner %s, %s",
+                        edge_length, edge_uv_length, fi, j)
                     return False
 
                 # Get opposite halfedge and corner if it exists
@@ -1218,8 +1205,9 @@ class AffineManifold:
                 if not float_equal(edge_length, opposite_edge_uv_length, length_threshold):
                     LOGGER.error("Inconsistent opposite uv length for corners %s, %s and %s, %s",
                                  fi, j, fi_opp, j_opp)
-                    raise ValueError("Inconsistent opposite uv length for corners %s, %s and %s, %s",
-                                     fi, j, fi_opp, j_opp)
+                    raise ValueError(
+                        "Inconsistent opposite uv length for corners %s, %s and %s, %s",
+                        fi, j, fi_opp, j_opp)
                     return False
 
         # Check that each vertex chart is valid
@@ -1274,14 +1262,17 @@ class AffineManifold:
                 if not edge_has_length(chart.one_ring_uv_positions[i + 1, :],
                                        chart.one_ring_uv_positions[i, :],
                                        self.__l[face_index][(face_vertex_index + 0) % 3]):
-                    LOGGER.error("uv positions %s and %s in chart %s do not have expected length %s",
-                                 chart.one_ring_uv_positions[i + 1, :],
-                                 chart.one_ring_uv_positions[i, :],
-                                 vertex_index, self.__l[face_index][(face_vertex_index + 0) % 3])
-                    raise ValueError("uv positions %s and %s in chart %s do not have expected length %s",
-                                     chart.one_ring_uv_positions[i + 1, :],
-                                     chart.one_ring_uv_positions[i, :],
-                                     vertex_index, self.__l[face_index][(face_vertex_index + 0) % 3])
+                    LOGGER.error(
+                        "uv positions %s and %s in chart %s do not have expected length %s",
+                        chart.one_ring_uv_positions[i + 1, :],
+                        chart.one_ring_uv_positions[i, :],
+                        vertex_index, self.__l[face_index][(face_vertex_index + 0) % 3])
+                    raise ValueError(
+                        "uv positions %s and %s in chart %s do not have expected length %s",
+                        chart.one_ring_uv_positions[i + 1, :],
+                        chart.one_ring_uv_positions[i, :],
+                        vertex_index, self.__l[face_index]
+                        [(face_vertex_index + 0) % 3])
                     return False
 
                 if not edge_has_length(zero,
@@ -1291,10 +1282,11 @@ class AffineManifold:
                                  chart.one_ring_uv_positions[i + 1, :],
                                  vertex_index,
                                  self.__l[face_index][(face_vertex_index + 1) % 3])
-                    raise ValueError("uv position %s in chart %s does not have the expected norm %s",
-                                     chart.one_ring_uv_positions[i + 1, :],
-                                     vertex_index,
-                                     self.__l[face_index][(face_vertex_index + 1) % 3])
+                    raise ValueError(
+                        "uv position %s in chart %s does not have the expected norm %s",
+                        chart.one_ring_uv_positions[i + 1, :],
+                        vertex_index, self.__l[face_index]
+                        [(face_vertex_index + 1) % 3])
                     return False
 
         # Return true if no issues found

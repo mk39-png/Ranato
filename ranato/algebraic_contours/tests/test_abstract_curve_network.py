@@ -2,14 +2,13 @@
 
 import numpy as np
 
-from ranato.algebraic_contours.core.abstract_curve_network import \
-    AbstractCurveNetwork
-from ranato.algebraic_contours.core.common import (
-    NodeIndex, SegmentIndex, Vector1D, compare_eigen_numpy_matrix,
-    deserialize_eigen_matrix_csv_to_numpy)
+from ..core.abstract_curve_network import AbstractCurveNetwork
+from ..core.common import (NodeIndex, SegmentIndex, Vector1D,
+                           compare_eigen_numpy_matrix,
+                           deserialize_eigen_matrix_csv_to_numpy)
 
 
-def test_init_abstract_curve_network():
+def test_init_abstract_curve_network() -> None:
     """
     """
     filepath_base: str = "spot_control\\core\\abstract_curve_network\\init_abstract_curve_network\\"

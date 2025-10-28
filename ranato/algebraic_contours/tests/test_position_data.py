@@ -6,10 +6,10 @@ So, dependent on the assertions made in methods like compute_least_squares_verte
 
 import numpy as np
 
-from ranato.algebraic_contours.core.common import *
-from ranato.algebraic_contours.quadratic_spline_surface.position_data import *
-from ranato.algebraic_contours.quadratic_spline_surface.position_data import (
-    TriangleCornerData, TriangleMidpointData)
+from ..core.common import *
+from ..quadratic_spline_surface.position_data import *
+from ..quadratic_spline_surface.position_data import (TriangleCornerData,
+                                                      TriangleMidpointData)
 
 # def test_gradients_find_constant() -> None:
 #     V = np.array([[1.0, 0.0, 0.0],
@@ -70,7 +70,8 @@ def test_generate_corner_data_matrices() -> None:
     position_matrix: np.ndarray[tuple[int, int], np.dtype[np.float64]]
     first_derivative_matrix:  np.ndarray[tuple[int, int], np.dtype[np.float64]]
     second_derivative_matrix:  np.ndarray[tuple[int, int], np.dtype[np.float64]]
-    position_matrix, first_derivative_matrix, second_derivative_matrix = generate_corner_data_matrices(corner_data)
+    position_matrix, first_derivative_matrix, second_derivative_matrix = generate_corner_data_matrices(
+        corner_data)
 
     # print("man")
     np.testing.assert_equal(position_matrix, np.ones(shape=(6, 3)))

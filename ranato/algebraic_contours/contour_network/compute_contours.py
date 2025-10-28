@@ -6,27 +6,23 @@ from collections import defaultdict
 
 import numpy as np
 
-from ranato.algebraic_contours.contour_network.intersection_data import \
-    IntersectionData
-from ranato.algebraic_contours.contour_network.validity import (
-    is_valid_frame, is_valid_spatial_mapping)
-from ranato.algebraic_contours.core.common import (LOGGER, Matrix3x2f,
-                                                   Matrix3x3f, Matrix6x3f,
-                                                   PatchIndex, PlanarPoint1d,
-                                                   Vector3f, Vector6f,
-                                                   compare_eigen_numpy_matrix)
-from ranato.algebraic_contours.core.conic import Conic
-from ranato.algebraic_contours.core.convex_polygon import ConvexPolygon
-from ranato.algebraic_contours.core.intersect_conic import (
+from ..contour_network.intersection_data import IntersectionData
+from ..contour_network.validity import is_valid_frame, is_valid_spatial_mapping
+from ..core.common import (LOGGER, Matrix3x2f, Matrix3x3f, Matrix6x3f,
+                           PatchIndex, PlanarPoint1d, Vector3f, Vector6f,
+                           compare_eigen_numpy_matrix)
+from ..core.conic import Conic
+from ..core.convex_polygon import ConvexPolygon
+from ..core.intersect_conic import (
     check_if_conic_intersects_cone_patch_domain, intersect_conic_in_cone_patch,
     intersect_conic_with_convex_polygon)
-from ranato.algebraic_contours.core.line_segment import LineSegment
-from ranato.algebraic_contours.core.parametrize_conic import (
-    parametrize_cone_patch_conic, parametrize_conic)
-from ranato.algebraic_contours.core.rational_function import RationalFunction
-from ranato.algebraic_contours.quadratic_spline_surface.quadratic_spline_surface import \
+from ..core.line_segment import LineSegment
+from ..core.parametrize_conic import (parametrize_cone_patch_conic,
+                                      parametrize_conic)
+from ..core.rational_function import RationalFunction
+from ..quadratic_spline_surface.quadratic_spline_surface import \
     QuadraticSplineSurface
-from ranato.algebraic_contours.quadratic_spline_surface.quadratic_spline_surface_patch import \
+from ..quadratic_spline_surface.quadratic_spline_surface_patch import \
     QuadraticSplineSurfacePatch
 
 

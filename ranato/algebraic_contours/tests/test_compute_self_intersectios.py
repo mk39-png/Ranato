@@ -1,11 +1,10 @@
 import numpy as np
 
-from ranato.algebraic_contours.contour_network.compute_intersections import \
+from ..contour_network.compute_intersections import \
     split_planar_curves_no_self_intersection
-from ranato.algebraic_contours.core.common import (Matrix5x2f, Vector2f,
-                                                   Vector5f)
-from ranato.algebraic_contours.core.interval import Interval
-from ranato.algebraic_contours.core.rational_function import RationalFunction
+from ..core.common import Matrix5x2f, Vector2f, Vector5f
+from ..core.interval import Interval
+from ..core.rational_function import RationalFunction
 
 
 def test_self_intersecting_curve_circle() -> None:

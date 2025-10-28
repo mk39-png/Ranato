@@ -3,9 +3,8 @@ import math
 
 import numpy as np
 
-from ranato.algebraic_contours.core.common import (Matrix5x3f, SpatialVector1d,
-                                                   Vector2f, Vector3f,
-                                                   Vector5f, float_equal)
+from ..core.common import (Matrix5x3f, SpatialVector1d, Vector2f, Vector3f,
+                           Vector5f, float_equal)
 
 
 class Interval_ink:

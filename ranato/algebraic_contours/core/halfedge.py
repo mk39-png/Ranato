@@ -11,12 +11,9 @@ topological information. Can be initialized from face topology information.
 
 import logging
 
-from ranato.algebraic_contours.core.common import (CHECK_VALIDITY, LOGGER,
-                                                   PLACEHOLDER_INDEX, Index,
-                                                   MatrixNx3i,
-                                                   find_face_vertex_index,
-                                                   is_manifold)
-from ranato.algebraic_contours.core.vertex_circulator import VertexCirculator
+from ..core.common import (CHECK_VALIDITY, LOGGER, PLACEHOLDER_INDEX, Index,
+                           MatrixNx3i, find_face_vertex_index, is_manifold)
+from ..core.vertex_circulator import VertexCirculator
 
 
 def build_halfedge_to_edge_maps(opp: list[Index]
@@ -380,7 +377,8 @@ class Halfedge:
         self.__f2he.clear()
         self.__F.resize(0, 0)
 
-    def build_corner_to_he_maps(self, num_faces: Index) -> tuple[list[list[Index]], list[tuple[Index, Index]]]:
+    def build_corner_to_he_maps(self, num_faces: Index) -> tuple[list[list[Index]],
+                                                                 list[tuple[Index, Index]]]:
         """
         Builds list for corner to he and he to corner maps.
 

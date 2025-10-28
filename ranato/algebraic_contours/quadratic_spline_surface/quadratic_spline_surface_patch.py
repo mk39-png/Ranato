@@ -8,18 +8,19 @@ from typing import TextIO
 import numpy as np
 import polyscope as ps
 
-from ranato.algebraic_contours.core.bivariate_quadratic_function import (
+from ..core.bivariate_quadratic_function import (
     evaluate_quadratic_mapping, generate_monomial_to_bezier_matrix,
     generate_quadratic_coordinate_domain_triangle_normalization_matrix)
-from ranato.algebraic_contours.core.common import (
-    LOGGER, ROWS, Matrix2x2f, Matrix3x2r, Matrix6x3f, Matrix6x3r, Matrix6x6r,
-    MatrixNx2f, PlanarPoint1d, SpatialVector, SpatialVector1d, Vector3f,
-    compute_point_cloud_bounding_box, load_json, todo, unimplemented)
-from ranato.algebraic_contours.core.convex_polygon import ConvexPolygon
-from ranato.algebraic_contours.core.evaluate_surface_normal import \
+from ..core.common import (LOGGER, ROWS, Matrix2x2f, Matrix3x2r, Matrix6x3f,
+                           Matrix6x3r, Matrix6x6r, MatrixNx2f, PlanarPoint1d,
+                           SpatialVector, SpatialVector1d, Vector3f,
+                           compute_point_cloud_bounding_box, load_json, todo,
+                           unimplemented)
+from ..core.convex_polygon import ConvexPolygon
+from ..core.evaluate_surface_normal import \
     generate_quadratic_surface_normal_coeffs
-from ranato.algebraic_contours.core.line_segment import LineSegment
-from ranato.algebraic_contours.core.rational_function import RationalFunction
+from ..core.line_segment import LineSegment
+from ..core.rational_function import RationalFunction
 
 # **************************************
 # Quadratic Spline Surface Patch Helpers
@@ -99,7 +100,8 @@ class QuadraticSplineSurfacePatch:
 
             # -- Inferred dependent data --
             self.m_normal_mapping_coeffs: Matrix6x3r = np.zeros(shape=(6, 3), dtype=np.float64)
-            self.m_normalized_surface_mapping_coeffs: Matrix6x3r = np.zeros(shape=(6, 3), dtype=np.float64)
+            self.m_normalized_surface_mapping_coeffs: Matrix6x3r = np.zeros(
+                shape=(6, 3), dtype=np.float64)
             self.m_bezier_points: Matrix6x3r = np.zeros(shape=(6, 3), dtype=np.float64)
             self.m_min_point: SpatialVector1d = np.zeros(shape=(3, ), dtype=np.float64)
             self.m_max_point: SpatialVector1d = np.zeros(shape=(3, ), dtype=np.float64)
@@ -135,20 +137,22 @@ class QuadraticSplineSurfacePatch:
     def init_from_json_file(cls, filename: str):
         """
         Initializes QuadraticSplineSurfacePatch object from JSON file.
-        Used for testing retrieving files from ranato.algebraic_contours/test/
+        Used for testing retrieving files from algebraic_contours/test/
 
         :param filename: name of file to deserialize from
         """
         spline_surface_patch_json: dict = load_json(filename)
 
         # FIXME: check if ok
-        surface_mapping_coeffs: Matrix6x3f = np.array(spline_surface_patch_json.get("surface_mapping_coeffs"))
+        surface_mapping_coeffs: Matrix6x3f = np.array(
+            spline_surface_patch_json.get("surface_mapping_coeffs"))
 
         domain_json: dict = spline_surface_patch_json.get("domain")
 
         # TODO: might have to flip ordering of vertices matrix
-        domain: ConvexPolygon = ConvexPolygon([np.array(arr).squeeze() for arr in domain_json.get("boundary_segment_coeffs")],
-                                              np.array(domain_json.get("vertices")).squeeze())
+        domain: ConvexPolygon = ConvexPolygon(
+            [np.array(arr).squeeze() for arr in domain_json.get("boundary_segment_coeffs")],
+            np.array(domain_json.get("vertices")).squeeze())
         normal_mapping_coeffs: Matrix6x3f = np.array(
             spline_surface_patch_json.get("normal_mapping_coeffs"))
         normalized_surface_mapping_coeffs: Matrix6x3f = np.array(

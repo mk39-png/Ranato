@@ -4,9 +4,8 @@ Class to build circulators around vertices in VF representation
 
 import numpy as np
 
-from ranato.algebraic_contours.core.common import (LOGGER, PLACEHOLDER_VALUE,
-                                                   MatrixNx3i, Vector1D,
-                                                   contains_vertex)
+from ..core.common import (LOGGER, PLACEHOLDER_VALUE, MatrixNx3i, Vector1D,
+                           contains_vertex)
 
 
 def contains_edge(face: Vector1D, vertex_0: int, vertex_1: int) -> bool:
@@ -118,7 +117,8 @@ def compute_adjacent_faces(F: np.ndarray) -> list[list[int]]:
     return all_adjacent_faces
 
 
-def compute_vertex_one_ring_first_face(F: np.ndarray, vertex_index: int, adjacent_faces: list[int]) -> int:
+def compute_vertex_one_ring_first_face(
+        F: np.ndarray, vertex_index: int, adjacent_faces: list[int]) -> int:
     """
     Compute the first face of the vertex one ring, which should be right
     boundary face for a boundary vertex.

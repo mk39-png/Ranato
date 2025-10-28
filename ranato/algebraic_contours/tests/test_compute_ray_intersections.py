@@ -6,19 +6,16 @@ Ray Intersection Tests
 import numpy as np
 import numpy.testing as npt
 
-from ranato.algebraic_contours.contour_network.compute_ray_intersections import \
+from ..contour_network.compute_ray_intersections import \
     compute_spline_surface_ray_intersections
-from ranato.algebraic_contours.contour_network.compute_ray_intersections_pencil_method import \
+from ..contour_network.compute_ray_intersections_pencil_method import \
     compute_spline_surface_patch_ray_intersections_pencil_method
-from ranato.algebraic_contours.core.common import (Matrix2x2f, Matrix2x3f,
-                                                   Matrix3x2f, Matrix6x3f,
-                                                   PatchIndex, PlanarPoint1d,
-                                                   float_equal)
-from ranato.algebraic_contours.core.convex_polygon import ConvexPolygon
-from ranato.algebraic_contours.quadratic_spline_surface.quadratic_spline_surface_patch import \
+from ..core.common import (Matrix2x2f, Matrix2x3f, Matrix3x2f, Matrix6x3f,
+                           PatchIndex, PlanarPoint1d, float_equal)
+from ..core.convex_polygon import ConvexPolygon
+from ..quadratic_spline_surface.quadratic_spline_surface_patch import \
     QuadraticSplineSurfacePatch
-from ranato.algebraic_contours.tests.test_compute_contours import \
-    _initialize_contour_info_spot_mesh
+from ..tests.test_compute_contours import _initialize_contour_info_spot_mesh
 
 
 def test_compute_spline_surface_ray_intersections_spot_control() -> None:
@@ -86,8 +83,8 @@ def test_intersection_of_ray_and_plane_nonstandard_domain() -> None:
     spline_surface_patch: QuadraticSplineSurfacePatch = QuadraticSplineSurfacePatch(
         surface_mapping_coeffs,
         normalized_domain)
-    ray_mapping_coeffs: Matrix2x3f = np.array([[-1.69671806538393, 2.5609728762486372,  51.377018112355586],
-                                               [0, 0, 200]])
+    ray_mapping_coeffs: Matrix2x3f = np.array(
+        [[-1.69671806538393, 2.5609728762486372, 51.377018112355586], [0, 0, 200]])
     assert ray_mapping_coeffs.shape == (2, 3)
 
     num_intersections: int = 0

@@ -7,19 +7,19 @@ import numpy as np
 import numpy.testing as npt
 import pytest
 
-from ranato.algebraic_contours.contour_network.contour_network import *
-from ranato.algebraic_contours.core.apply_transformation import *
-from ranato.algebraic_contours.core.common import *
-from ranato.algebraic_contours.core.compute_boundaries import *
-from ranato.algebraic_contours.core.convex_polygon import ConvexPolygon
-from ranato.algebraic_contours.core.generate_transformation import *
-from ranato.algebraic_contours.quadratic_spline_surface.optimize_spline_surface import *
-from ranato.algebraic_contours.quadratic_spline_surface.quadratic_spline_surface import *
-from ranato.algebraic_contours.quadratic_spline_surface.quadratic_spline_surface import \
+from ..contour_network.contour_network import *
+from ..core.apply_transformation import *
+from ..core.common import *
+from ..core.compute_boundaries import *
+from ..core.convex_polygon import ConvexPolygon
+from ..core.generate_transformation import *
+from ..quadratic_spline_surface.optimize_spline_surface import *
+from ..quadratic_spline_surface.quadratic_spline_surface import *
+from ..quadratic_spline_surface.quadratic_spline_surface import \
     QuadraticSplineSurface
-from ranato.algebraic_contours.quadratic_spline_surface.quadratic_spline_surface_patch import \
+from ..quadratic_spline_surface.quadratic_spline_surface_patch import \
     QuadraticSplineSurfacePatch
-from ranato.algebraic_contours.quadratic_spline_surface.twelve_split_spline import *
+from ..quadratic_spline_surface.twelve_split_spline import *
 
 
 def test_read_write_spline_surface_serialization() -> None:
@@ -37,7 +37,8 @@ def test_read_write_spline_surface_serialization() -> None:
 
     # NOTE: need a placeholder to call write_spline() and deserialize()...
     # TODO: better to separate deserialize() and write_spline() as separate from, QuadraticSplineSurface class and take QuadraticSplineSurface as the parameter or whatnot.
-    spline_surface_placeholder: QuadraticSplineSurface = QuadraticSplineSurface.from_file(filepath=filepath_control)
+    spline_surface_placeholder: QuadraticSplineSurface = QuadraticSplineSurface.from_file(
+        filepath=filepath_control)
     # Write the saved spline data to an external file. So, converting Eigen TXT -> Numpy Implementation -> NumPy TXT
     spline_surface_placeholder.write_spline(filepath_test)
 
@@ -48,11 +49,13 @@ def test_read_write_spline_surface_serialization() -> None:
 
     # First open files to convert into list[QuadraticSplineSurfacePatch]
     with open(filepath_control, "r", encoding="utf-8") as file_control:
-        control_patches: list[QuadraticSplineSurfacePatch] = spline_surface_placeholder.deserialize(file_control)
+        control_patches: list[QuadraticSplineSurfacePatch] = spline_surface_placeholder.deserialize(
+            file_control)
         file_control.close()
 
     with open(filepath_test, "r", encoding="utf-8") as file_test:
-        test_patches: list[QuadraticSplineSurfacePatch] = spline_surface_placeholder.deserialize(file_test)
+        test_patches: list[QuadraticSplineSurfacePatch] = spline_surface_placeholder.deserialize(
+            file_test)
         file_test.close()
 
     assert len(control_patches) == len(test_patches)
@@ -60,7 +63,8 @@ def test_read_write_spline_surface_serialization() -> None:
 
     # Now, checking the values that have been saved
     for i in range(num_patches):
-        surface_mapping_coeffs_control: Matrix6x3r = control_patches[i].surface_mapping  # cx, cy, cz
+        # cx, cy, cz
+        surface_mapping_coeffs_control: Matrix6x3r = control_patches[i].surface_mapping
         domain_control: ConvexPolygon = control_patches[i].domain
         vertices_control: Matrix3x2r = domain_control.vertices  # p1, p2, p3
 
@@ -68,7 +72,8 @@ def test_read_write_spline_surface_serialization() -> None:
         domain_test: ConvexPolygon = test_patches[i].domain
         vertices_test: Matrix3x2r = domain_test.vertices  # p1, p2, p3
 
-        npt.assert_allclose(surface_mapping_coeffs_control, surface_mapping_coeffs_test, atol=FLOAT_EQUAL_PRECISION)
+        npt.assert_allclose(surface_mapping_coeffs_control,
+                            surface_mapping_coeffs_test, atol=FLOAT_EQUAL_PRECISION)
         npt.assert_allclose(vertices_control, vertices_test, atol=FLOAT_EQUAL_PRECISION)
 
 

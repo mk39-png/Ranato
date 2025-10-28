@@ -7,18 +7,14 @@ from collections import defaultdict
 from enum import Enum
 from typing import Any
 
-from ranato.algebraic_contours.contour_network.intersection_data import \
-    IntersectionData
-from ranato.algebraic_contours.core.abstract_curve_network import \
-    AbstractCurveNetwork
-from ranato.algebraic_contours.core.common import (LOGGER, NodeIndex,
-                                                   SegmentIndex, arange,
-                                                   load_json, vector_equal)
-from ranato.algebraic_contours.core.conic import Conic
-from ranato.algebraic_contours.core.rational_function import RationalFunction
-from ranato.algebraic_contours.utils.conic_testing_utils import (
-    compare_conics, deserialize_conic)
-from ranato.algebraic_contours.utils.rational_function_testing_utils import (
+from ..contour_network.intersection_data import IntersectionData
+from ..core.abstract_curve_network import AbstractCurveNetwork
+from ..core.common import (LOGGER, NodeIndex, SegmentIndex, arange, load_json,
+                           vector_equal)
+from ..core.conic import Conic
+from ..core.rational_function import RationalFunction
+from ..utils.conic_testing_utils import compare_conics, deserialize_conic
+from ..utils.rational_function_testing_utils import (
     compare_rational_functions, deserialize_rational_function)
 
 # **************
@@ -155,7 +151,8 @@ class SegmentGeometry():
         upper_spatial_curve: RationalFunction  # <4, 3>
         upper_planar_curve: RationalFunction  # <4, 2>
 
-        lower_parameter_curve, upper_parameter_curve = self.parameter_curve.split_at_knot_conic(knot)
+        lower_parameter_curve, upper_parameter_curve = self.parameter_curve.split_at_knot_conic(
+            knot)
         assert (lower_parameter_curve.degree, lower_parameter_curve.dimension) == (2, 2)
         assert (upper_parameter_curve.degree, upper_parameter_curve.dimension) == (2, 2)
 
@@ -972,7 +969,8 @@ def _deserialize_segment_geometry(segment_geometry_intermediate: dict[str, Any]
     parameter_curve: dict[str, Any] = segment_geometry_intermediate.get("parameter_curve")
     spatial_curve: dict[str, Any] = segment_geometry_intermediate.get("spatial_curve")
     planar_curve: dict[str, Any] = segment_geometry_intermediate.get("planar_curve")
-    segment_labels: dict[str, int] = segment_geometry_intermediate.get("segment_labels")  # already as dict[str, int]
+    segment_labels: dict[str, int] = segment_geometry_intermediate.get(
+        "segment_labels")  # already as dict[str, int]
 
     segment_geometry_final = SegmentGeometry(
         parameter_curve=deserialize_conic(parameter_curve),

@@ -4,11 +4,11 @@ import os
 import numpy as np
 import pytest
 
-from ranato.algebraic_contours.core.common import (
-    MatrixNx3f, MatrixNx3i, SpatialVector, SpatialVector1d,
-    compare_eigen_numpy_matrix, convert_nested_vector_to_matrix,
-    convert_polylines_to_edges, todo)
-from ranato.algebraic_contours.quadratic_spline_surface.quadratic_spline_surface import (
+from ..core.common import (MatrixNx3f, MatrixNx3i, SpatialVector,
+                           SpatialVector1d, compare_eigen_numpy_matrix,
+                           convert_nested_vector_to_matrix,
+                           convert_polylines_to_edges, todo)
+from ..quadratic_spline_surface.quadratic_spline_surface import (
     QuadraticSplineSurface, SurfaceDiscretizationParameters)
 
 
@@ -26,7 +26,8 @@ def test_spot_control_triangulate_patch_patch_index_0() -> None:
     V_patch_0: np.ndarray[tuple[int], np.dtype[np.float64]]
     F_patch_0: np.ndarray[tuple[int], np.dtype[np.int64]]
     N_patch_0: np.ndarray[tuple[int], np.dtype[np.float64]]
-    V_patch_0, F_patch_0, N_patch_0 = spline_surface.triangulate_patch(patch_index, num_subdivisions)
+    V_patch_0, F_patch_0, N_patch_0 = spline_surface.triangulate_patch(
+        patch_index, num_subdivisions)
 
     compare_eigen_numpy_matrix(
         "spot_control\\quadratic_spline_surface\\discretize\\F_triangulate_patch_0.csv", F_patch_0)
@@ -75,10 +76,12 @@ def test_spot_control_discretize_patch_boundaries() -> None:
     boundary_polylines: list[list[int]]
     boundary_points, boundary_polylines = spline_surface.discretize_patch_boundaries()
 
-    compare_eigen_numpy_matrix("spot_control\\quadratic_spline_surface\\add_surface_to_viewer\\boundary_points.csv",
-                               np.array(boundary_points))
-    compare_eigen_numpy_matrix("spot_control\\quadratic_spline_surface\\add_surface_to_viewer\\boundary_polylines.csv",
-                               np.array(boundary_polylines))
+    compare_eigen_numpy_matrix(
+        "spot_control\\quadratic_spline_surface\\add_surface_to_viewer\\boundary_points.csv",
+        np.array(boundary_points))
+    compare_eigen_numpy_matrix(
+        "spot_control\\quadratic_spline_surface\\add_surface_to_viewer\\boundary_polylines.csv",
+        np.array(boundary_polylines))
 
 
 def test_spot_control_boundary_points_matrix() -> None:
@@ -97,8 +100,9 @@ def test_spot_control_boundary_points_matrix() -> None:
     boundary_points, _boundary_polylines = spline_surface.discretize_patch_boundaries()
 
     boundary_points_matrix: np.ndarray = convert_nested_vector_to_matrix(boundary_points)
-    compare_eigen_numpy_matrix("spot_control\\quadratic_spline_surface\\add_surface_to_viewer\\boundary_points_mat.csv",
-                               np.array(boundary_points_matrix))
+    compare_eigen_numpy_matrix(
+        "spot_control\\quadratic_spline_surface\\add_surface_to_viewer\\boundary_points_mat.csv",
+        np.array(boundary_points_matrix))
 
 
 def test_spot_control_boundary_edges() -> None:
@@ -117,5 +121,6 @@ def test_spot_control_boundary_edges() -> None:
     _boundary_points, boundary_polylines = spline_surface.discretize_patch_boundaries()
 
     boundary_edges: list[tuple[int, int]] = convert_polylines_to_edges(boundary_polylines)
-    compare_eigen_numpy_matrix("spot_control\\quadratic_spline_surface\\add_surface_to_viewer\\boundary_edges.csv",
-                               np.array(boundary_edges))
+    compare_eigen_numpy_matrix(
+        "spot_control\\quadratic_spline_surface\\add_surface_to_viewer\\boundary_edges.csv",
+        np.array(boundary_edges))

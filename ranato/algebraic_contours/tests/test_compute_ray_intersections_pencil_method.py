@@ -7,13 +7,13 @@ Testing various methods for calculating intersections.
 
 import numpy as np
 
-from ranato.algebraic_contours.contour_network.compute_ray_intersections_pencil_method import (
+from ..contour_network.compute_ray_intersections_pencil_method import (
     compute_spline_surface_patch_ray_intersections_pencil_method,
     pencil_first_part, solve_quadratic_quadratic_equation_pencil_method)
-from ranato.algebraic_contours.core.common import (
-    PlanarPoint1d, Vector6f, compare_eigen_numpy_matrix,
-    compare_intersection_points, deserialize_eigen_matrix_csv_to_numpy)
-from ranato.algebraic_contours.quadratic_spline_surface.quadratic_spline_surface_patch import \
+from ..core.common import (PlanarPoint1d, Vector6f, compare_eigen_numpy_matrix,
+                           compare_intersection_points,
+                           deserialize_eigen_matrix_csv_to_numpy)
+from ..quadratic_spline_surface.quadratic_spline_surface_patch import \
     QuadraticSplineSurfacePatch
 
 

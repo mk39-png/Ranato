@@ -10,35 +10,24 @@ import numpy.testing as npt
 from cholespy import CholeskySolverD, MatrixType
 from scipy.sparse import csr_matrix
 
-from ranato.algebraic_contours.core.affine_manifold import (AffineManifold,
-                                                            EdgeManifoldChart)
-from ranato.algebraic_contours.core.common import (COLS, LOGGER, ROWS, Index,
-                                                   Matrix2x2f, Matrix2x3r,
-                                                   Matrix3x2r, Matrix12x3f,
-                                                   Matrix12x12r, Matrix36x36f,
-                                                   MatrixNx3, MatrixNx3f,
-                                                   MatrixXf, MatrixXi,
-                                                   PlanarPoint, PlanarPoint1d,
-                                                   SpatialVector,
-                                                   SpatialVector1d,
-                                                   TwelveSplitGradient,
-                                                   TwelveSplitHessian,
-                                                   Vector1D, Vector2D,
-                                                   Vector12f, Vector36f,
-                                                   VectorX,
-                                                   find_face_vertex_index,
-                                                   index_vector_complement,
-                                                   unimplemented)
-from ranato.algebraic_contours.core.halfedge import Halfedge
-from ranato.algebraic_contours.quadratic_spline_surface.compute_local_twelve_split_hessian import (
+from ..core.affine_manifold import AffineManifold, EdgeManifoldChart
+from ..core.common import (COLS, LOGGER, ROWS, Index, Matrix2x2f, Matrix2x3r,
+                           Matrix3x2r, Matrix12x3f, Matrix12x12r, Matrix36x36f,
+                           MatrixNx3, MatrixNx3f, MatrixXf, MatrixXi,
+                           PlanarPoint, PlanarPoint1d, SpatialVector,
+                           SpatialVector1d, TwelveSplitGradient,
+                           TwelveSplitHessian, Vector1D, Vector2D, Vector12f,
+                           Vector36f, VectorX, find_face_vertex_index,
+                           index_vector_complement, unimplemented)
+from ..core.halfedge import Halfedge
+from ..quadratic_spline_surface.compute_local_twelve_split_hessian import (
     build_local_smoothness_hessian, get_C_gl)
-from ranato.algebraic_contours.quadratic_spline_surface.planarH import \
-    planarHfun
-from ranato.algebraic_contours.quadratic_spline_surface.position_data import (
+from ..quadratic_spline_surface.planarH import planarHfun
+from ..quadratic_spline_surface.position_data import (
     TriangleCornerData, TriangleMidpointData,
     compute_edge_midpoint_with_gradient, generate_affine_manifold_corner_data,
     generate_affine_manifold_midpoint_data)
-from ranato.algebraic_contours.quadratic_spline_surface.powell_sabin_local_to_global_indexing import (
+from ..quadratic_spline_surface.powell_sabin_local_to_global_indexing import (
     build_face_variable_vector, build_variable_edge_indices_map,
     build_variable_vertex_indices_map,
     generate_local_edge_gradient_variable_index,
@@ -622,9 +611,8 @@ def compute_twelve_split_energy_quadratic(
     # hessian_coo: coo_matrix = coo_matrix((data, (rows, cols)),
     #                                      #  shape=(num_independent_variables, num_independent_variables),
     #                                      dtype=np.float64)
-    hessian_csr: csr_matrix = csr_matrix((data, (rows, cols)),
-                                         shape=(num_independent_variables, num_independent_variables),
-                                         dtype=np.float64)
+    hessian_csr: csr_matrix = csr_matrix((data, (rows, cols)), shape=(
+        num_independent_variables, num_independent_variables), dtype=np.float64)
     assert derivatives.shape == (num_independent_variables, )
 
     # Build the inverse.
@@ -674,8 +662,10 @@ def build_local_fit_hessian(is_cone: list[bool],
             # Add cone gradient fitting term
             LOGGER.info("Weighting cone gradients by %s",
                         optimization_params.cone_vertex_gradient_difference_factor)
-            g1i: int = generate_local_vertex_gradient_variable_index(i, 0, 0, 1)  # local first gradient index
-            g2i: int = generate_local_vertex_gradient_variable_index(i, 1, 0, 1)  # local second gradient index
+            g1i: int = generate_local_vertex_gradient_variable_index(
+                i, 0, 0, 1)  # local first gradient index
+            g2i: int = generate_local_vertex_gradient_variable_index(
+                i, 1, 0, 1)  # local second gradient index
             H_f[g1i, g1i] = optimization_params.cone_vertex_gradient_difference_factor
             H_f[g2i, g2i] = optimization_params.cone_vertex_gradient_difference_factor
         # Weights for cone adjacent vertices (which can be collapsed to the cone)
@@ -689,8 +679,10 @@ def build_local_fit_hessian(is_cone: list[bool],
             # Add cone adjacent vertex gradient fitting term
             LOGGER.info("Weighting cone adjacent gradients by %s",
                         optimization_params.cone_adjacent_vertex_gradient_difference_factor)
-            g1i = generate_local_vertex_gradient_variable_index(i, 0, 0, 1)  # local first gradient index
-            g2i = generate_local_vertex_gradient_variable_index(i, 1, 0, 1)  # local second gradient index
+            g1i = generate_local_vertex_gradient_variable_index(
+                i, 0, 0, 1)  # local first gradient index
+            g2i = generate_local_vertex_gradient_variable_index(
+                i, 1, 0, 1)  # local second gradient index
             H_f[g1i, g1i] = optimization_params.cone_adjacent_vertex_gradient_difference_factor
             H_f[g2i, g2i] = optimization_params.cone_adjacent_vertex_gradient_difference_factor
         # Default fitting weight is 1.0
@@ -707,7 +699,8 @@ def build_local_fit_hessian(is_cone: list[bool],
             LOGGER.info(
                 "Weighting cone edge gradients by %s",
                 optimization_params.cone_adjacent_edge_gradient_difference_factor)
-            gjk: int = generate_local_edge_gradient_variable_index(i, 0, 1)  # local first gradient index
+            gjk: int = generate_local_edge_gradient_variable_index(
+                i, 0, 1)  # local first gradient index
             H_f[gjk, gjk] = optimization_params.cone_adjacent_edge_gradient_difference_factor
 
     return H_f

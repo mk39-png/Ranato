@@ -10,11 +10,11 @@ But anyways, could convert to MathUtils and back...
 
 import numpy as np
 
-from ranato.algebraic_contours.core.common import (
-    LOGGER, ROWS, Matrix3x3f, Matrix4x4f, MatrixNx3f, SpatialVector1d,
-    Vector4f, compute_point_cloud_bounding_box, float_equal, todo,
-    unimplemented)
-from ranato.algebraic_contours.core.generate_transformation import (
+from ..core.common import (LOGGER, ROWS, Matrix3x3f, Matrix4x4f, MatrixNx3f,
+                           SpatialVector1d, Vector4f,
+                           compute_point_cloud_bounding_box, float_equal, todo,
+                           unimplemented)
+from ..core.generate_transformation import (
     origin_to_infinity_projective_matrix, rotate_frame_projective_matrix,
     translation_projective_matrix)
 

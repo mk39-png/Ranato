@@ -6,15 +6,13 @@ TODO: how is the degree 0 denominator possible?
 
 import numpy as np
 
-from ranato.algebraic_contours.core.bivariate_quadratic_function import \
+from ..core.bivariate_quadratic_function import \
     formatted_bivariate_linear_mapping
-from ranato.algebraic_contours.core.common import (LOGGER, Matrix3x2r,
-                                                   Vector2D, unreachable)
-from ranato.algebraic_contours.core.conic import Conic
-from ranato.algebraic_contours.core.interval import Interval
-from ranato.algebraic_contours.core.polynomial_function import \
-    formatted_polynomial
-from ranato.algebraic_contours.core.rational_function import RationalFunction
+from ..core.common import LOGGER, Matrix3x2r, Vector2D, unreachable
+from ..core.conic import Conic
+from ..core.interval import Interval
+from ..core.polynomial_function import formatted_polynomial
+from ..core.rational_function import RationalFunction
 
 
 class LineSegment(Conic):

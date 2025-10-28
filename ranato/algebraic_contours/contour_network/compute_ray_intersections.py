@@ -7,16 +7,12 @@ Methods to compute intersections of a ray and a quadratic surface.
 
 import numpy as np
 
-from ranato.algebraic_contours.contour_network.compute_ray_intersections_pencil_method import \
+from ..contour_network.compute_ray_intersections_pencil_method import \
     compute_spline_surface_patch_ray_intersections_pencil_method
-from ranato.algebraic_contours.core.common import (INLINE_TESTING_ENABLED_QI,
-                                                   LOGGER,
-                                                   MAX_PATCH_RAY_INTERSECTIONS,
-                                                   Matrix2x3f, PatchIndex,
-                                                   PlanarPoint1d,
-                                                   SpatialVector1d,
-                                                   float_equal)
-from ranato.algebraic_contours.quadratic_spline_surface.quadratic_spline_surface import \
+from ..core.common import (INLINE_TESTING_ENABLED_QI, LOGGER,
+                           MAX_PATCH_RAY_INTERSECTIONS, Matrix2x3f, PatchIndex,
+                           PlanarPoint1d, SpatialVector1d, float_equal)
+from ..quadratic_spline_surface.quadratic_spline_surface import \
     QuadraticSplineSurface
 
 

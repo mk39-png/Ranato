@@ -9,9 +9,9 @@ from typing import Any
 import numpy as np
 import numpy.testing as npt
 
-from ranato.algebraic_contours.core.common import float_equal, load_json
-from ranato.algebraic_contours.core.interval import Interval
-from ranato.algebraic_contours.core.rational_function import RationalFunction
+from ..core.common import float_equal, load_json
+from ..core.interval import Interval
+from ..core.rational_function import RationalFunction
 
 # These utils are more for testing than anything else.
 # TODO: move/rename file to better reflect that this file is only for testing and not to be used for

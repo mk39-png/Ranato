@@ -6,13 +6,13 @@
 import numpy as np
 import pytest
 
-from ranato.algebraic_contours.contour_network.compute_rational_bezier_curve_intersection import (
+from ..contour_network.compute_rational_bezier_curve_intersection import (
     _clipfatline, find_intersections_bezier_clipping)
-from ranato.algebraic_contours.core.common import (
-    FIND_INTERSECTIONS_BEZIER_CLIPPING_PRECISION, Matrix5x3f, SpatialVector1d,
-    Vector2f, compare_eigen_numpy_matrix,
-    deserialize_eigen_matrix_csv_to_numpy,
-    deserialize_list_list_varying_lengths_float)
+from ..core.common import (FIND_INTERSECTIONS_BEZIER_CLIPPING_PRECISION,
+                           Matrix5x3f, SpatialVector1d, Vector2f,
+                           compare_eigen_numpy_matrix,
+                           deserialize_eigen_matrix_csv_to_numpy,
+                           deserialize_list_list_varying_lengths_float)
 
 ROOT_FOLDER: str = "spot_control"
 
@@ -28,9 +28,11 @@ def test_find_intersections_bezier_clipping() -> None:
     # Number of files
     for i in range(378):
         A: list[SpatialVector1d] = [
-            np.array(point) for point in deserialize_eigen_matrix_csv_to_numpy(filepath+f"A\\{i}.csv").tolist()]
+            np.array(point)
+            for point in deserialize_eigen_matrix_csv_to_numpy(filepath + f"A\\{i}.csv").tolist()]
         B: list[SpatialVector1d] = [
-            np.array(point) for point in deserialize_eigen_matrix_csv_to_numpy(filepath+f"B\\{i}.csv").tolist()]
+            np.array(point)
+            for point in deserialize_eigen_matrix_csv_to_numpy(filepath + f"B\\{i}.csv").tolist()]
 
         xs: list[tuple[float, float]] = find_intersections_bezier_clipping(
             A, B, FIND_INTERSECTIONS_BEZIER_CLIPPING_PRECISION)
