@@ -7,7 +7,6 @@ import os
 
 import igl
 import numpy as np
-import numpy.typing
 import pytest
 
 from ..contour_network.compute_intersections import IntersectionParameters

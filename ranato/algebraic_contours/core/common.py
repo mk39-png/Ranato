@@ -183,7 +183,7 @@ def initialize_spot_control_mesh() -> tuple[npty.ArrayLike, npty.ArrayLike, npty
     """
     # Get input mesh
     filename: str = "spot_control_mesh-cleaned_conf_simplified_with_uv.obj"
-    filepath: str = os.path.abspath(f"src\\tests\\spot_control\\{filename}")
+    filepath: str = os.path.abspath(f"spot_control\\{filename}")
 
     V_temp: npty.ArrayLike
     uv_temp: npty.ArrayLike

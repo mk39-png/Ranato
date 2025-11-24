@@ -10,13 +10,15 @@ from .search_mesh import OBJECT_OT_search_mesh_operator
 # https://blenderartists.org/t/can-i-install-pandas-or-other-modules-into-blenders-python/1375122
 # NOTE: must try and install these packages before running any one of the other modules
 # NOTE: the below only works for Windows systems
+# FIXME: utilize new wheels specification system, which requires packages be installed from pip download into the wheels/ folder.
+# FIXME: but for cholespy, user would have to build forked version and go through a separate process for that... meaning that "pip download ./cholespy --dest ./wheels --only-binary=:all: --python-version=4.5 --platform=win_amd64" would have to be ran
+#
 try:
     import bpy
     import cholespy
     import igl
     import matplotlib
     import mpmath as mp
-    import pytest
 except ImportError:
     # Blender Python interpreter location
     python_exe: str = os.path.join(sys.prefix, 'bin', 'python.exe')

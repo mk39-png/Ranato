@@ -111,7 +111,7 @@ def test_contour_network() -> None:
     # Save the contours to file
     logger.info("Saving contours")
     contour_network_file: str = "contours.svg"
-    contour_network_path: str = os.path.abspath(f"src\\tests\\spot_control\\{contour_network_file}")
+    contour_network_path: str = os.path.abspath(f"spot_control\\{contour_network_file}")
     contour_network.write(contour_network_path, svg_output_mode, show_nodes)
 
 
