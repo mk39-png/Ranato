@@ -6,10 +6,10 @@ So, dependent on the assertions made in methods like compute_least_squares_verte
 
 import numpy as np
 
-from ..core.common import *
-from ..quadratic_spline_surface.position_data import *
-from ..quadratic_spline_surface.position_data import (TriangleCornerData,
-                                                      TriangleMidpointData)
+from ranato.algebraic_contours.core.common import *
+from ranato.algebraic_contours.quadratic_spline_surface.position_data import *
+from ranato.algebraic_contours.quadratic_spline_surface.position_data import (
+    TriangleCornerData, TriangleMidpointData)
 
 # def test_gradients_find_constant() -> None:
 #     V = np.array([[1.0, 0.0, 0.0],

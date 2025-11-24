@@ -8,9 +8,10 @@ import logging
 
 import numpy as np
 
-from ..contour_network.validity import is_valid_frame
-from ..core.common import Matrix3x3f, Matrix5x2f, Matrix5x3f, Vector5f
-from ..core.rational_function import RationalFunction
+from ranato.algebraic_contours.contour_network.validity import is_valid_frame
+from ranato.algebraic_contours.core.common import (Matrix3x3f, Matrix5x2f,
+                                                   Matrix5x3f, Vector5f)
+from ranato.algebraic_contours.core.rational_function import RationalFunction
 
 logger: logging.Logger = logging.getLogger(__name__)
 

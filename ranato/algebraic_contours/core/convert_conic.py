@@ -9,8 +9,9 @@ from typing import Any
 import numpy as np
 import numpy.testing as npt
 
-from ..core.common import (Matrix2x2f, PlanarPoint1d, Vector2f, Vector6f,
-                           float_equal, todo)
+from ranato.algebraic_contours.core.common import (Matrix2x2f, PlanarPoint1d,
+                                                   Vector2f, Vector6f,
+                                                   float_equal, todo)
 
 logger: logging.Logger = logging.getLogger(__name__)
 

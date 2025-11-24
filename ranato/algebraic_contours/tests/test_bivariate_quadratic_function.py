@@ -1,8 +1,9 @@
 import numpy as np
 import pytest
 
-from ..core.bivariate_quadratic_function import compute_quadratic_cross_product
-from ..core.common import Matrix3x3f
+from ranato.algebraic_contours.core.bivariate_quadratic_function import \
+    compute_quadratic_cross_product
+from ranato.algebraic_contours.core.common import Matrix3x3f
 
 
 def test_compute_quadratic_cross_product() -> None:

@@ -11,11 +11,14 @@ import logging
 
 import numpy as np
 
-from ..core.affine_manifold import (AffineManifold, EdgeManifoldChart,
-                                    VertexManifoldChart)
-from ..core.common import (ROWS, Matrix2x3r, MatrixNx3f, MatrixNx3i,
-                           PlanarPoint, SpatialVector1d, Vector2f,
-                           find_face_vertex_index, unimplemented, unreachable)
+from ranato.algebraic_contours.core.affine_manifold import (
+    AffineManifold, EdgeManifoldChart, VertexManifoldChart)
+from ranato.algebraic_contours.core.common import (ROWS, Matrix2x3r,
+                                                   MatrixNx3f, MatrixNx3i,
+                                                   PlanarPoint,
+                                                   SpatialVector1d, Vector2f,
+                                                   find_face_vertex_index,
+                                                   unimplemented, unreachable)
 
 logger: logging.Logger = logging.getLogger(__name__)
 

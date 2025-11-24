@@ -7,19 +7,19 @@ import numpy as np
 import numpy.testing as npt
 import pytest
 
-from ..contour_network.contour_network import *
-from ..core.apply_transformation import *
-from ..core.common import *
-from ..core.compute_boundaries import *
-from ..core.convex_polygon import ConvexPolygon
-from ..core.generate_transformation import *
-from ..quadratic_spline_surface.optimize_spline_surface import *
-from ..quadratic_spline_surface.quadratic_spline_surface import *
-from ..quadratic_spline_surface.quadratic_spline_surface import \
+from ranato.algebraic_contours.contour_network.contour_network import *
+from ranato.algebraic_contours.core.apply_transformation import *
+from ranato.algebraic_contours.core.common import *
+from ranato.algebraic_contours.core.compute_boundaries import *
+from ranato.algebraic_contours.core.convex_polygon import ConvexPolygon
+from ranato.algebraic_contours.core.generate_transformation import *
+from ranato.algebraic_contours.quadratic_spline_surface.optimize_spline_surface import *
+from ranato.algebraic_contours.quadratic_spline_surface.quadratic_spline_surface import *
+from ranato.algebraic_contours.quadratic_spline_surface.quadratic_spline_surface import \
     QuadraticSplineSurface
-from ..quadratic_spline_surface.quadratic_spline_surface_patch import \
+from ranato.algebraic_contours.quadratic_spline_surface.quadratic_spline_surface_patch import \
     QuadraticSplineSurfacePatch
-from ..quadratic_spline_surface.twelve_split_spline import *
+from ranato.algebraic_contours.quadratic_spline_surface.twelve_split_spline import *
 
 
 def test_read_write_spline_surface_serialization() -> None:

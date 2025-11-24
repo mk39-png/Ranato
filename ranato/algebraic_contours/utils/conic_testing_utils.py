@@ -8,9 +8,9 @@ from typing import Any
 import numpy as np
 import numpy.testing as npt
 
-from ..core.common import float_equal, load_json
-from ..core.conic import Conic, ConicType
-from ..core.interval import Interval
+from ranato.algebraic_contours.core.common import float_equal, load_json
+from ranato.algebraic_contours.core.conic import Conic, ConicType
+from ranato.algebraic_contours.core.interval import Interval
 
 
 def _string_to_conictype(type_string: str) -> ConicType:

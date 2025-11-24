@@ -7,9 +7,11 @@ Used to test project_curves with spot mesh.
 
 import numpy as np
 
-from ..contour_network.project_curves import project_curves
-from ..core.common import Matrix3x3f
-from ..core.rational_function import RationalFunction
+from ranato.algebraic_contours.contour_network.project_curves import \
+    project_curves
+from ranato.algebraic_contours.core.common import Matrix3x3f
+from ranato.algebraic_contours.core.rational_function import RationalFunction
+
 from ..utils.rational_function_testing_utils import (
     compare_rational_functions, deserialize_rational_functions)
 

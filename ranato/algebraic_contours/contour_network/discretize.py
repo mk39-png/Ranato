@@ -3,13 +3,14 @@ discretize.py
 Discretization methods.
 """
 
-from ..contour_network.compute_curve_frame import \
+from ranato.algebraic_contours.contour_network.compute_curve_frame import \
     compute_spline_surface_patch_curve_frame
-from ..core.common import PatchIndex, SpatialVector1d, Vector1D, unimplemented
-from ..core.conic import Conic
-from ..core.rational_function import (CurveDiscretizationParameters,
-                                      RationalFunction)
-from ..quadratic_spline_surface.quadratic_spline_surface import \
+from ranato.algebraic_contours.core.common import (PatchIndex, SpatialVector1d,
+                                                   Vector1D, unimplemented)
+from ranato.algebraic_contours.core.conic import Conic
+from ranato.algebraic_contours.core.rational_function import (
+    CurveDiscretizationParameters, RationalFunction)
+from ranato.algebraic_contours.quadratic_spline_surface.quadratic_spline_surface import \
     QuadraticSplineSurface
 
 

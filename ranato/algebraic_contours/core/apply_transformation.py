@@ -12,11 +12,10 @@ import logging
 
 import numpy as np
 
-from ..core.common import (ROWS, Matrix3x3f, Matrix4x4f, MatrixNx3f,
-                           SpatialVector1d, Vector4f,
-                           compute_point_cloud_bounding_box, float_equal,
-                           logger, todo, unimplemented)
-from ..core.generate_transformation import (
+from ranato.algebraic_contours.core.common import (
+    ROWS, Matrix3x3f, Matrix4x4f, MatrixNx3f, SpatialVector1d, Vector4f,
+    compute_point_cloud_bounding_box, float_equal, logger, todo, unimplemented)
+from ranato.algebraic_contours.core.generate_transformation import (
     origin_to_infinity_projective_matrix, rotate_frame_projective_matrix,
     translation_projective_matrix)
 

@@ -8,12 +8,12 @@ from dataclasses import dataclass
 import numpy as np
 import polyscope
 
-from ..core.common import (COLS, MatrixXf, Vector1D, Vector2D,
-                           convert_nested_vector_to_matrix,
-                           convert_polylines_to_edges, interval_lerp, todo,
-                           unimplemented, unreachable)
-from ..core.interval import Interval
-from ..core.polynomial_function import (
+from ranato.algebraic_contours.core.common import (
+    COLS, MatrixXf, Vector1D, Vector2D, convert_nested_vector_to_matrix,
+    convert_polylines_to_edges, interval_lerp, todo, unimplemented,
+    unreachable)
+from ranato.algebraic_contours.core.interval import Interval
+from ranato.algebraic_contours.core.polynomial_function import (
     compute_polynomial_mapping_derivative, compute_polynomial_mapping_product,
     compute_polynomial_mapping_scalar_product, evaluate_polynomial,
     formatted_polynomial)

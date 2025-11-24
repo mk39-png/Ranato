@@ -4,16 +4,20 @@ Projected Curve Network testing
 
 import numpy as np
 
-from ..contour_network.intersection_data import IntersectionData
-from ..contour_network.projected_curve_network import ProjectedCurveNetwork
-from ..core.abstract_curve_network import AbstractCurveNetwork
-from ..core.common import (NodeIndex, SegmentIndex, compare_eigen_numpy_matrix,
-                           compare_list_list_varying_lengths,
-                           deserialize_eigen_matrix_csv_to_numpy,
-                           deserialize_list_list_varying_lengths,
-                           deserialize_list_list_varying_lengths_float)
-from ..core.conic import Conic
-from ..core.rational_function import RationalFunction
+from ranato.algebraic_contours.contour_network.intersection_data import \
+    IntersectionData
+from ranato.algebraic_contours.contour_network.projected_curve_network import \
+    ProjectedCurveNetwork
+from ranato.algebraic_contours.core.abstract_curve_network import \
+    AbstractCurveNetwork
+from ranato.algebraic_contours.core.common import (
+    NodeIndex, SegmentIndex, compare_eigen_numpy_matrix,
+    compare_list_list_varying_lengths, deserialize_eigen_matrix_csv_to_numpy,
+    deserialize_list_list_varying_lengths,
+    deserialize_list_list_varying_lengths_float)
+from ranato.algebraic_contours.core.conic import Conic
+from ranato.algebraic_contours.core.rational_function import RationalFunction
+
 from ..utils.compute_intersections_testing_utils import (
     compare_list_list_intersection_data,
     deserialize_list_list_intersection_data)
@@ -54,7 +58,8 @@ def test_init_chain_start_nodes() -> None:
         deserialize_list_list_varying_lengths(filepath+"chains.csv"),
         deserialize_eigen_matrix_csv_to_numpy(filepath+"chain_labels.csv").tolist(),
         deserialize_list_list_varying_lengths_float(filepath+"interior_cusps.csv"),
-        deserialize_eigen_matrix_csv_to_numpy(filepath+"has_cusp_at_base.csv").astype(bool).tolist(),
+        deserialize_eigen_matrix_csv_to_numpy(
+            filepath+"has_cusp_at_base.csv").astype(bool).tolist(),
         deserialize_list_list_varying_lengths_float(filepath+"intersections.csv"),
         deserialize_list_list_varying_lengths(filepath+"intersection_indices.csv"),
         deserialize_list_list_intersection_data(filepath+"intersection_data.json"),

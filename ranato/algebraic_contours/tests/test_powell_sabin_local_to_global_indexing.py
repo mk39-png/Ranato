@@ -1,18 +1,18 @@
 import numpy as np
 import pytest
 
-from ..core.affine_manifold import AffineManifold
-from ..core.common import (ROWS, Index, Matrix2x3r, SpatialVector,
-                           SpatialVector1d, Vector1D,
-                           compare_eigen_numpy_matrix, float_equal,
-                           index_vector_complement,
-                           initialize_spot_control_mesh)
-from ..core.halfedge import Halfedge
-from ..quadratic_spline_surface.optimize_spline_surface import (
+from ranato.algebraic_contours.core.affine_manifold import AffineManifold
+from ranato.algebraic_contours.core.common import (
+    ROWS, Index, Matrix2x3r, SpatialVector, SpatialVector1d, Vector1D,
+    compare_eigen_numpy_matrix, float_equal, index_vector_complement,
+    initialize_spot_control_mesh)
+from ranato.algebraic_contours.core.halfedge import Halfedge
+from ranato.algebraic_contours.quadratic_spline_surface.optimize_spline_surface import (
     generate_zero_edge_gradients, generate_zero_vertex_gradients)
-from ..quadratic_spline_surface.powell_sabin_local_to_global_indexing import (
+from ranato.algebraic_contours.quadratic_spline_surface.powell_sabin_local_to_global_indexing import (
     build_variable_edge_indices_map, build_variable_vertex_indices_map,
     generate_twelve_split_variable_value_vector)
+
 from ..tests.test_affine_manifold import \
     initialize_affine_manifold_from_spot_control
 

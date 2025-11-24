@@ -7,8 +7,10 @@ import logging
 import numpy as np
 import numpy.linalg as LA
 
-from ..core.common import Matrix2x2f, Matrix3x2r, Matrix12x12r, Vector1D
-from ..quadratic_spline_surface.PS12_patch_coeffs import PS12_patch_coeffs
+from ranato.algebraic_contours.core.common import (Matrix2x2f, Matrix3x2r,
+                                                   Matrix12x12r, Vector1D)
+from ranato.algebraic_contours.quadratic_spline_surface.PS12_patch_coeffs import \
+    PS12_patch_coeffs
 
 logger: logging.Logger = logging.getLogger(__name__)
 

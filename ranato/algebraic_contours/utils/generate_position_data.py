@@ -1,9 +1,10 @@
 from collections import defaultdict
 
-from ..core.affine_manifold import *
-from ..core.common import *
-from ..quadratic_spline_surface.optimize_spline_surface import (
+from ranato.algebraic_contours.core.affine_manifold import *
+from ranato.algebraic_contours.core.common import *
+from ranato.algebraic_contours.quadratic_spline_surface.optimize_spline_surface import (
     TriangleCornerData, TriangleMidpointData)
+
 from ..utils.generate_shapes import *
 
 # ***************************

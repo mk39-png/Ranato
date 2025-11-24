@@ -8,15 +8,14 @@ import igl
 import numpy as np
 import polyscope
 
-from ..core.common import (COLS, DISCRETIZATION_LEVEL, HASH_TABLE_SIZE, ROWS,
-                           SKY_BLUE, Matrix3x2f, Matrix6x3f, MatrixNx3f,
-                           MatrixNx3i, MatrixXf, PatchIndex, PlanarPoint,
-                           PlanarPoint1d, SpatialVector, SpatialVector1d,
-                           Vector1D, convert_nested_vector_to_matrix,
-                           convert_polylines_to_edges, todo)
-from ..core.convex_polygon import ConvexPolygon
-from ..core.line_segment import LineSegment
-from ..quadratic_spline_surface.quadratic_spline_surface_patch import \
+from ranato.algebraic_contours.core.common import (
+    COLS, DISCRETIZATION_LEVEL, HASH_TABLE_SIZE, ROWS, SKY_BLUE, Matrix3x2f,
+    Matrix6x3f, MatrixNx3f, MatrixNx3i, MatrixXf, PatchIndex, PlanarPoint,
+    PlanarPoint1d, SpatialVector, SpatialVector1d, Vector1D,
+    convert_nested_vector_to_matrix, convert_polylines_to_edges, todo)
+from ranato.algebraic_contours.core.convex_polygon import ConvexPolygon
+from ranato.algebraic_contours.core.line_segment import LineSegment
+from ranato.algebraic_contours.quadratic_spline_surface.quadratic_spline_surface_patch import \
     QuadraticSplineSurfacePatch
 
 logger: logging.Logger = logging.getLogger(__name__)

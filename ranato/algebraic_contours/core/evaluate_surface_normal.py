@@ -4,9 +4,10 @@ coefficients.
 """
 import numpy as np
 
-from ..core.bivariate_quadratic_function import (
+from ranato.algebraic_contours.core.bivariate_quadratic_function import (
     compute_quadratic_cross_product, u_derivative_matrix, v_derivative_matrix)
-from ..core.common import Matrix3x3r, Matrix3x6r, Matrix6x3r
+from ranato.algebraic_contours.core.common import (Matrix3x3r, Matrix3x6r,
+                                                   Matrix6x3r)
 
 
 def generate_quadratic_surface_normal_coeffs(surface_mapping_coeffs: Matrix6x3r) -> Matrix6x3r:

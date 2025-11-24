@@ -4,8 +4,8 @@ import math
 
 import numpy as np
 
-from ..core.common import *
-from ..core.conic import Conic
+from ranato.algebraic_contours.core.common import *
+from ranato.algebraic_contours.core.conic import Conic
 
 logger: logging.Logger = logging.getLogger(__name__)
 

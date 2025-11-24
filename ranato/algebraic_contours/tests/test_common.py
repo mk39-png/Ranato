@@ -1,8 +1,8 @@
 import pytest
 
-from ..core.affine_manifold import AffineManifold
-from ..core.common import *
-from ..core.halfedge import Halfedge
+from ranato.algebraic_contours.core.affine_manifold import AffineManifold
+from ranato.algebraic_contours.core.common import *
+from ranato.algebraic_contours.core.halfedge import Halfedge
 
 # *******************
 # Test Methods

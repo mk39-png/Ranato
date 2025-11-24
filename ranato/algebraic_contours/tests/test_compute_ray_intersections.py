@@ -6,15 +6,18 @@ Ray Intersection Tests
 import numpy as np
 import numpy.testing as npt
 
-from ..contour_network.compute_ray_intersections import \
+from ranato.algebraic_contours.contour_network.compute_ray_intersections import \
     compute_spline_surface_ray_intersections
-from ..contour_network.compute_ray_intersections_pencil_method import \
+from ranato.algebraic_contours.contour_network.compute_ray_intersections_pencil_method import \
     compute_spline_surface_patch_ray_intersections_pencil_method
-from ..core.common import (Matrix2x2f, Matrix2x3f, Matrix3x2f, Matrix6x3f,
-                           PatchIndex, PlanarPoint1d, float_equal)
-from ..core.convex_polygon import ConvexPolygon
-from ..quadratic_spline_surface.quadratic_spline_surface_patch import \
+from ranato.algebraic_contours.core.common import (Matrix2x2f, Matrix2x3f,
+                                                   Matrix3x2f, Matrix6x3f,
+                                                   PatchIndex, PlanarPoint1d,
+                                                   float_equal)
+from ranato.algebraic_contours.core.convex_polygon import ConvexPolygon
+from ranato.algebraic_contours.quadratic_spline_surface.quadratic_spline_surface_patch import \
     QuadraticSplineSurfacePatch
+
 from ..tests.test_compute_contours import _initialize_contour_info_spot_mesh
 
 

@@ -8,17 +8,20 @@ import numpy as np
 from mathutils import Matrix
 from numpy.typing import ArrayLike
 
-from ...common import DIRECTORY_TEMP
-from ..contour_network.compute_intersections import IntersectionParameters
-from ..contour_network.contour_network import (ContourNetwork,
-                                               InvisibilityParameters)
-from ..core.affine_manifold import AffineManifold
-from ..core.apply_transformation import apply_transformation_to_vertices
-from ..core.common import MatrixNx3f
-from ..quadratic_spline_surface.optimize_spline_surface import \
+from ranato.algebraic_contours.contour_network.compute_intersections import \
+    IntersectionParameters
+from ranato.algebraic_contours.contour_network.contour_network import (
+    ContourNetwork, InvisibilityParameters)
+from ranato.algebraic_contours.core.affine_manifold import AffineManifold
+from ranato.algebraic_contours.core.apply_transformation import \
+    apply_transformation_to_vertices
+from ranato.algebraic_contours.core.common import MatrixNx3f
+from ranato.algebraic_contours.quadratic_spline_surface.optimize_spline_surface import \
     OptimizationParameters
-from ..quadratic_spline_surface.twelve_split_spline import (
+from ranato.algebraic_contours.quadratic_spline_surface.twelve_split_spline import (
     TwelveSplitSplineSurface, compute_twelve_split_spline_patch_boundary_edges)
+
+from ...common import DIRECTORY_TEMP
 from ..utils.projected_curve_networks_utils import SVGOutputMode
 
 

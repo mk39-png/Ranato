@@ -2,9 +2,10 @@ import numpy as np
 import numpy.testing as npt
 import pytest
 
-from ..core import polynomial_function
-from ..core.common import MatrixXf, Vector1D, Vector2D, float_equal
-from ..core.polynomial_function import (
+from ranato.algebraic_contours.core import polynomial_function
+from ranato.algebraic_contours.core.common import (MatrixXf, Vector1D,
+                                                   Vector2D, float_equal)
+from ranato.algebraic_contours.core.polynomial_function import (
     compute_polynomial_mapping_cross_product,
     compute_polynomial_mapping_derivative, compute_polynomial_mapping_product,
     evaluate_polynomial, generate_monomials, polynomial_real_roots,

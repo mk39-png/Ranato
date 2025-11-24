@@ -4,10 +4,11 @@ import igl
 import numpy as np
 import pytest
 
-from ..core.common import (MatrixNx3f, MatrixNx3i, MatrixXf, MatrixXi,
-                           compare_eigen_numpy_matrix,
-                           compare_list_list_varying_lengths, vector_contains)
-from ..core.vertex_circulator import VertexCirculator
+from ranato.algebraic_contours.core.common import (
+    MatrixNx3f, MatrixNx3i, MatrixXf, MatrixXi, compare_eigen_numpy_matrix,
+    compare_list_list_varying_lengths, vector_contains)
+from ranato.algebraic_contours.core.vertex_circulator import VertexCirculator
+
 from ..utils.generate_shapes import (generate_minimal_torus_VF,
                                      generate_tetrahedron_VF)
 

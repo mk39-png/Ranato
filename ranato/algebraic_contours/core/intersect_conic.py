@@ -5,11 +5,13 @@ Conic intersections.
 import copy
 import logging
 
-from ..core.common import (Matrix3x1r, Matrix3x2f, PlanarPoint1d, Vector2f,
-                           Vector3f, todo)
-from ..core.conic import Conic
-from ..core.convex_polygon import ConvexPolygon
-from ..core.polynomial_function import quadratic_real_roots
+from ranato.algebraic_contours.core.common import (Matrix3x1r, Matrix3x2f,
+                                                   PlanarPoint1d, Vector2f,
+                                                   Vector3f, todo)
+from ranato.algebraic_contours.core.conic import Conic
+from ranato.algebraic_contours.core.convex_polygon import ConvexPolygon
+from ranato.algebraic_contours.core.polynomial_function import \
+    quadratic_real_roots
 
 logger: logging.Logger = logging.getLogger(__name__)
 

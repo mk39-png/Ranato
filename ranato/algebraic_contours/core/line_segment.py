@@ -8,13 +8,15 @@ import logging
 
 import numpy as np
 
-from ..core.bivariate_quadratic_function import \
+from ranato.algebraic_contours.core.bivariate_quadratic_function import \
     formatted_bivariate_linear_mapping
-from ..core.common import Matrix3x2r, Vector2D, unreachable
-from ..core.conic import Conic
-from ..core.interval import Interval
-from ..core.polynomial_function import formatted_polynomial
-from ..core.rational_function import RationalFunction
+from ranato.algebraic_contours.core.common import (Matrix3x2r, Vector2D,
+                                                   unreachable)
+from ranato.algebraic_contours.core.conic import Conic
+from ranato.algebraic_contours.core.interval import Interval
+from ranato.algebraic_contours.core.polynomial_function import \
+    formatted_polynomial
+from ranato.algebraic_contours.core.rational_function import RationalFunction
 
 logger: logging.Logger = logging.getLogger(__name__)
 

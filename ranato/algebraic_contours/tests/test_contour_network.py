@@ -4,22 +4,23 @@ import os
 import numpy as np
 import pytest
 
-from ..contour_network.compute_intersections import IntersectionParameters
-from ..contour_network.contour_network import (ContourNetwork,
-                                               InvisibilityMethod,
-                                               InvisibilityParameters,
-                                               _build_contour_labels)
-from ..core.affine_manifold import AffineManifold
-from ..core.apply_transformation import (
+from ranato.algebraic_contours.contour_network.compute_intersections import \
+    IntersectionParameters
+from ranato.algebraic_contours.contour_network.contour_network import (
+    ContourNetwork, InvisibilityMethod, InvisibilityParameters,
+    _build_contour_labels)
+from ranato.algebraic_contours.core.affine_manifold import AffineManifold
+from ranato.algebraic_contours.core.apply_transformation import (
     apply_camera_frame_transformation_to_vertices,
     apply_transformation_to_vertices)
-from ..core.common import (Matrix3x3f, MatrixNx3f,
-                           deserialize_eigen_matrix_csv_to_numpy,
-                           initialize_spot_control_mesh)
-from ..quadratic_spline_surface.optimize_spline_surface import \
+from ranato.algebraic_contours.core.common import (
+    Matrix3x3f, MatrixNx3f, deserialize_eigen_matrix_csv_to_numpy,
+    initialize_spot_control_mesh)
+from ranato.algebraic_contours.quadratic_spline_surface.optimize_spline_surface import \
     OptimizationParameters
-from ..quadratic_spline_surface.twelve_split_spline import (
+from ranato.algebraic_contours.quadratic_spline_surface.twelve_split_spline import (
     TwelveSplitSplineSurface, compute_twelve_split_spline_patch_boundary_edges)
+
 from ..tests.test_compute_rational_bezier_curve_intersections import \
     ROOT_FOLDER
 from ..utils.projected_curve_networks_utils import (SVGOutputMode,

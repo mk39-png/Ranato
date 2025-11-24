@@ -5,8 +5,9 @@ Used for contour_network.
 
 import logging
 
-from ..core.common import (CHECK_VALIDITY, NodeIndex, SegmentIndex,
-                           vector_contains)
+from ranato.algebraic_contours.core.common import (CHECK_VALIDITY, NodeIndex,
+                                                   SegmentIndex,
+                                                   vector_contains)
 
 logger: logging.Logger = logging.getLogger(__name__)
 

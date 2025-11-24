@@ -21,9 +21,12 @@ from venv import logger
 
 import numpy as np
 
-from ..core.common import (COLS, ROWS, MatrixNx3f, MatrixXf, Vector1D,
-                           Vector2D, Vector2f, Vector3f, float_equal,
-                           float_equal_zero, unimplemented)
+from ranato.algebraic_contours.core.common import (COLS, ROWS, MatrixNx3f,
+                                                   MatrixXf, Vector1D,
+                                                   Vector2D, Vector2f,
+                                                   Vector3f, float_equal,
+                                                   float_equal_zero,
+                                                   unimplemented)
 
 
 def remove_polynomial_trailing_coefficients(A_coeffs_ref: Vector1D) -> Vector1D:

@@ -8,22 +8,23 @@ from datetime import datetime
 
 import numpy as np
 
-from ..contour_network.compute_rational_bezier_curve_intersection import (
+from ranato.algebraic_contours.contour_network.compute_rational_bezier_curve_intersection import (
     find_intersections_bezier_clipping,
     split_bezier_curve_no_self_intersection)
-from ..contour_network.intersection_data import IntersectionData
-from ..contour_network.intersection_heuristics import (
+from ranato.algebraic_contours.contour_network.intersection_data import \
+    IntersectionData
+from ranato.algebraic_contours.contour_network.intersection_heuristics import (
     IntersectionStats, are_nonintersecting_by_heuristic_bounding_box,
     compute_bezier_bounding_box, compute_bounding_box_hash_table,
     compute_homogeneous_bezier_points_over_interval)
-from ..core.common import (FIND_INTERSECTIONS_BEZIER_CLIPPING_PRECISION,
-                           INLINE_TESTING_ENABLED_CONTOUR_NETWORK, Matrix5x3f,
-                           PlanarPoint1d, SpatialVector1d,
-                           compare_eigen_numpy_matrix,
-                           compare_list_list_varying_lengths,
-                           compare_list_list_varying_lengths_float,
-                           float_equal_zero, interval_lerp, load_json)
-from ..core.rational_function import RationalFunction
+from ranato.algebraic_contours.core.common import (
+    FIND_INTERSECTIONS_BEZIER_CLIPPING_PRECISION,
+    INLINE_TESTING_ENABLED_CONTOUR_NETWORK, Matrix5x3f, PlanarPoint1d,
+    SpatialVector1d, compare_eigen_numpy_matrix,
+    compare_list_list_varying_lengths, compare_list_list_varying_lengths_float,
+    float_equal_zero, interval_lerp, load_json)
+from ranato.algebraic_contours.core.rational_function import RationalFunction
+
 from ..tests.test_compute_rational_bezier_curve_intersections import \
     ROOT_FOLDER
 from ..utils.compute_intersections_testing_utils import (

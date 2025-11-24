@@ -886,10 +886,10 @@ def find_face_vertex_index(face: Vector1D, vertex_index: int) -> int:
 
 def is_manifold(F: MatrixXi) -> bool:
     """
-    @brief Check if F describes a manifold mesh with a single component
+    Check if F describes a manifold mesh with a single component
 
-    @param[in] F: mesh faces
-    @return true iff the mesh is manifold
+    :param F: [in] mesh faces
+    :return: true iff the mesh is manifold
     """
 
     # Check edge manifold condition

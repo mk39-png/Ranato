@@ -11,24 +11,35 @@ import numpy.testing as npt
 from cholespy import CholeskySolverD, MatrixType
 from scipy.sparse import csr_matrix
 
-from ..core.affine_manifold import AffineManifold, EdgeManifoldChart
-from ..core.common import (COLS, ROWS, Index, Matrix2x2f, Matrix2x3r,
-                           Matrix3x2r, Matrix12x3f, Matrix12x12r, Matrix36x36f,
-                           MatrixNx3, MatrixNx3f, MatrixXf, MatrixXi,
-                           PlanarPoint, PlanarPoint1d, SpatialVector,
-                           SpatialVector1d, TwelveSplitGradient,
-                           TwelveSplitHessian, Vector1D, Vector2D, Vector12f,
-                           Vector36f, VectorX, find_face_vertex_index,
-                           index_vector_complement, unimplemented)
-from ..core.halfedge import Halfedge
-from ..quadratic_spline_surface.compute_local_twelve_split_hessian import (
+from ranato.algebraic_contours.core.affine_manifold import (AffineManifold,
+                                                            EdgeManifoldChart)
+from ranato.algebraic_contours.core.common import (COLS, ROWS, Index,
+                                                   Matrix2x2f, Matrix2x3r,
+                                                   Matrix3x2r, Matrix12x3f,
+                                                   Matrix12x12r, Matrix36x36f,
+                                                   MatrixNx3, MatrixNx3f,
+                                                   MatrixXf, MatrixXi,
+                                                   PlanarPoint, PlanarPoint1d,
+                                                   SpatialVector,
+                                                   SpatialVector1d,
+                                                   TwelveSplitGradient,
+                                                   TwelveSplitHessian,
+                                                   Vector1D, Vector2D,
+                                                   Vector12f, Vector36f,
+                                                   VectorX,
+                                                   find_face_vertex_index,
+                                                   index_vector_complement,
+                                                   unimplemented)
+from ranato.algebraic_contours.core.halfedge import Halfedge
+from ranato.algebraic_contours.quadratic_spline_surface.compute_local_twelve_split_hessian import (
     build_local_smoothness_hessian, get_C_gl)
-from ..quadratic_spline_surface.planarH import planarHfun
-from ..quadratic_spline_surface.position_data import (
+from ranato.algebraic_contours.quadratic_spline_surface.planarH import \
+    planarHfun
+from ranato.algebraic_contours.quadratic_spline_surface.position_data import (
     TriangleCornerData, TriangleMidpointData,
     compute_edge_midpoint_with_gradient, generate_affine_manifold_corner_data,
     generate_affine_manifold_midpoint_data)
-from ..quadratic_spline_surface.powell_sabin_local_to_global_indexing import (
+from ranato.algebraic_contours.quadratic_spline_surface.powell_sabin_local_to_global_indexing import (
     build_face_variable_vector, build_variable_edge_indices_map,
     build_variable_vertex_indices_map,
     generate_local_edge_gradient_variable_index,

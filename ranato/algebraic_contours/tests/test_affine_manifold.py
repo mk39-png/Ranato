@@ -4,15 +4,13 @@ from typing import Any
 import numpy as np
 import numpy.testing as npt
 
-from ..core.affine_manifold import (AffineManifold, EdgeManifoldChart,
-                                    FaceManifoldChart,
-                                    ParametricAffineManifold,
-                                    VertexManifoldChart)
-from ..core.common import (FLOAT_EQUAL_PRECISION, Index, Matrix2x2f, MatrixXf,
-                           MatrixXi, PlanarPoint, Vector1D,
-                           compare_eigen_numpy_matrix, float_equal,
-                           initialize_spot_control_mesh, load_json,
-                           vector_equal)
+from ranato.algebraic_contours.core.affine_manifold import (
+    AffineManifold, EdgeManifoldChart, FaceManifoldChart,
+    ParametricAffineManifold, VertexManifoldChart)
+from ranato.algebraic_contours.core.common import (
+    FLOAT_EQUAL_PRECISION, Index, Matrix2x2f, MatrixXf, MatrixXi, PlanarPoint,
+    Vector1D, compare_eigen_numpy_matrix, float_equal,
+    initialize_spot_control_mesh, load_json, vector_equal)
 
 # ********************
 # Helper Methods

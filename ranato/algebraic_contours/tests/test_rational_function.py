@@ -4,8 +4,10 @@ Tests to find that the derivative of a rational function can be found.
 
 import numpy as np
 
-from ..core.common import Matrix3x2f, Vector3f, float_equal
-from ..core.rational_function import RationalFunction
+from ranato.algebraic_contours.core.common import (Matrix3x2f, Vector3f,
+                                                   float_equal)
+from ranato.algebraic_contours.core.rational_function import RationalFunction
+
 from ..utils.rational_function_testing_utils import \
     deserialize_rational_functions
 

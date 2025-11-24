@@ -3,8 +3,8 @@ import numpy as np
 from cholespy import CholeskySolverD, MatrixType
 from scipy.sparse import coo_matrix
 
-# from ..contour_network.intersection_data import IntersectionData
-# from ..core.common import Matrix4x4f
+# from ranato.algebraic_contours.contour_network.intersection_data import IntersectionData
+# from ranato.algebraic_contours.core.common import Matrix4x4f
 
 # #
 # V_coeffs = np.array([[0, 1, 2], [3, 4, 5], [6, 7, 8]])

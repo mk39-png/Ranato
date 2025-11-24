@@ -11,12 +11,16 @@ import sys
 
 import numpy as np
 
-from ..contour_network.intersection_heuristics import is_in_bounding_box
-from ..core.common import (MAX_PATCH_RAY_INTERSECTIONS, Matrix2x2f, Matrix2x3f,
-                           Matrix6x3f, PlanarPoint1d, SpatialVector1d,
-                           Vector2f, Vector3f, Vector4f, Vector6f)
-from ..core.convex_polygon import ConvexPolygon
-from ..quadratic_spline_surface.quadratic_spline_surface_patch import \
+from ranato.algebraic_contours.contour_network.intersection_heuristics import \
+    is_in_bounding_box
+from ranato.algebraic_contours.core.common import (MAX_PATCH_RAY_INTERSECTIONS,
+                                                   Matrix2x2f, Matrix2x3f,
+                                                   Matrix6x3f, PlanarPoint1d,
+                                                   SpatialVector1d, Vector2f,
+                                                   Vector3f, Vector4f,
+                                                   Vector6f)
+from ranato.algebraic_contours.core.convex_polygon import ConvexPolygon
+from ranato.algebraic_contours.quadratic_spline_surface.quadratic_spline_surface_patch import \
     QuadraticSplineSurfacePatch
 
 logger: logging.Logger = logging.getLogger(__name__)

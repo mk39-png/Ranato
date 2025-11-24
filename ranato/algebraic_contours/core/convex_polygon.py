@@ -8,12 +8,15 @@ from venv import logger
 
 import numpy as np
 
-from ..core.common import (ROWS, Index, Matrix2x2f, Matrix3x2f, MatrixNx3f,
-                           MatrixNx3i, PlanarPoint, PlanarPoint1d, Vector1D,
-                           Vector3f, float_equal, generate_linspace,
-                           unreachable)
-from ..core.interval import Interval
-from ..core.line_segment import LineSegment
+from ranato.algebraic_contours.core.common import (ROWS, Index, Matrix2x2f,
+                                                   Matrix3x2f, MatrixNx3f,
+                                                   MatrixNx3i, PlanarPoint,
+                                                   PlanarPoint1d, Vector1D,
+                                                   Vector3f, float_equal,
+                                                   generate_linspace,
+                                                   unreachable)
+from ranato.algebraic_contours.core.interval import Interval
+from ranato.algebraic_contours.core.line_segment import LineSegment
 
 # *******
 # Helpers

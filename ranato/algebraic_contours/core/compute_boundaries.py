@@ -3,8 +3,9 @@ Methods to compute the boundaries of a mesh
 """
 import numpy as np
 
-from ..core.common import Index, convert_boolean_array_to_index_vector
-from ..core.halfedge import Halfedge
+from ranato.algebraic_contours.core.common import (
+    Index, convert_boolean_array_to_index_vector)
+from ranato.algebraic_contours.core.halfedge import Halfedge
 
 
 def compute_face_boundary_edges(F: np.ndarray) -> list[tuple[int, int]]:

@@ -4,31 +4,33 @@ import os
 
 import numpy as np
 
-from ..contour_network.compute_contours import (
+from ranato.algebraic_contours.contour_network.compute_contours import (
     compute_spline_surface_boundaries,
     compute_spline_surface_boundary_intersections,
     compute_spline_surface_contours,
     compute_spline_surface_contours_and_boundaries, pad_contours)
-from ..contour_network.compute_intersections import IntersectionParameters
-from ..contour_network.contour_network import (ContourNetwork,
-                                               InvisibilityMethod,
-                                               InvisibilityParameters)
-from ..contour_network.intersection_data import IntersectionData
-from ..core.affine_manifold import AffineManifold
-from ..core.apply_transformation import \
+from ranato.algebraic_contours.contour_network.compute_intersections import \
+    IntersectionParameters
+from ranato.algebraic_contours.contour_network.contour_network import (
+    ContourNetwork, InvisibilityMethod, InvisibilityParameters)
+from ranato.algebraic_contours.contour_network.intersection_data import \
+    IntersectionData
+from ranato.algebraic_contours.core.affine_manifold import AffineManifold
+from ranato.algebraic_contours.core.apply_transformation import \
     apply_camera_frame_transformation_to_vertices
-from ..core.common import (Matrix3x3f, MatrixNx3f, PatchIndex,
-                           compare_eigen_numpy_matrix,
-                           deserialize_eigen_matrix_csv_to_numpy,
-                           initialize_spot_control_mesh, unimplemented)
-from ..core.conic import Conic
-from ..core.rational_function import RationalFunction
-from ..quadratic_spline_surface.optimize_spline_surface import \
+from ranato.algebraic_contours.core.common import (
+    Matrix3x3f, MatrixNx3f, PatchIndex, compare_eigen_numpy_matrix,
+    deserialize_eigen_matrix_csv_to_numpy, initialize_spot_control_mesh,
+    unimplemented)
+from ranato.algebraic_contours.core.conic import Conic
+from ranato.algebraic_contours.core.rational_function import RationalFunction
+from ranato.algebraic_contours.quadratic_spline_surface.optimize_spline_surface import \
     OptimizationParameters
-from ..quadratic_spline_surface.quadratic_spline_surface import \
+from ranato.algebraic_contours.quadratic_spline_surface.quadratic_spline_surface import \
     QuadraticSplineSurface
-from ..quadratic_spline_surface.twelve_split_spline import (
+from ranato.algebraic_contours.quadratic_spline_surface.twelve_split_spline import (
     TwelveSplitSplineSurface, compute_twelve_split_spline_patch_boundary_edges)
+
 from ..utils.compute_intersections_testing_utils import (
     compare_list_list_intersection_data,
     compare_list_list_intersection_data_from_file,

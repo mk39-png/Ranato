@@ -6,14 +6,16 @@ Methods to compute a curve aligned frame for quadratic and spline surfaces.
 
 import logging
 
-from ..core.common import (Matrix5x3f, Matrix6x3f, Matrix9x3f, Matrix13x3f,
-                           Vector5f, Vector9f, Vector13f)
-from ..core.conic import Conic
-from ..core.polynomial_function import (
+from ranato.algebraic_contours.core.common import (Matrix5x3f, Matrix6x3f,
+                                                   Matrix9x3f, Matrix13x3f,
+                                                   Vector5f, Vector9f,
+                                                   Vector13f)
+from ranato.algebraic_contours.core.conic import Conic
+from ranato.algebraic_contours.core.polynomial_function import (
     compute_polynomial_mapping_cross_product,
     compute_polynomial_mapping_product)
-from ..core.rational_function import RationalFunction
-from ..quadratic_spline_surface.quadratic_spline_surface_patch import \
+from ranato.algebraic_contours.core.rational_function import RationalFunction
+from ranato.algebraic_contours.quadratic_spline_surface.quadratic_spline_surface_patch import \
     QuadraticSplineSurfacePatch
 
 logger: logging.Logger = logging.getLogger(__name__)

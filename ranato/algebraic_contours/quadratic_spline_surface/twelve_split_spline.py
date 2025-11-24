@@ -13,25 +13,31 @@ import polyscope as ps
 from cholespy import CholeskySolverD
 from scipy.sparse import csr_matrix
 
-from ..core.affine_manifold import AffineManifold, VertexManifoldChart
-from ..core.common import (COLS, DISCRETIZATION_LEVEL, ROWS, SKY_BLUE, Index,
-                           Matrix6x3f, Matrix6x12f, Matrix12x3f, MatrixNx3f,
-                           MatrixXf, MatrixXi, Vector1D, Vector3f,
-                           unimplemented)
-from ..core.compute_boundaries import compute_face_boundary_edges
-from ..core.convex_polygon import ConvexPolygon
-from ..quadratic_spline_surface.optimize_spline_surface import (
+from ranato.algebraic_contours.core.affine_manifold import (
+    AffineManifold, VertexManifoldChart)
+from ranato.algebraic_contours.core.common import (COLS, DISCRETIZATION_LEVEL,
+                                                   ROWS, SKY_BLUE, Index,
+                                                   Matrix6x3f, Matrix6x12f,
+                                                   Matrix12x3f, MatrixNx3f,
+                                                   MatrixXf, MatrixXi,
+                                                   Vector1D, Vector3f,
+                                                   unimplemented)
+from ranato.algebraic_contours.core.compute_boundaries import \
+    compute_face_boundary_edges
+from ranato.algebraic_contours.core.convex_polygon import ConvexPolygon
+from ranato.algebraic_contours.quadratic_spline_surface.optimize_spline_surface import (
     OptimizationParameters, build_twelve_split_spline_energy_system,
     generate_optimized_twelve_split_position_data)
-from ..quadratic_spline_surface.position_data import (
+from ranato.algebraic_contours.quadratic_spline_surface.position_data import (
     TriangleCornerData, TriangleMidpointData, generate_corner_data_matrices,
     generate_midpoint_data_matrices)
-from ..quadratic_spline_surface.PS12_patch_coeffs import PS12_patch_coeffs
-from ..quadratic_spline_surface.PS12tri_bounds_coeffs import \
+from ranato.algebraic_contours.quadratic_spline_surface.PS12_patch_coeffs import \
+    PS12_patch_coeffs
+from ranato.algebraic_contours.quadratic_spline_surface.PS12tri_bounds_coeffs import \
     PS12tri_bounds_coeffs
-from ..quadratic_spline_surface.quadratic_spline_surface import \
+from ranato.algebraic_contours.quadratic_spline_surface.quadratic_spline_surface import \
     QuadraticSplineSurface
-from ..quadratic_spline_surface.quadratic_spline_surface_patch import \
+from ranato.algebraic_contours.quadratic_spline_surface.quadratic_spline_surface_patch import \
     QuadraticSplineSurfacePatch
 
 logger: logging.Logger = logging.getLogger(__name__)

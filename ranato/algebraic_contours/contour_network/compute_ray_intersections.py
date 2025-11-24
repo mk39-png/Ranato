@@ -9,11 +9,14 @@ import logging
 
 import numpy as np
 
-from ..contour_network.compute_ray_intersections_pencil_method import \
+from ranato.algebraic_contours.contour_network.compute_ray_intersections_pencil_method import \
     compute_spline_surface_patch_ray_intersections_pencil_method
-from ..core.common import (MAX_PATCH_RAY_INTERSECTIONS, Matrix2x3f, PatchIndex,
-                           PlanarPoint1d, SpatialVector1d, float_equal)
-from ..quadratic_spline_surface.quadratic_spline_surface import \
+from ranato.algebraic_contours.core.common import (MAX_PATCH_RAY_INTERSECTIONS,
+                                                   Matrix2x3f, PatchIndex,
+                                                   PlanarPoint1d,
+                                                   SpatialVector1d,
+                                                   float_equal)
+from ranato.algebraic_contours.quadratic_spline_surface.quadratic_spline_surface import \
     QuadraticSplineSurface
 
 logger: logging.Logger = logging.getLogger(__name__)

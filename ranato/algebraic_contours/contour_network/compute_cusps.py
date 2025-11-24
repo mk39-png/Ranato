@@ -7,19 +7,23 @@ Methods to compute cusps for a quadratic spline surface.
 
 import numpy as np
 
-from ..contour_network.compute_curve_frame import \
+from ranato.algebraic_contours.contour_network.compute_curve_frame import \
     compute_quadratic_surface_curve_frame
-from ..contour_network.compute_ray_intersections_pencil_method import \
+from ranato.algebraic_contours.contour_network.compute_ray_intersections_pencil_method import \
     solve_quadratic_quadratic_equation_pencil_method
-from ..core.common import (Matrix3x2f, Matrix3x3f, Matrix6x3f, PatchIndex,
-                           PlanarPoint1d, Vector1D, Vector3f, Vector6f,
-                           deprecated, float_equal, float_equal_zero, todo)
-from ..core.conic import Conic
-from ..core.polynomial_function import polynomial_real_roots
-from ..core.rational_function import RationalFunction
-from ..quadratic_spline_surface.quadratic_spline_surface import \
+from ranato.algebraic_contours.core.common import (Matrix3x2f, Matrix3x3f,
+                                                   Matrix6x3f, PatchIndex,
+                                                   PlanarPoint1d, Vector1D,
+                                                   Vector3f, Vector6f,
+                                                   deprecated, float_equal,
+                                                   float_equal_zero, todo)
+from ranato.algebraic_contours.core.conic import Conic
+from ranato.algebraic_contours.core.polynomial_function import \
+    polynomial_real_roots
+from ranato.algebraic_contours.core.rational_function import RationalFunction
+from ranato.algebraic_contours.quadratic_spline_surface.quadratic_spline_surface import \
     QuadraticSplineSurface
-from ..quadratic_spline_surface.quadratic_spline_surface_patch import \
+from ranato.algebraic_contours.quadratic_spline_surface.quadratic_spline_surface_patch import \
     QuadraticSplineSurfacePatch
 
 

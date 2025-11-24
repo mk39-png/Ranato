@@ -16,11 +16,15 @@ from typing import Literal
 
 import numpy as np
 
-from ..core.common import (COLS, PLACEHOLDER_VALUE, ROWS, Index, Matrix2x3r,
-                           SpatialVector1d, TwelveSplitGradient,
-                           TwelveSplitHessian, Vector1D)
-from ..core.differentiable_variable import generate_local_variable_matrix_index
-from ..core.halfedge import Halfedge
+from ranato.algebraic_contours.core.common import (COLS, PLACEHOLDER_VALUE,
+                                                   ROWS, Index, Matrix2x3r,
+                                                   SpatialVector1d,
+                                                   TwelveSplitGradient,
+                                                   TwelveSplitHessian,
+                                                   Vector1D)
+from ranato.algebraic_contours.core.differentiable_variable import \
+    generate_local_variable_matrix_index
+from ranato.algebraic_contours.core.halfedge import Halfedge
 
 logger: logging.Logger = logging.getLogger(__name__)
 

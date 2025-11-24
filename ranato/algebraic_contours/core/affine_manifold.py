@@ -9,19 +9,33 @@ from dataclasses import dataclass
 import numpy as np
 import polyscope as ps
 
-from ..core.common import (CHECK_VALIDITY, COLS, GOLD_YELLOW, PLACEHOLDER_BOOL,
-                           PLACEHOLDER_INDEX, PLACEHOLDER_VALUE, ROWS, Index,
-                           Matrix2x2f, Matrix3x2f, MatrixNx2f, MatrixNx3f,
-                           MatrixNx3i, MatrixXf, MatrixXi, PlanarPoint1d,
-                           Vector3i, angle_from_positions, area_from_length,
-                           find_face_vertex_index, float_equal,
-                           float_equal_zero, formatted_vector, is_manifold,
-                           matrix_contains_nan, reflect_across_x_axis,
-                           remove_mesh_faces, remove_mesh_vertices,
-                           remove_vector_values, unimplemented,
-                           vector_contains_nan, vector_equal)
-from ..core.halfedge import Halfedge
-from ..core.vertex_circulator import VertexCirculator
+from ranato.algebraic_contours.core.common import (CHECK_VALIDITY, COLS,
+                                                   GOLD_YELLOW,
+                                                   PLACEHOLDER_BOOL,
+                                                   PLACEHOLDER_INDEX,
+                                                   PLACEHOLDER_VALUE, ROWS,
+                                                   Index, Matrix2x2f,
+                                                   Matrix3x2f, MatrixNx2f,
+                                                   MatrixNx3f, MatrixNx3i,
+                                                   MatrixXf, MatrixXi,
+                                                   PlanarPoint1d, Vector3i,
+                                                   angle_from_positions,
+                                                   area_from_length,
+                                                   find_face_vertex_index,
+                                                   float_equal,
+                                                   float_equal_zero,
+                                                   formatted_vector,
+                                                   is_manifold,
+                                                   matrix_contains_nan,
+                                                   reflect_across_x_axis,
+                                                   remove_mesh_faces,
+                                                   remove_mesh_vertices,
+                                                   remove_vector_values,
+                                                   unimplemented,
+                                                   vector_contains_nan,
+                                                   vector_equal)
+from ranato.algebraic_contours.core.halfedge import Halfedge
+from ranato.algebraic_contours.core.vertex_circulator import VertexCirculator
 
 logger: logging.Logger = logging.getLogger(__name__)
 

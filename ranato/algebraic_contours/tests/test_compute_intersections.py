@@ -2,20 +2,23 @@
 import numpy as np
 import pytest
 
-from ..contour_network.compute_intersections import (
+from ranato.algebraic_contours.contour_network.compute_intersections import (
     IntersectionParameters,
     _compute_bezier_clipping_planar_curve_intersections,
     _compute_planar_curve_intersections_from_bounding_box,
     _prune_intersection_points, compute_intersections,
     compute_planar_curve_intersections)
-from ..contour_network.intersection_data import IntersectionData
-from ..contour_network.intersection_heuristics import IntersectionStats
-from ..core.common import (Matrix5x2f, Matrix5x3f, PlanarPoint1d, Vector5f,
-                           compare_eigen_numpy_matrix,
-                           compare_list_list_varying_lengths,
-                           compare_list_list_varying_lengths_float,
-                           deserialize_eigen_matrix_csv_to_numpy, float_equal)
-from ..core.rational_function import RationalFunction
+from ranato.algebraic_contours.contour_network.intersection_data import \
+    IntersectionData
+from ranato.algebraic_contours.contour_network.intersection_heuristics import \
+    IntersectionStats
+from ranato.algebraic_contours.core.common import (
+    Matrix5x2f, Matrix5x3f, PlanarPoint1d, Vector5f,
+    compare_eigen_numpy_matrix, compare_list_list_varying_lengths,
+    compare_list_list_varying_lengths_float,
+    deserialize_eigen_matrix_csv_to_numpy, float_equal)
+from ranato.algebraic_contours.core.rational_function import RationalFunction
+
 from ..tests.test_compute_rational_bezier_curve_intersections import \
     ROOT_FOLDER
 from ..utils.compute_intersections_testing_utils import (

@@ -9,9 +9,10 @@ import igl
 import numpy as np
 import pytest
 
-from ..core.common import (Index, MatrixNx3i, MatrixXf, MatrixXi,
-                           compare_eigen_numpy_matrix)
-from ..core.halfedge import Halfedge
+from ranato.algebraic_contours.core.common import (Index, MatrixNx3i, MatrixXf,
+                                                   MatrixXi,
+                                                   compare_eigen_numpy_matrix)
+from ranato.algebraic_contours.core.halfedge import Halfedge
 
 
 def test_halfedge_spot_mesh() -> None:

@@ -9,19 +9,18 @@ from typing import TextIO
 import numpy as np
 import polyscope as ps
 
-from ..core.bivariate_quadratic_function import (
+from ranato.algebraic_contours.core.bivariate_quadratic_function import (
     evaluate_quadratic_mapping, generate_monomial_to_bezier_matrix,
     generate_quadratic_coordinate_domain_triangle_normalization_matrix)
-from ..core.common import (ROWS, Matrix2x2f, Matrix3x2r, Matrix6x3f,
-                           Matrix6x3r, Matrix6x6r, MatrixNx2f, PlanarPoint1d,
-                           SpatialVector, SpatialVector1d, Vector3f,
-                           compute_point_cloud_bounding_box, load_json, todo,
-                           unimplemented)
-from ..core.convex_polygon import ConvexPolygon
-from ..core.evaluate_surface_normal import \
+from ranato.algebraic_contours.core.common import (
+    ROWS, Matrix2x2f, Matrix3x2r, Matrix6x3f, Matrix6x3r, Matrix6x6r,
+    MatrixNx2f, PlanarPoint1d, SpatialVector, SpatialVector1d, Vector3f,
+    compute_point_cloud_bounding_box, load_json, todo, unimplemented)
+from ranato.algebraic_contours.core.convex_polygon import ConvexPolygon
+from ranato.algebraic_contours.core.evaluate_surface_normal import \
     generate_quadratic_surface_normal_coeffs
-from ..core.line_segment import LineSegment
-from ..core.rational_function import RationalFunction
+from ranato.algebraic_contours.core.line_segment import LineSegment
+from ranato.algebraic_contours.core.rational_function import RationalFunction
 
 logger: logging.Logger = logging.getLogger(__name__)
 

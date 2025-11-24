@@ -7,10 +7,10 @@ import logging
 
 import numpy as np
 
-from ..core.common import (INLINE_TESTING_ENABLED_CONTOUR_NETWORK,
-                           PLACEHOLDER_VALUE, SpatialVector1d,
-                           compare_eigen_numpy_matrix, float_equal_zero, todo)
-from ..core.rational_function import RationalFunction
+from ranato.algebraic_contours.core.common import (
+    INLINE_TESTING_ENABLED_CONTOUR_NETWORK, PLACEHOLDER_VALUE, SpatialVector1d,
+    compare_eigen_numpy_matrix, float_equal_zero, todo)
+from ranato.algebraic_contours.core.rational_function import RationalFunction
 
 logger: logging.Logger = logging.getLogger(__name__)
 # *******

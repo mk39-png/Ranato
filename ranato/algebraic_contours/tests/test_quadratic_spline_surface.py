@@ -4,11 +4,11 @@ import os
 import numpy as np
 import pytest
 
-from ..core.common import (MatrixNx3f, MatrixNx3i, SpatialVector,
-                           SpatialVector1d, compare_eigen_numpy_matrix,
-                           convert_nested_vector_to_matrix,
-                           convert_polylines_to_edges, todo)
-from ..quadratic_spline_surface.quadratic_spline_surface import (
+from ranato.algebraic_contours.core.common import (
+    MatrixNx3f, MatrixNx3i, SpatialVector, SpatialVector1d,
+    compare_eigen_numpy_matrix, convert_nested_vector_to_matrix,
+    convert_polylines_to_edges, todo)
+from ranato.algebraic_contours.quadratic_spline_surface.quadratic_spline_surface import (
     QuadraticSplineSurface, SurfaceDiscretizationParameters)
 
 

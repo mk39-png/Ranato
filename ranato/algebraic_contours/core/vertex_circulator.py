@@ -6,8 +6,9 @@ import logging
 
 import numpy as np
 
-from ..core.common import (PLACEHOLDER_VALUE, MatrixNx3i, Vector1D,
-                           contains_vertex)
+from ranato.algebraic_contours.core.common import (PLACEHOLDER_VALUE,
+                                                   MatrixNx3i, Vector1D,
+                                                   contains_vertex)
 
 logger: logging.Logger = logging.getLogger(__name__)
 

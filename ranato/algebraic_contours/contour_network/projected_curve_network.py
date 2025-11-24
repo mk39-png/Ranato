@@ -9,24 +9,26 @@ import numpy as np
 import polyscope
 import svg
 
-from ..contour_network.discretize import discretize_curve_segments
-from ..contour_network.intersection_data import IntersectionData
-from ..contour_network.write_output import (add_curve_to_svg,
-                                            write_planar_curve_segment,
-                                            write_planar_point)
-from ..core.abstract_curve_network import AbstractCurveNetwork
-from ..core.common import (CHECK_VALIDITY,
-                           INLINE_TESTING_ENABLED_CONTOUR_NETWORK,
-                           PLACEHOLDER_VALUE, TESTING_FOLDER_SOURCE, Color,
-                           MatrixXf, NodeIndex, PlanarPoint1d, SegmentIndex,
-                           SpatialVector1d, Vector3f,
-                           compare_eigen_numpy_matrix,
-                           convert_nested_vector_to_matrix,
-                           convert_polylines_to_edges, todo, unimplemented)
-from ..core.conic import Conic
-from ..core.generate_colormap import generate_random_category_colormap
-from ..core.rational_function import (CurveDiscretizationParameters,
-                                      RationalFunction)
+from ranato.algebraic_contours.contour_network.discretize import \
+    discretize_curve_segments
+from ranato.algebraic_contours.contour_network.intersection_data import \
+    IntersectionData
+from ranato.algebraic_contours.contour_network.write_output import (
+    add_curve_to_svg, write_planar_curve_segment, write_planar_point)
+from ranato.algebraic_contours.core.abstract_curve_network import \
+    AbstractCurveNetwork
+from ranato.algebraic_contours.core.common import (
+    CHECK_VALIDITY, INLINE_TESTING_ENABLED_CONTOUR_NETWORK, PLACEHOLDER_VALUE,
+    TESTING_FOLDER_SOURCE, Color, MatrixXf, NodeIndex, PlanarPoint1d,
+    SegmentIndex, SpatialVector1d, Vector3f, compare_eigen_numpy_matrix,
+    convert_nested_vector_to_matrix, convert_polylines_to_edges, todo,
+    unimplemented)
+from ranato.algebraic_contours.core.conic import Conic
+from ranato.algebraic_contours.core.generate_colormap import \
+    generate_random_category_colormap
+from ranato.algebraic_contours.core.rational_function import (
+    CurveDiscretizationParameters, RationalFunction)
+
 from ..utils.projected_curve_networks_utils import (
     NodeGeometry, SegmentGeometry, SVGOutputMode,
     build_projected_curve_network_without_intersections,

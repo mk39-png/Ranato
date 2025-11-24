@@ -11,9 +11,12 @@ topological information. Can be initialized from face topology information.
 
 import logging
 
-from ..core.common import (CHECK_VALIDITY, PLACEHOLDER_INDEX, Index,
-                           MatrixNx3i, find_face_vertex_index, is_manifold)
-from ..core.vertex_circulator import VertexCirculator
+from ranato.algebraic_contours.core.common import (CHECK_VALIDITY,
+                                                   PLACEHOLDER_INDEX, Index,
+                                                   MatrixNx3i,
+                                                   find_face_vertex_index,
+                                                   is_manifold)
+from ranato.algebraic_contours.core.vertex_circulator import VertexCirculator
 
 logger: logging.Logger = logging.getLogger(__name__)
 

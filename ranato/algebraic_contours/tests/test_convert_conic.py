@@ -3,8 +3,10 @@ import math
 
 import numpy as np
 
-from ..core.common import Matrix2x2f, Vector2f, float_equal
-from ..core.convert_conic import compute_symmetric_matrix_eigen_decomposition
+from ranato.algebraic_contours.core.common import (Matrix2x2f, Vector2f,
+                                                   float_equal)
+from ranato.algebraic_contours.core.convert_conic import \
+    compute_symmetric_matrix_eigen_decomposition
 
 
 def test_parametrize_contour_identity():

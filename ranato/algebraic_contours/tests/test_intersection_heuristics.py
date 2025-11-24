@@ -7,14 +7,15 @@ Testing intersection_heuristics methods.
 
 import numpy as np
 
-from ..contour_network.intersection_heuristics import (
+from ranato.algebraic_contours.contour_network.intersection_heuristics import (
     compute_bezier_bounding_box, compute_bounding_box_hash_table,
     compute_homogeneous_bezier_points_over_interval)
-from ..core.common import (Matrix5x3f, PlanarPoint1d,
-                           compare_eigen_numpy_matrix,
-                           compare_list_list_varying_lengths,
-                           deserialize_eigen_matrix_csv_to_numpy, load_json)
-from ..core.rational_function import RationalFunction
+from ranato.algebraic_contours.core.common import (
+    Matrix5x3f, PlanarPoint1d, compare_eigen_numpy_matrix,
+    compare_list_list_varying_lengths, deserialize_eigen_matrix_csv_to_numpy,
+    load_json)
+from ranato.algebraic_contours.core.rational_function import RationalFunction
+
 from ..utils.rational_function_testing_utils import \
     deserialize_rational_functions
 

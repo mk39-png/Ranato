@@ -7,12 +7,16 @@ import logging
 from enum import Enum
 from typing import Any
 
-from ..contour_network.intersection_data import IntersectionData
-from ..core.abstract_curve_network import AbstractCurveNetwork
-from ..core.common import (NodeIndex, SegmentIndex, arange, load_json,
-                           vector_equal)
-from ..core.conic import Conic
-from ..core.rational_function import RationalFunction
+from ranato.algebraic_contours.contour_network.intersection_data import \
+    IntersectionData
+from ranato.algebraic_contours.core.abstract_curve_network import \
+    AbstractCurveNetwork
+from ranato.algebraic_contours.core.common import (NodeIndex, SegmentIndex,
+                                                   arange, load_json,
+                                                   vector_equal)
+from ranato.algebraic_contours.core.conic import Conic
+from ranato.algebraic_contours.core.rational_function import RationalFunction
+
 from ..utils.conic_testing_utils import compare_conics, deserialize_conic
 from ..utils.rational_function_testing_utils import (
     compare_rational_functions, deserialize_rational_function)

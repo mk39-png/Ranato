@@ -2,10 +2,11 @@
 
 import numpy as np
 
-from ..core.abstract_curve_network import AbstractCurveNetwork
-from ..core.common import (NodeIndex, SegmentIndex, Vector1D,
-                           compare_eigen_numpy_matrix,
-                           deserialize_eigen_matrix_csv_to_numpy)
+from ranato.algebraic_contours.core.abstract_curve_network import \
+    AbstractCurveNetwork
+from ranato.algebraic_contours.core.common import (
+    NodeIndex, SegmentIndex, compare_eigen_numpy_matrix,
+    deserialize_eigen_matrix_csv_to_numpy)
 
 
 def test_init_abstract_curve_network() -> None:

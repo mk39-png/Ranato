@@ -6,21 +6,25 @@ Testing compute_cusp
 
 import numpy as np
 
-from ..contour_network.compute_cusps import (
+from ranato.algebraic_contours.contour_network.compute_cusps import (
     compute_boundary_cusps_testing, compute_cusp_by_one_patch_testing,
     compute_cusp_start_end_points_testing, compute_spline_surface_cusps)
-from ..contour_network.compute_intersections import IntersectionParameters
-from ..contour_network.contour_network import InvisibilityParameters
-from ..core.common import (Matrix3x3f, Vector1D, compare_eigen_numpy_matrix,
-                           compare_list_list_varying_lengths_float,
-                           deserialize_eigen_matrix_csv_to_numpy,
-                           deserialize_list_list_varying_lengths)
-from ..core.conic import Conic
-from ..core.rational_function import RationalFunction
-from ..quadratic_spline_surface.quadratic_spline_surface import \
+from ranato.algebraic_contours.contour_network.compute_intersections import \
+    IntersectionParameters
+from ranato.algebraic_contours.contour_network.contour_network import \
+    InvisibilityParameters
+from ranato.algebraic_contours.core.common import (
+    Matrix3x3f, Vector1D, compare_eigen_numpy_matrix,
+    compare_list_list_varying_lengths_float,
+    deserialize_eigen_matrix_csv_to_numpy,
+    deserialize_list_list_varying_lengths)
+from ranato.algebraic_contours.core.conic import Conic
+from ranato.algebraic_contours.core.rational_function import RationalFunction
+from ranato.algebraic_contours.quadratic_spline_surface.quadratic_spline_surface import \
     QuadraticSplineSurface
-from ..quadratic_spline_surface.twelve_split_spline import \
+from ranato.algebraic_contours.quadratic_spline_surface.twelve_split_spline import \
     TwelveSplitSplineSurface
+
 from ..tests.test_compute_contours import _initialize_contour_info_spot_mesh
 from ..utils.conic_testing_utils import deserialize_conics
 from ..utils.rational_function_testing_utils import \

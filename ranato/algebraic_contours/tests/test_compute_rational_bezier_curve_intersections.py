@@ -6,13 +6,13 @@
 import numpy as np
 import pytest
 
-from ..contour_network.compute_rational_bezier_curve_intersection import (
+from ranato.algebraic_contours.contour_network.compute_rational_bezier_curve_intersection import (
     _clipfatline, find_intersections_bezier_clipping)
-from ..core.common import (FIND_INTERSECTIONS_BEZIER_CLIPPING_PRECISION,
-                           Matrix5x3f, SpatialVector1d, Vector2f,
-                           compare_eigen_numpy_matrix,
-                           deserialize_eigen_matrix_csv_to_numpy,
-                           deserialize_list_list_varying_lengths_float)
+from ranato.algebraic_contours.core.common import (
+    FIND_INTERSECTIONS_BEZIER_CLIPPING_PRECISION, Matrix5x3f, SpatialVector1d,
+    Vector2f, compare_eigen_numpy_matrix,
+    deserialize_eigen_matrix_csv_to_numpy,
+    deserialize_list_list_varying_lengths_float)
 
 ROOT_FOLDER: str = "spot_control"
 

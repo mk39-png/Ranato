@@ -4,10 +4,10 @@ import logging
 
 import numpy as np
 
-from ..core.apply_transformation import \
+from ranato.algebraic_contours.core.apply_transformation import \
     apply_camera_frame_transformation_to_vertices
-from ..core.common import (Matrix3x3f, compare_eigen_numpy_matrix,
-                           initialize_spot_control_mesh)
+from ranato.algebraic_contours.core.common import (
+    Matrix3x3f, compare_eigen_numpy_matrix, initialize_spot_control_mesh)
 
 logger: logging.Logger = logging.getLogger(__name__)
 

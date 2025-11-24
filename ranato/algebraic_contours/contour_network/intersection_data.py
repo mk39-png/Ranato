@@ -2,8 +2,8 @@
 File for intersection data.
 """
 
-from ..core.common import float_equal
-from ..core.interval import Interval
+from ranato.algebraic_contours.core.common import float_equal
+from ranato.algebraic_contours.core.interval import Interval
 
 
 class IntersectionData():

@@ -6,10 +6,12 @@ Tests compute_closed_contours inside init_contour_network.
 
 import numpy as np
 
-from ..contour_network.compute_closed_contours import compute_closed_contours
-from ..core.common import (compare_eigen_numpy_matrix,
-                           compare_list_list_varying_lengths)
-from ..core.rational_function import RationalFunction
+from ranato.algebraic_contours.contour_network.compute_closed_contours import \
+    compute_closed_contours
+from ranato.algebraic_contours.core.common import (
+    compare_eigen_numpy_matrix, compare_list_list_varying_lengths)
+from ranato.algebraic_contours.core.rational_function import RationalFunction
+
 from ..utils.rational_function_testing_utils import \
     deserialize_rational_functions
 

@@ -7,14 +7,16 @@ from enum import Enum
 
 import numpy as np
 
-from ..core.bivariate_quadratic_function import \
+from ranato.algebraic_contours.core.bivariate_quadratic_function import \
     formatted_bivariate_quadratic_mapping
-from ..core.common import (COLS, Matrix2x2f, Matrix3x2f, Matrix6xNi,
-                           PlanarPoint1d, Vector1D, Vector2D, Vector3f)
-from ..core.interval import Interval
-from ..core.polynomial_function import (compute_polynomial_mapping_product,
-                                        formatted_polynomial)
-from ..core.rational_function import RationalFunction
+from ranato.algebraic_contours.core.common import (COLS, Matrix2x2f,
+                                                   Matrix3x2f, Matrix6xNi,
+                                                   PlanarPoint1d, Vector1D,
+                                                   Vector2D, Vector3f)
+from ranato.algebraic_contours.core.interval import Interval
+from ranato.algebraic_contours.core.polynomial_function import (
+    compute_polynomial_mapping_product, formatted_polynomial)
+from ranato.algebraic_contours.core.rational_function import RationalFunction
 
 logger: logging.Logger = logging.getLogger(__name__)
 

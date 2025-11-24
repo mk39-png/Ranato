@@ -1,9 +1,10 @@
 
 import numpy as np
 
-from ..core.common import Matrix3x2f, Vector3f, Vector6f, float_equal
-from ..core.conic import Conic, ConicType
-from ..core.rational_function import RationalFunction
+from ranato.algebraic_contours.core.common import (Matrix3x2f, Vector3f,
+                                                   Vector6f, float_equal)
+from ranato.algebraic_contours.core.conic import Conic, ConicType
+from ranato.algebraic_contours.core.rational_function import RationalFunction
 
 
 def test_zero_case() -> None:

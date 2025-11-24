@@ -10,26 +10,28 @@ import pytest
 from cholespy import CholeskySolverD
 from scipy.sparse import csr_matrix
 
-from ..core.affine_manifold import AffineManifold, ParametricAffineManifold
-from ..core.bivariate_quadratic_function import evaluate_quadratic_mapping
-from ..core.common import (DISCRETIZATION_LEVEL, SKY_BLUE, Matrix3x2f,
-                           Matrix6x3r, MatrixNx3f, MatrixXf, MatrixXi,
-                           PlanarPoint1d, SpatialVector, SpatialVector1d,
-                           compare_eigen_numpy_matrix,
-                           initialize_spot_control_mesh, vector_equal)
-from ..core.convex_polygon import ConvexPolygon
-from ..quadratic_spline_surface.optimize_spline_surface import (
+from ranato.algebraic_contours.core.affine_manifold import (
+    AffineManifold, ParametricAffineManifold)
+from ranato.algebraic_contours.core.bivariate_quadratic_function import \
+    evaluate_quadratic_mapping
+from ranato.algebraic_contours.core.common import (
+    DISCRETIZATION_LEVEL, SKY_BLUE, Matrix3x2f, Matrix6x3r, MatrixNx3f,
+    MatrixXf, MatrixXi, PlanarPoint1d, SpatialVector, SpatialVector1d,
+    compare_eigen_numpy_matrix, initialize_spot_control_mesh, vector_equal)
+from ranato.algebraic_contours.core.convex_polygon import ConvexPolygon
+from ranato.algebraic_contours.quadratic_spline_surface.optimize_spline_surface import (
     OptimizationParameters, build_twelve_split_spline_energy_system,
     generate_optimized_twelve_split_position_data)
-from ..quadratic_spline_surface.quadratic_spline_surface import \
+from ranato.algebraic_contours.quadratic_spline_surface.quadratic_spline_surface import \
     QuadraticSplineSurface
-from ..quadratic_spline_surface.quadratic_spline_surface_patch import \
+from ranato.algebraic_contours.quadratic_spline_surface.quadratic_spline_surface_patch import \
     QuadraticSplineSurfacePatch
-from ..quadratic_spline_surface.twelve_split_spline import (  # generate_affine_manifold_corner_data,; generate_affine_manifold_midpoint_data,
+from ranato.algebraic_contours.quadratic_spline_surface.twelve_split_spline import (  # generate_affine_manifold_corner_data,; generate_affine_manifold_midpoint_data,
     TriangleCornerData, TriangleMidpointData, TwelveSplitSplineSurface,
     generate_twelve_split_spline_patch_patch_boundaries,
     generate_twelve_split_spline_patch_patch_to_corner_map,
     generate_twelve_split_spline_patch_surface_mapping)
+
 from ..utils.generate_position_data import (
     QuadraticGradientFunction, QuadraticPositionFunction,
     generate_parametric_affine_manifold_corner_data,
