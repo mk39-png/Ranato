@@ -2,10 +2,14 @@
 Class to build circulators around vertices in VF representation
 """
 
+import logging
+
 import numpy as np
 
-from ..core.common import (LOGGER, PLACEHOLDER_VALUE, MatrixNx3i, Vector1D,
+from ..core.common import (PLACEHOLDER_VALUE, MatrixNx3i, Vector1D,
                            contains_vertex)
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 def contains_edge(face: Vector1D, vertex_0: int, vertex_1: int) -> bool:
@@ -129,7 +133,7 @@ def compute_vertex_one_ring_first_face(
     #  Get arbitrary adjacent face to start and vertex on the face
     current_face: int = adjacent_faces[0]
     current_vertex: int = find_next_vertex(F[current_face, :], vertex_index)
-    LOGGER.info("Starting search for first face from vertex %s on face %s",
+    logger.info("Starting search for first face from vertex %s on face %s",
                 current_vertex, F[current_face, :])
 
     # Cycle clockwise to a starting face
@@ -197,11 +201,11 @@ def compute_vertex_one_ring(F: np.ndarray,
                 face_one_ring[i] = f
 
     # Get final vertex(same as first for closed loop)
-    LOGGER.info("Adding last vertex for face %s from vertex %s",
+    logger.info("Adding last vertex for face %s from vertex %s",
                 F[face_one_ring[num_faces - 1], :], vertex_one_ring[num_faces - 1])
     vertex_one_ring[num_faces] = find_next_vertex(
         F[face_one_ring[num_faces - 1], :], vertex_one_ring[num_faces - 1])
-    LOGGER.info("Last vertex: %s", vertex_one_ring[num_faces])
+    logger.info("Last vertex: %s", vertex_one_ring[num_faces])
 
     return vertex_one_ring, face_one_ring
 

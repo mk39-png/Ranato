@@ -2,6 +2,7 @@
 Representation for quadratic surface patches with convex domains.
 """
 import json
+import logging
 import os
 from typing import TextIO
 
@@ -11,7 +12,7 @@ import polyscope as ps
 from ..core.bivariate_quadratic_function import (
     evaluate_quadratic_mapping, generate_monomial_to_bezier_matrix,
     generate_quadratic_coordinate_domain_triangle_normalization_matrix)
-from ..core.common import (LOGGER, ROWS, Matrix2x2f, Matrix3x2r, Matrix6x3f,
+from ..core.common import (ROWS, Matrix2x2f, Matrix3x2r, Matrix6x3f,
                            Matrix6x3r, Matrix6x6r, MatrixNx2f, PlanarPoint1d,
                            SpatialVector, SpatialVector1d, Vector3f,
                            compute_point_cloud_bounding_box, load_json, todo,
@@ -21,6 +22,9 @@ from ..core.evaluate_surface_normal import \
     generate_quadratic_surface_normal_coeffs
 from ..core.line_segment import LineSegment
 from ..core.rational_function import RationalFunction
+
+logger: logging.Logger = logging.getLogger(__name__)
+
 
 # **************************************
 # Quadratic Spline Surface Patch Helpers
@@ -584,10 +588,10 @@ class QuadraticSplineSurfacePatch:
         :param filepath: file path to write serialized patch to.
         :type filepath: str
         """
-        LOGGER.info("Writing spline patch to %s", filepath)
+        logger.info("Writing spline patch to %s", filepath)
 
         if os.path.isfile(filepath):
-            LOGGER.warning("Overwriting file at %s.", filepath)
+            logger.warning("Overwriting file at %s.", filepath)
 
         with open(filepath, 'w', encoding='utf-8') as output_file:
             self.serialize(output_file)

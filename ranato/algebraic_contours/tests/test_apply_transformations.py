@@ -1,11 +1,15 @@
 
 
+import logging
+
 import numpy as np
 
 from ..core.apply_transformation import \
     apply_camera_frame_transformation_to_vertices
-from ..core.common import (LOGGER, Matrix3x3f, compare_eigen_numpy_matrix,
+from ..core.common import (Matrix3x3f, compare_eigen_numpy_matrix,
                            initialize_spot_control_mesh)
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 def test_apply_camera_frame_transformation_to_vertices():
@@ -14,7 +18,7 @@ def test_apply_camera_frame_transformation_to_vertices():
     frame: Matrix3x3f = np.array([[1, 0, 0],
                                   [0, 1, 0],
                                   [0, 0, 1]])
-    LOGGER.info("Projecting onto frame:\n%s", frame)
+    logger.info("Projecting onto frame:\n%s", frame)
     V, uv, F, FT = initialize_spot_control_mesh()
     V_copy = apply_camera_frame_transformation_to_vertices(V, frame)
     compare_eigen_numpy_matrix(

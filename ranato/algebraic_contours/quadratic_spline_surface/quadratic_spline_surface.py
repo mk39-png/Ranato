@@ -1,4 +1,5 @@
 # from igl.pyigl_core import writeOBJ
+import logging
 import os
 from dataclasses import dataclass
 from typing import TextIO
@@ -7,8 +8,8 @@ import igl
 import numpy as np
 import polyscope
 
-from ..core.common import (COLS, DISCRETIZATION_LEVEL, HASH_TABLE_SIZE, LOGGER,
-                           ROWS, SKY_BLUE, Matrix3x2f, Matrix6x3f, MatrixNx3f,
+from ..core.common import (COLS, DISCRETIZATION_LEVEL, HASH_TABLE_SIZE, ROWS,
+                           SKY_BLUE, Matrix3x2f, Matrix6x3f, MatrixNx3f,
                            MatrixNx3i, MatrixXf, PatchIndex, PlanarPoint,
                            PlanarPoint1d, SpatialVector, SpatialVector1d,
                            Vector1D, convert_nested_vector_to_matrix,
@@ -17,6 +18,8 @@ from ..core.convex_polygon import ConvexPolygon
 from ..core.line_segment import LineSegment
 from ..quadratic_spline_surface.quadratic_spline_surface_patch import \
     QuadraticSplineSurfacePatch
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -272,9 +275,9 @@ class QuadraticSplineSurface:
             # XXX: need to increment patch_index
             patch_index += 1
 
-        LOGGER.info("%s surface vertices", V_tri.shape[ROWS])
-        LOGGER.info("%s surface faces", F_tri.shape[ROWS])
-        LOGGER.info("%s surface normals", N_tri.shape[ROWS])
+        logger.info("%s surface vertices", V_tri.shape[ROWS])
+        logger.info("%s surface faces", F_tri.shape[ROWS])
+        logger.info("%s surface normals", N_tri.shape[ROWS])
 
         return V_tri, F_tri, N_tri
 
@@ -441,7 +444,7 @@ class QuadraticSplineSurface:
         else:
             polyscope.set_view_projection_mode("perspective")
         polyscope.screenshot(filename)
-        LOGGER.info("Screenshot saved to %s", filename)
+        logger.info("Screenshot saved to %s", filename)
         polyscope.remove_all_structures()
 
     def serialize(self, output_file: TextIO) -> None:
@@ -545,11 +548,11 @@ class QuadraticSplineSurface:
         :param filepath: [in] file path for the serialized surface
         :type filepath: str
         """
-        LOGGER.info("Writing spline to %s", filepath)
+        logger.info("Writing spline to %s", filepath)
 
         # filepath: str = os.path.abspath(f"src\\tests\\spot_control\\{filename}")
         if os.path.isfile(filepath):
-            LOGGER.warning("Overwriting file at %s.", filepath)
+            logger.warning("Overwriting file at %s.", filepath)
 
         with open(filepath, 'w', encoding='utf-8') as output_file:
             self.serialize(output_file)
@@ -661,11 +664,11 @@ class QuadraticSplineSurface:
         hash_y = int((point[1] - self.__patches_bbox_y_min) // self.hash_y_interval)
 
         if (hash_x < 0) or (hash_x >= HASH_TABLE_SIZE):
-            LOGGER.error("x hash index out of bounds")
+            logger.error("x hash index out of bounds")
             hash_x: int = max(min(hash_x, HASH_TABLE_SIZE - 1), 0)
 
         if (hash_y < 0) or (hash_y >= HASH_TABLE_SIZE):
-            LOGGER.error("y hash index out of bounds")
+            logger.error("y hash index out of bounds")
             hash_y: int = max(min(hash_y, HASH_TABLE_SIZE - 1), 0)
 
         return (hash_x, hash_y)

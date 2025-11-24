@@ -11,9 +11,11 @@ topological information. Can be initialized from face topology information.
 
 import logging
 
-from ..core.common import (CHECK_VALIDITY, LOGGER, PLACEHOLDER_INDEX, Index,
+from ..core.common import (CHECK_VALIDITY, PLACEHOLDER_INDEX, Index,
                            MatrixNx3i, find_face_vertex_index, is_manifold)
 from ..core.vertex_circulator import VertexCirculator
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 def build_halfedge_to_edge_maps(opp: list[Index]
@@ -92,7 +94,7 @@ class Halfedge:
 
         if CHECK_VALIDITY:
             if not is_manifold(F):
-                LOGGER.error("Input mesh is not manifold")
+                logger.error("Input mesh is not manifold")
                 self.clear()
                 return
 
@@ -169,9 +171,9 @@ class Halfedge:
         self.__num_edges: int = len(self.__e2he)
 
         #  Check validity
-        if LOGGER.getEffectiveLevel() == logging.DEBUG:
+        if logger.getEffectiveLevel() == logging.DEBUG:
             if not self.is_valid():
-                LOGGER.error("Could not build halfedge")
+                logger.error("Could not build halfedge")
                 self.clear()
                 return
 
@@ -444,34 +446,34 @@ class Halfedge:
 
     def is_valid(self) -> bool:
         if len(self.__next) != self.num_halfedges:
-            LOGGER.error("next domain not in bijection with halfedges")
+            logger.error("next domain not in bijection with halfedges")
             return False
         if len(self.__opp) != self.num_halfedges:
-            LOGGER.error("opp domain not in bijection with halfedges")
+            logger.error("opp domain not in bijection with halfedges")
             return False
         if len(self.__he2e) != self.num_halfedges:
-            LOGGER.error("he2e domain not in bijection with halfedges")
+            logger.error("he2e domain not in bijection with halfedges")
             return False
         if len(self.__to) != self.num_halfedges:
-            LOGGER.error("to domain not in bijection with halfedges")
+            logger.error("to domain not in bijection with halfedges")
             return False
         if len(self.__from) != self.num_halfedges:
-            LOGGER.error("from domain not in bijection with halfedges")
+            logger.error("from domain not in bijection with halfedges")
             return False
         if len(self.__face) != self.num_halfedges:
-            LOGGER.error("face domain not in bijection with halfedges")
+            logger.error("face domain not in bijection with halfedges")
             return False
         if len(self.__e2he) != self.num_edges:
-            LOGGER.error("e2he domain not in bijection with edges")
+            logger.error("e2he domain not in bijection with edges")
             return False
         if len(self.__out) != self.num_vertices:
-            LOGGER.error("out domain not in bijection with vertices")
+            logger.error("out domain not in bijection with vertices")
             return False
         if len(self.__f2he) != self.num_faces:
-            LOGGER.error("f2he domain not in bijection with faces")
+            logger.error("f2he domain not in bijection with faces")
             return False
         if self.__F.shape[0] != self.num_faces:
-            LOGGER.error("F rows not in bijection with faces")
+            logger.error("F rows not in bijection with faces")
             return False
 
         return True

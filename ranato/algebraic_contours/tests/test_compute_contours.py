@@ -17,7 +17,7 @@ from ..contour_network.intersection_data import IntersectionData
 from ..core.affine_manifold import AffineManifold
 from ..core.apply_transformation import \
     apply_camera_frame_transformation_to_vertices
-from ..core.common import (LOGGER, Matrix3x3f, MatrixNx3f, PatchIndex,
+from ..core.common import (Matrix3x3f, MatrixNx3f, PatchIndex,
                            compare_eigen_numpy_matrix,
                            deserialize_eigen_matrix_csv_to_numpy,
                            initialize_spot_control_mesh, unimplemented)
@@ -40,6 +40,8 @@ from ..utils.projected_curve_networks_utils import SVGOutputMode
 from ..utils.rational_function_testing_utils import (
     compare_rational_functions, compare_rational_functions_from_file,
     deserialize_rational_functions)
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 # **************
@@ -68,13 +70,13 @@ def _initialize_contour_info_spot_mesh() -> tuple[TwelveSplitSplineSurface,
     pad: float = invisibility_params.pad_amount
     invisibility_method: InvisibilityMethod = invisibility_params.invisibility_method
     show_nodes: bool = False
-    LOGGER.setLevel(logging.INFO)
+    logger.setLevel(logging.INFO)
 
     # Set up the camera
     frame: Matrix3x3f = np.array([[1, 0, 0],
                                   [0, 1, 0],
                                   [0, 0, 1]])
-    LOGGER.info("Projecting onto frame:\n%s", frame)
+    logger.info("Projecting onto frame:\n%s", frame)
     V:  np.ndarray
     uv: np.ndarray
     F:  np.ndarray
@@ -83,7 +85,7 @@ def _initialize_contour_info_spot_mesh() -> tuple[TwelveSplitSplineSurface,
     V_transformed: MatrixNx3f = apply_camera_frame_transformation_to_vertices(V, frame)
 
     # Generate quadratic spline
-    LOGGER.info("Comnputing spline surface")
+    logger.info("Comnputing spline surface")
     affine_manifold: AffineManifold = AffineManifold(F, uv, FT)
     spline_surface: TwelveSplitSplineSurface = TwelveSplitSplineSurface(V_transformed,
                                                                         affine_manifold,

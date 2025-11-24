@@ -4,6 +4,7 @@ Methods to generate a quadratic surface with twelve split Powell-Sabin basis
 coefficients
 """
 import copy
+import logging
 from collections import defaultdict
 
 import igl
@@ -13,9 +14,9 @@ from cholespy import CholeskySolverD
 from scipy.sparse import csr_matrix
 
 from ..core.affine_manifold import AffineManifold, VertexManifoldChart
-from ..core.common import (COLS, DISCRETIZATION_LEVEL, LOGGER, ROWS, SKY_BLUE,
-                           Index, Matrix6x3f, Matrix6x12f, Matrix12x3f,
-                           MatrixNx3f, MatrixXf, MatrixXi, Vector1D, Vector3f,
+from ..core.common import (COLS, DISCRETIZATION_LEVEL, ROWS, SKY_BLUE, Index,
+                           Matrix6x3f, Matrix6x12f, Matrix12x3f, MatrixNx3f,
+                           MatrixXf, MatrixXi, Vector1D, Vector3f,
                            unimplemented)
 from ..core.compute_boundaries import compute_face_boundary_edges
 from ..core.convex_polygon import ConvexPolygon
@@ -32,6 +33,8 @@ from ..quadratic_spline_surface.quadratic_spline_surface import \
     QuadraticSplineSurface
 from ..quadratic_spline_surface.quadratic_spline_surface_patch import \
     QuadraticSplineSurfacePatch
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 class TwelveSplitSplineSurface(QuadraticSplineSurface):
@@ -429,7 +432,7 @@ def compute_twelve_split_spline_patch_boundary_edges(F: MatrixXi,
 
     :return patch_boundary_edges: edges of the patch triangle domains that are boundaries
     """
-    LOGGER.info("Computing patch boundary edges for mesh with %s faces", F.shape[ROWS])  # rows
+    logger.info("Computing patch boundary edges for mesh with %s faces", F.shape[ROWS])  # rows
     patch_boundary_edges: list[tuple[int, int]] = []
 
     # Validate input

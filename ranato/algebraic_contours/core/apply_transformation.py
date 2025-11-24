@@ -8,15 +8,19 @@ But anyways, could convert to MathUtils and back...
 """
 
 
+import logging
+
 import numpy as np
 
-from ..core.common import (LOGGER, ROWS, Matrix3x3f, Matrix4x4f, MatrixNx3f,
+from ..core.common import (ROWS, Matrix3x3f, Matrix4x4f, MatrixNx3f,
                            SpatialVector1d, Vector4f,
-                           compute_point_cloud_bounding_box, float_equal, todo,
-                           unimplemented)
+                           compute_point_cloud_bounding_box, float_equal,
+                           logger, todo, unimplemented)
 from ..core.generate_transformation import (
     origin_to_infinity_projective_matrix, rotate_frame_projective_matrix,
     translation_projective_matrix)
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 def convert_point_to_homogeneous_coords(point: SpatialVector1d) -> Vector4f:
@@ -178,8 +182,8 @@ def apply_camera_frame_transformation_to_vertices(input_V: MatrixNx3f,
     min_point, max_point = compute_point_cloud_bounding_box(input_V)
     mesh_midpoint: SpatialVector1d = 0.5 * (max_point + min_point)
     bounding_box_diagonal: SpatialVector1d = max_point - min_point
-    LOGGER.info("Initial mesh bounding box: %s, %s", min_point, max_point)
-    LOGGER.info("Initial mesh midpoint: %s", mesh_midpoint)
+    logger.info("Initial mesh bounding box: %s, %s", min_point, max_point)
+    logger.info("Initial mesh midpoint: %s", mesh_midpoint)
 
     # Normalize the vertices
     scale_factor: float = bounding_box_diagonal.max()
@@ -195,9 +199,9 @@ def apply_camera_frame_transformation_to_vertices(input_V: MatrixNx3f,
     # logger.info("Normalized mesh midpoint: %s", mesh_midpoint)
 
     # Generate rotation matrix
-    LOGGER.info("Projecting onto frame:\n%s", frame)
+    logger.info("Projecting onto frame:\n%s", frame)
     frame_rotation_matrix: Matrix4x4f = rotate_frame_projective_matrix(frame)
-    LOGGER.debug("Frame rotation matrix:\n%s", frame_rotation_matrix)
+    logger.debug("Frame rotation matrix:\n%s", frame_rotation_matrix)
 
     # Generate translation matrix
     z_distance: float = 5.0
@@ -215,15 +219,15 @@ def apply_camera_frame_transformation_to_vertices(input_V: MatrixNx3f,
         projective_transformation = translation_matrix @ frame_rotation_matrix
 
     # Apply the transformations
-    LOGGER.info("Apply transformation:\n%s", projective_transformation)
+    logger.info("Apply transformation:\n%s", projective_transformation)
     apply_transformation_to_vertices_in_place(output_V, projective_transformation)
 
     if recenter_mesh:
         # Renormalize the projected vertices
         min_point, max_point = compute_point_cloud_bounding_box(output_V, )
         mesh_midpoint = 0.5 * (max_point + min_point)
-        LOGGER.info("Projected mesh bounding box: %s, %s", min_point, max_point)
-        LOGGER.info("Projected mesh midpoint: %s", mesh_midpoint)
+        logger.info("Projected mesh bounding box: %s, %s", min_point, max_point)
+        logger.info("Projected mesh midpoint: %s", mesh_midpoint)
         bounding_box_diagonal = max_point - min_point
         scale_factor = np.linalg.norm(bounding_box_diagonal)
         for i in range(num_vertices):
@@ -232,7 +236,7 @@ def apply_camera_frame_transformation_to_vertices(input_V: MatrixNx3f,
     # Check final midpoint location
     min_point, max_point = compute_point_cloud_bounding_box(output_V)
     mesh_midpoint = 0.5 * (max_point + min_point)
-    LOGGER.info("Final mesh bounding box: %s, %s", min_point, max_point)
-    LOGGER.info("Final mesh midpoint: %s", mesh_midpoint)
+    logger.info("Final mesh bounding box: %s, %s", min_point, max_point)
+    logger.info("Final mesh midpoint: %s", mesh_midpoint)
 
     return output_V

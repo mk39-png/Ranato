@@ -11,15 +11,19 @@ be applied.
 
 Used by optimize_spline_surface.py
 """
+import logging
 from typing import Literal
 
 import numpy as np
 
-from ..core.common import (COLS, LOGGER, PLACEHOLDER_VALUE, ROWS, Index,
-                           Matrix2x3r, SpatialVector1d, TwelveSplitGradient,
+from ..core.common import (COLS, PLACEHOLDER_VALUE, ROWS, Index, Matrix2x3r,
+                           SpatialVector1d, TwelveSplitGradient,
                            TwelveSplitHessian, Vector1D)
 from ..core.differentiable_variable import generate_local_variable_matrix_index
 from ..core.halfedge import Halfedge
+
+logger: logging.Logger = logging.getLogger(__name__)
+
 
 # *******************
 # Local block indices
@@ -294,7 +298,7 @@ def generate_six_split_variable_value_vector(vertex_positions: list[SpatialVecto
     num_variable_vertices: int = len(variable_vertices)
     if num_variable_vertices == 0:
         # FIXME: determine severity of warning (i.e. Exception or not)
-        LOGGER.warning("Building value vector for zero variable vertices")
+        logger.warning("Building value vector for zero variable vertices")
         variable_values: Vector1D = np.ndarray(shape=(0, 0))
         raise Exception("building value vector for zero variable vertices")
         return variable_values
@@ -745,8 +749,8 @@ def update_energy_quadratic(local_energy: float,
     :param  derivatives_ref: [out] global energy gradient
     :param  hessian_ref:     [out] global energy Hessian
     """
-    LOGGER.info("Adding local face energy %s", local_energy)
-    LOGGER.info("Local to global map: %s", local_to_global_map)
+    logger.info("Adding local face energy %s", local_energy)
+    logger.info("Local to global map: %s", local_to_global_map)
     assert derivatives_ref.ndim == 1  # shape (36, 1)
     assert local_derivatives.ndim == 1
     assert local_hessian.ndim == 2

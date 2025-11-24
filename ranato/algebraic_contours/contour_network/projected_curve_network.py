@@ -2,7 +2,6 @@
 Methods to compute a simple planar curve network from annotated plane curve
 soup.
 """
-import copy
 import logging
 from typing import Literal
 
@@ -17,7 +16,7 @@ from ..contour_network.write_output import (add_curve_to_svg,
                                             write_planar_point)
 from ..core.abstract_curve_network import AbstractCurveNetwork
 from ..core.common import (CHECK_VALIDITY,
-                           INLINE_TESTING_ENABLED_CONTOUR_NETWORK, LOGGER,
+                           INLINE_TESTING_ENABLED_CONTOUR_NETWORK,
                            PLACEHOLDER_VALUE, TESTING_FOLDER_SOURCE, Color,
                            MatrixXf, NodeIndex, PlanarPoint1d, SegmentIndex,
                            SpatialVector1d, Vector3f,
@@ -34,6 +33,9 @@ from ..utils.projected_curve_networks_utils import (
     compare_list_node_geometry, connect_segment_intersections,
     is_valid_next_prev_pair, remove_redundant_intersections,
     split_segments_at_cusps, split_segments_at_intersections)
+
+logger: logging.Logger = logging.getLogger(__name__)
+
 
 # ***********************
 # Helper Methods
@@ -56,7 +58,7 @@ class SegmentChainIterator():
         self.__current_segment_index: SegmentIndex = segment_index
         self.__is_end_of_chain: bool = False
         self.__is_reverse_end_of_chain: bool = False
-        LOGGER.debug("Iterator initialized to segment %s", self.__current_segment_index)
+        logger.debug("Iterator initialized to segment %s", self.__current_segment_index)
 
     def increment(self) -> None:
         """
@@ -77,7 +79,7 @@ class SegmentChainIterator():
         else:
             self.__current_segment_index = self.__parent.next(self.__current_segment_index)
 
-        LOGGER.debug("Iterator moved to segment %s", self.__current_segment_index)
+        logger.debug("Iterator moved to segment %s", self.__current_segment_index)
 
     def decrement(self) -> None:
         """
@@ -97,7 +99,7 @@ class SegmentChainIterator():
         else:
             self.__current_segment_index = self.__parent.prev(self.__current_segment_index)
 
-        LOGGER.debug("Iterator moved to segment %s", self.__current_segment_index)
+        logger.debug("Iterator moved to segment %s", self.__current_segment_index)
 
     @property
     def at_end_of_chain(self) -> bool:
@@ -215,7 +217,7 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
 
             # Check the validity of the geometric graph structure
             if not self._is_valid_projected_curve_network():
-                LOGGER.error("Invalid projected curve network made")
+                logger.error("Invalid projected curve network made")
                 raise RuntimeError("Invalid projected curve network made")
 
     # ******
@@ -301,7 +303,7 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
         Sets quantitative invisibility of segment
         """
         if new_quantitative_invisibility < 0:
-            LOGGER.error("Cannot set negative segment QI")
+            logger.error("Cannot set negative segment QI")
             return
         self.segments[segment_index].quantitative_invisibility = new_quantitative_invisibility
 
@@ -442,7 +444,7 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
             elif self.is_path_end_node(ni):
                 spatial_path_end_nodes.append(spatial_point)
 
-        LOGGER.debug("Enumerated %s spatial intersection nodes",
+        logger.debug("Enumerated %s spatial intersection nodes",
                      len(spatial_intersection_nodes))
 
         return (spatial_knot_nodes,
@@ -510,7 +512,7 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
         """
         assert self._is_valid_node_index(node_index)
         if not self._is_valid_node_index(node_index):
-            LOGGER.error("Invalid node query")
+            logger.error("Invalid node query")
             raise ValueError("Invalid node query")
 
             return False
@@ -523,7 +525,7 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
         """
         assert self._is_valid_node_index(node_index)
         if not self._is_valid_node_index(node_index):
-            LOGGER.error("Invalid node query")
+            logger.error("Invalid node query")
             raise ValueError("Invalid node query")
             return False
 
@@ -535,7 +537,7 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
         """
         assert self._is_valid_node_index(node_index)
         if not self._is_valid_node_index(node_index):
-            LOGGER.error("Invalid node query")
+            logger.error("Invalid node query")
             raise ValueError("Invalid node query")
             return False
         return self.__nodes[node_index].is_intersection()
@@ -546,7 +548,7 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
         """
         assert self._is_valid_node_index(node_index)
         if not self._is_valid_node_index(node_index):
-            LOGGER.error("Invalid node query")
+            logger.error("Invalid node query")
             return False
         return self.__nodes[node_index].is_interior_cusp()
 
@@ -556,7 +558,7 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
         """
         assert self._is_valid_node_index(node_index)
         if not self._is_valid_node_index(node_index):
-            LOGGER.error("Invalid node query")
+            logger.error("Invalid node query")
             raise ValueError("Invalid node query")
 
             return False
@@ -568,7 +570,7 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
         """
         assert self._is_valid_node_index(node_index)
         if not self._is_valid_node_index(node_index):
-            LOGGER.error("Invalid node query")
+            logger.error("Invalid node query")
             raise ValueError("Invalid node query")
 
             return False
@@ -580,7 +582,7 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
         """
         assert self._is_valid_node_index(node_index)
         if not self._is_valid_node_index(node_index):
-            LOGGER.error("Invalid node query")
+            logger.error("Invalid node query")
             raise ValueError("Invalid node query")
 
             return False
@@ -659,7 +661,7 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
         elif self._is_valid_segment_index(self.out(node_index)):
             return self.node_spatial_out_tangent(node_index)
         else:
-            LOGGER.error("Isolated node")
+            logger.error("Isolated node")
             return np.zeros(shape=(3, ), dtype=np.float64)
 
     def node_planar_in_tangent(self, node_index: NodeIndex) -> PlanarPoint1d:
@@ -698,7 +700,7 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
             assert planar_tangent.shape == (2, )
             return planar_tangent
         else:
-            LOGGER.error("Isolated node")
+            logger.error("Isolated node")
             return np.zeros(shape=(2, ), dtype=np.float64)
 
     def get_node_quantitative_invisibility(self, node_index: NodeIndex) -> int:
@@ -714,7 +716,7 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
         Sets quantitative invisibility at node_index.
         """
         if new_quantitative_invisibility < 0:
-            LOGGER.error("Cannot set negative node QI")
+            logger.error("Cannot set negative node QI")
             return
         self.nodes[node_index].quantitative_invisibility = new_quantitative_invisibility
 
@@ -783,15 +785,15 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
             for i in range(self.num_nodes):
                 node_point: PlanarPoint1d = self.node_planar_point(i)
                 if self.is_boundary_cusp_node(i):
-                    LOGGER.info("Writing boundary cusp node at %s", node_point)
+                    logger.info("Writing boundary cusp node at %s", node_point)
                     write_planar_point(
                         node_point, svg_elements, 800, 400, (0, 0, 0.545, 1))  # Blue
                 elif self.is_interior_cusp_node(i):
-                    LOGGER.info("Writing interior cusp node at %s", node_point)
+                    logger.info("Writing interior cusp node at %s", node_point)
                     write_planar_point(
                         node_point, svg_elements, 800, 400, (0.537, 0.671, 0.890, 1))  # Light blue
                 elif self.is_intersection_node(i):
-                    LOGGER.info("Writing intersection node at %s", node_point)
+                    logger.info("Writing intersection node at %s", node_point)
                     write_planar_point(
                         node_point, svg_elements, 800, 400, (0.227, 0.420, 0.208, 1))  # Green
 
@@ -1051,24 +1053,24 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
         num_segments: int = len(planar_segments)
 
         if len(parameter_segments) != num_segments:
-            LOGGER.error("Inconsistent number of segments")
+            logger.error("Inconsistent number of segments")
         if len(spatial_segments) != num_segments:
-            LOGGER.error("Inconsistent number of segments")
+            logger.error("Inconsistent number of segments")
         if len(planar_segments) != num_segments:
-            LOGGER.error("Inconsistent number of segments")
+            logger.error("Inconsistent number of segments")
         if len(segment_labels) != num_segments:
-            LOGGER.error("Inconsistent number of segments")
+            logger.error("Inconsistent number of segments")
         if len(chain_labels) != num_segments:
-            LOGGER.error("Inconsistent number of segments")
+            logger.error("Inconsistent number of segments")
         if len(interior_cusps) != num_segments:
-            LOGGER.error("Inconsistent number of segments")
+            logger.error("Inconsistent number of segments")
         if len(has_cusp_at_base) != num_segments:
-            LOGGER.error("Inconsistent number of segments")
+            logger.error("Inconsistent number of segments")
         if len(intersections) != num_segments:
-            LOGGER.error("Inconsistent number of segments")
+            logger.error("Inconsistent number of segments")
         if len(intersection_indices) != num_segments:
-            LOGGER.error("Inconsistent number of segments")
-        LOGGER.info("Building projected curve network for %s segments",
+            logger.error("Inconsistent number of segments")
+        logger.info("Building projected curve network for %s segments",
                     num_segments)
 
         # Connect segments into chains before splitting at intersections
@@ -1116,9 +1118,9 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
         assert self._is_valid_curve_data(to_array, out_array)
 
         for i, _ in enumerate(intersection_nodes):
-            LOGGER.info("Intersection %s: %s", i, intersection_nodes[i])
+            logger.info("Intersection %s: %s", i, intersection_nodes[i])
             if (len(intersection_nodes[i]) != 2) and (len(intersection_nodes[i]) != 0):
-                LOGGER.warning("Intersection %s does not have two nodes: %s",
+                logger.warning("Intersection %s does not have two nodes: %s",
                                i,
                                intersection_nodes[i])
 
@@ -1164,7 +1166,7 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
             is_covered_node[ni] = True
             start_si: SegmentIndex = self.out(ni)
             if not self._is_valid_segment_index(start_si):
-                LOGGER.error("Start node is an end point")
+                logger.error("Start node is an end point")
                 raise ValueError("Start node is an end point")
                 return False
 
@@ -1182,7 +1184,7 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
         for ni in range(self.num_nodes):
             if not is_covered_node[ni]:
                 num_missed_nodes += 1
-                LOGGER.error("%s node %s is not covered by chain iteration",
+                logger.error("%s node %s is not covered by chain iteration",
                              self.nodes[ni].formatted_node(),
                              ni)
                 raise ValueError("%s node %s is not covered by chain iteration",
@@ -1192,11 +1194,11 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
         num_missed_segments = 0
         for si in range(self.num_segments):
             if not is_covered_segment[si]:
-                LOGGER.error("Segment %s is not covered by chain iteration", si)
+                logger.error("Segment %s is not covered by chain iteration", si)
                 raise ValueError("Segment %s is not covered by chain iteration", si)
 
         if (num_missed_segments > 0) or (num_missed_nodes > 0):
-            LOGGER.error("Missed %s nodes and %s segments",
+            logger.error("Missed %s nodes and %s segments",
                          num_missed_nodes,
                          num_missed_segments)
             raise ValueError("Missed %s nodes and %s segments",
@@ -1248,7 +1250,7 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
             all_nodes_covered = True
             for ni in range(num_nodes):
                 if not is_covered_node[ni]:
-                    LOGGER.debug("Marking node %s on closed featureless contour", ni)
+                    logger.debug("Marking node %s on closed featureless contour", ni)
                     self.__nodes[ni].mark_as_marked_knot()
                     self.__chain_start_nodes.append(ni)
                     all_nodes_covered = False
@@ -1419,7 +1421,7 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
         if CHECK_VALIDITY:
             # Check if the connectivity has consistent next/prev pairs
             if not is_valid_next_prev_pair(next_, prev):
-                LOGGER.error("Invalid next/prev pair found")
+                logger.error("Invalid next/prev pair found")
                 raise ValueError("Invalid next/prev pair found")
                 return simplified_points, simplified_polylines
 
@@ -1432,7 +1434,7 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
 
             # Go back until the start of the chain is found
             start_index: int = i
-            LOGGER.info("Processing start index %s", start_index)
+            logger.info("Processing start index %s", start_index)
             while prev[start_index] != -1:
                 start_index = prev[start_index]
 
@@ -1458,7 +1460,7 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
                     points.append(all_points[current_index][j - 1])
                 prev_index = current_index
                 current_index = next_[current_index]
-                LOGGER.info("Processing index %s", current_index)
+                logger.info("Processing index %s", current_index)
 
                 # Break if current index is invalid or check for consistency
                 if current_index == -1:
@@ -1467,7 +1469,7 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
                 start_point: PlanarPoint1d = all_points[current_index][0]
                 difference: PlanarPoint1d = start_point - end_point
                 if difference.dot(difference) > 2e-4:
-                    LOGGER.error("Points %s and %s are distant", end_point, start_point)
+                    logger.error("Points %s and %s are distant", end_point, start_point)
                     raise ValueError("Points %s and %s are distant", end_point, start_point)
                 condition: bool = (current_index != start_index)
 
@@ -1571,11 +1573,11 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
         visible_curve_start_nodes: list[NodeIndex]
         visible_curve_end_nodes: list[NodeIndex]
         visible_curve_start_nodes, visible_curve_end_nodes = self.get_visible_curves()
-        LOGGER.info("%s start points and %s end points found",
+        logger.info("%s start points and %s end points found",
                     len(visible_curve_start_nodes),
                     len(visible_curve_end_nodes))
-        LOGGER.info("Start nodes are %s", visible_curve_start_nodes)
-        LOGGER.info("End nodes are %s", visible_curve_end_nodes)
+        logger.info("Start nodes are %s", visible_curve_start_nodes)
+        logger.info("End nodes are %s", visible_curve_end_nodes)
 
         # Write all curves
         for i, _ in enumerate(visible_curve_start_nodes):
@@ -1599,11 +1601,11 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
         closed_curve_start_nodes: list[NodeIndex]
         closed_curve_end_nodes: list[NodeIndex]
         closed_curve_start_nodes, closed_curve_end_nodes = self.get_closed_curves()
-        LOGGER.info("%s start points and %s end points found",
+        logger.info("%s start points and %s end points found",
                     len(closed_curve_start_nodes),
                     len(closed_curve_end_nodes))
-        LOGGER.info("Start nodes are %s", closed_curve_start_nodes)
-        LOGGER.info("End nodes are %s", closed_curve_end_nodes)
+        logger.info("Start nodes are %s", closed_curve_start_nodes)
+        logger.info("End nodes are %s", closed_curve_end_nodes)
 
         # Write all curves
         for i, _ in enumerate(closed_curve_start_nodes):
@@ -1627,7 +1629,7 @@ class ProjectedCurveNetwork(AbstractCurveNetwork):
         visible_curve_start_nodes: list[NodeIndex]
         visible_curve_end_nodes: list[NodeIndex]
         visible_curve_start_nodes, visible_curve_end_nodes = self.get_visible_curves()
-        LOGGER.info("%s start points and %s end points found",
+        logger.info("%s start points and %s end points found",
                     len(visible_curve_start_nodes),
                     len(visible_curve_end_nodes))
 

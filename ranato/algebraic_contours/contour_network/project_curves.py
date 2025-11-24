@@ -4,11 +4,15 @@ project_curves.py
 Given a rational spatial curve and view direction, project the curve to a planar curve
 """
 
+import logging
+
 import numpy as np
 
 from ..contour_network.validity import is_valid_frame
-from ..core.common import LOGGER, Matrix3x3f, Matrix5x2f, Matrix5x3f, Vector5f
+from ..core.common import Matrix3x3f, Matrix5x2f, Matrix5x3f, Vector5f
 from ..core.rational_function import RationalFunction
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 def _project_curve(spatial_curve: RationalFunction, frame: Matrix3x3f) -> RationalFunction:
@@ -24,14 +28,14 @@ def _project_curve(spatial_curve: RationalFunction, frame: Matrix3x3f) -> Ration
     assert is_valid_frame(frame)
 
     # Get coordinates for spatial curve
-    LOGGER.debug("Getting spatial curve coefficients")
+    logger.debug("Getting spatial curve coefficients")
     spatial_P_coeffs: Matrix5x3f = spatial_curve.numerators
     assert spatial_P_coeffs.shape == (5, 3)
     Q_coeffs: Vector5f = spatial_curve.denominator
     assert Q_coeffs.shape == (5, )
 
     # Build planar curve coefficients
-    LOGGER.debug("Getting planar curve coefficients")
+    logger.debug("Getting planar curve coefficients")
     # FIXME: probably problem with shaping... as in we may not need to transpose.
     # shape (5, 1) = (5, 3) @ (1, 3).T --> (5, 3) @ (3, 1) --> (5, 1)
     # TODO: remove unnecessary transpose

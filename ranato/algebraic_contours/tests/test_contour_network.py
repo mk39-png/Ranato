@@ -28,6 +28,9 @@ from .utils_testing import (initialize_affine_manifold,
                             load_mesh_testing, obj_filepaths,
                             projection_matrices, projection_on_vertices)
 
+logger: logging.Logger = logging.getLogger(__name__)
+
+
 # TODO: the deserialization of rational functions and then printing of rational functions should be the same as the whole rational functions.txt file
 
 
@@ -63,13 +66,13 @@ def test_contour_network() -> None:
     pad: float = invisibility_params.pad_amount
     invisibility_method: InvisibilityMethod = invisibility_params.invisibility_method
     show_nodes: bool = False
-    LOGGER.setLevel(logging.INFO)
+    logger.setLevel(logging.INFO)
 
     # Set up the camera
     frame: Matrix3x3f = np.array([[1, 0, 0],
                                   [0, 1, 0],
                                   [0, 0, 1]])
-    LOGGER.info("Projecting onto frame:\n%s", frame)
+    logger.info("Projecting onto frame:\n%s", frame)
     V:  np.ndarray
     uv: np.ndarray
     F:  np.ndarray
@@ -85,7 +88,7 @@ def test_contour_network() -> None:
     V_transformed: MatrixNx3f = apply_transformation_to_vertices(V, np.array(projection_matrix))
 
     # Generate quadratic spline
-    LOGGER.info("Computing spline surface")
+    logger.info("Computing spline surface")
     affine_manifold: AffineManifold = AffineManifold(F, uv, FT)
     spline_surface: TwelveSplitSplineSurface = TwelveSplitSplineSurface(V_transformed,
                                                                         affine_manifold,
@@ -97,7 +100,7 @@ def test_contour_network() -> None:
         compute_twelve_split_spline_patch_boundary_edges(F, spline_surface.face_to_patch_indices))
 
     # Build the contours
-    LOGGER.info("Computing contours")
+    logger.info("Computing contours")
     contour_network = ContourNetwork(
         spline_surface,
         intersect_params,
@@ -106,7 +109,7 @@ def test_contour_network() -> None:
     )
 
     # Save the contours to file
-    LOGGER.info("Saving contours")
+    logger.info("Saving contours")
     contour_network_file: str = "contours.svg"
     contour_network_path: str = os.path.abspath(f"src\\tests\\spot_control\\{contour_network_file}")
     contour_network.write(contour_network_path, svg_output_mode, show_nodes)

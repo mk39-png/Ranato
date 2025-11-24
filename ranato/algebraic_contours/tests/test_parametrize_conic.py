@@ -1,18 +1,22 @@
 
+import logging
+
 import numpy as np
 
 from ..core.bivariate_quadratic_function import (evaluate_quadratic,
                                                  evaluate_quadratic_mapping)
-from ..core.common import LOGGER, PlanarPoint1d, Vector6f, float_equal, todo
+from ..core.common import PlanarPoint1d, Vector6f, float_equal, todo
 from ..core.conic import Conic, ConicType
 from ..core.parametrize_conic import identify_conic, parametrize_conic
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 def _test_parametrization(C_coeffs: Vector6f) -> bool:
     """
     """
     assert C_coeffs.shape == (6, )
-    LOGGER.info("Testing conic with equation %s", C_coeffs)
+    logger.info("Testing conic with equation %s", C_coeffs)
 
     conics: list[Conic] = parametrize_conic(C_coeffs)
     for conic in conics:

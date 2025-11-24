@@ -1,18 +1,22 @@
+"""
 
-
+"""
 import copy
+import logging
 from enum import Enum
 
 import numpy as np
 
 from ..core.bivariate_quadratic_function import \
     formatted_bivariate_quadratic_mapping
-from ..core.common import (COLS, LOGGER, Matrix2x2f, Matrix3x2f, Matrix6xNi,
+from ..core.common import (COLS, Matrix2x2f, Matrix3x2f, Matrix6xNi,
                            PlanarPoint1d, Vector1D, Vector2D, Vector3f)
 from ..core.interval import Interval
 from ..core.polynomial_function import (compute_polynomial_mapping_product,
                                         formatted_polynomial)
 from ..core.rational_function import RationalFunction
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 class ConicType(Enum):
@@ -122,7 +126,7 @@ class Conic(RationalFunction):
         assert F_coeffs.shape == (6, dimension)
         assert F_coeffs.dtype == np.float64
 
-        LOGGER.debug("Pulling back conic by quadratic function %s",
+        logger.debug("Pulling back conic by quadratic function %s",
                      formatted_bivariate_quadratic_mapping(dimension, F_coeffs))
 
         # Separate the individual polynomial coefficients from the rational function
@@ -135,10 +139,10 @@ class Conic(RationalFunction):
         assert v_coeffs.shape == (3, )
         assert Q_coeffs.shape == (3, )
 
-        LOGGER.debug("u function before pullback: (%s)/(%s)",
+        logger.debug("u function before pullback: (%s)/(%s)",
                      u_coeffs, Q_coeffs)
 
-        LOGGER.debug("v function before pullback: (%s)/(%s)",
+        logger.debug("v function before pullback: (%s)/(%s)",
                      v_coeffs, Q_coeffs)
         # formatted_polynomial(self.get_degree, self.get_dimension, u_coeffs),
         # formatted_polynomial(self.get_degree, self.get_dimension, Q_coeffs))
@@ -176,17 +180,17 @@ class Conic(RationalFunction):
                                     uu_coeffs,
                                     vv_coeffs]).T
         assert monomial_coeffs.shape == (5, 6)
-        LOGGER.debug("Monomial coefficients matrix:\n%s", monomial_coeffs)
+        logger.debug("Monomial coefficients matrix:\n%s", monomial_coeffs)
 
         # Compute the pulled back rational function numerator
-        LOGGER.debug("Quadratic coefficient matrix:\n%s", F_coeffs)
+        logger.debug("Quadratic coefficient matrix:\n%s", F_coeffs)
         pullback_coeffs = monomial_coeffs @ F_coeffs
         assert pullback_coeffs.shape == (5, dimension)
 
-        LOGGER.debug("Pullback numerator: %s",
+        logger.debug("Pullback numerator: %s",
                      pullback_coeffs)
         # formatted_polynomial(self.get_degree, self.get_dimension, pullback_coeffs))
-        LOGGER.debug("Pullback denominator: %s",
+        logger.debug("Pullback denominator: %s",
                      QQ_coeffs)
         # formatted_polynomial(self.get_degree, self.get_dimension, QQ_coeffs))
 

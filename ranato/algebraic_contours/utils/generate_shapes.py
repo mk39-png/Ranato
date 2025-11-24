@@ -1,10 +1,13 @@
 
+import logging
 import math
 
 import numpy as np
 
 from ..core.common import *
 from ..core.conic import Conic
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 def generate_circle(radius: float) -> Conic:
@@ -386,7 +389,7 @@ def generate_mesh_from_grid(point_grid: list[list[SpatialVector]],
             assert len(l[2*flatten(i, j, N)]) == 3
             assert len(l[2*flatten(i, j, N) + 1]) == 3
 
-    LOGGER.debug("Faces:\n%s", F)
+    logger.debug("Faces:\n%s", F)
 
     assert len(l) == 2 * N * N
 

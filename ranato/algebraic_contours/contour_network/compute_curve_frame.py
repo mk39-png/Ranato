@@ -4,8 +4,10 @@ compute_curve_frame.py
 Methods to compute a curve aligned frame for quadratic and spline surfaces.
 """
 
-from ..core.common import (LOGGER, Matrix5x3f, Matrix6x3f, Matrix9x3f,
-                           Matrix13x3f, Vector5f, Vector9f, Vector13f)
+import logging
+
+from ..core.common import (Matrix5x3f, Matrix6x3f, Matrix9x3f, Matrix13x3f,
+                           Vector5f, Vector9f, Vector13f)
 from ..core.conic import Conic
 from ..core.polynomial_function import (
     compute_polynomial_mapping_cross_product,
@@ -13,6 +15,8 @@ from ..core.polynomial_function import (
 from ..core.rational_function import RationalFunction
 from ..quadratic_spline_surface.quadratic_spline_surface_patch import \
     QuadraticSplineSurfacePatch
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 # ****************
 # Helper Methods
@@ -25,13 +29,13 @@ def _compute_quadratic_surface_curve_tangent(surface_mapping_coeffs: Matrix6x3f,
     Compute tangent of a curve on a quadratic surface. degree = 8, dimension = 3
     """
     # Lift the domain curve to a surface curve
-    LOGGER.info("Computing quadratic surface curve tangent")
-    LOGGER.info("Domain curve: %s", domain_curve)
+    logger.info("Computing quadratic surface curve tangent")
+    logger.info("Domain curve: %s", domain_curve)
     surface_curve: RationalFunction  # degree = 4, dimension = 3
     surface_curve = domain_curve.pullback_quadratic_function(3, surface_mapping_coeffs)
     assert surface_curve.degree == 4
     assert surface_curve.dimension == 3
-    LOGGER.info("Surface curve: %s", surface_curve)
+    logger.info("Surface curve: %s", surface_curve)
 
     # Compute the tangent of the surface curve directly
     surface_curve_tangent: RationalFunction = surface_curve.compute_derivative()
@@ -141,7 +145,7 @@ def compute_spline_surface_patch_curve_frame(spline_surface_patch: QuadraticSpli
     :return surface_curve_tangent_normal: function for the tangent normal on the curve.
         surface_curve_tangent_normal with degree 12, dimension 3
     """
-    LOGGER.debug("Computing spline surface patch curve frame")
+    logger.debug("Computing spline surface patch curve frame")
     #  Get surface and normal mappings for the given patch
     surface_mapping_coeffs: Matrix6x3f = spline_surface_patch.surface_mapping
     normal_mapping_coeffs: Matrix6x3f = spline_surface_patch.normal_mapping
@@ -156,8 +160,8 @@ def compute_spline_surface_patch_curve_frame(spline_surface_patch: QuadraticSpli
                                                                            normal_mapping_coeffs,
                                                                            domain_curve_segment)
 
-    LOGGER.debug("Surface curve tangent: %s", surface_curve_tangent)
-    LOGGER.debug("Surface curve normal: %s", surface_curve_normal)
-    LOGGER.debug("Surface curve tangent normal: %s",  surface_curve_tangent_normal)
+    logger.debug("Surface curve tangent: %s", surface_curve_tangent)
+    logger.debug("Surface curve normal: %s", surface_curve_normal)
+    logger.debug("Surface curve tangent normal: %s",  surface_curve_tangent_normal)
 
     return surface_curve_tangent, surface_curve_normal, surface_curve_tangent_normal

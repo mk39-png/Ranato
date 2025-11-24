@@ -5,8 +5,10 @@ Used for contour_network.
 
 import logging
 
-from ..core.common import (CHECK_VALIDITY, LOGGER, NodeIndex, SegmentIndex,
+from ..core.common import (CHECK_VALIDITY, NodeIndex, SegmentIndex,
                            vector_contains)
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 class AbstractCurveNetwork():
@@ -31,7 +33,7 @@ class AbstractCurveNetwork():
         self.__out_array: list[SegmentIndex] = out_array
         self.__intersection_array: list[NodeIndex] = intersection_array
 
-        if LOGGER.getEffectiveLevel() == logging.DEBUG:
+        if logger.getEffectiveLevel() == logging.DEBUG:
             if not self._is_valid_minimal_curve_network_data(to_array,
                                                              out_array,
                                                              intersection_array):
@@ -55,7 +57,7 @@ class AbstractCurveNetwork():
          self.__in_array) = self._init_abstract_curve_network()
 
         # Check validity
-        if LOGGER.getEffectiveLevel() == logging.DEBUG:
+        if logger.getEffectiveLevel() == logging.DEBUG:
             if not self._is_valid_abstract_curve_network():
                 raise ValueError("Inconsistent abstract curve network built")
 
@@ -399,7 +401,7 @@ class AbstractCurveNetwork():
 
         for si in range(num_segments):
             if (to_array[si] < 0) or to_array[si] >= num_nodes:
-                LOGGER.error("Segment %s is invalid with to node %s", si, to_array[si])
+                logger.error("Segment %s is invalid with to node %s", si, to_array[si])
 
         return True
 
@@ -418,13 +420,13 @@ class AbstractCurveNetwork():
         num_nodes: int = len(out_array)
 
         if len(to_array) != num_segments:
-            LOGGER.error("to domain not in bijection with number of segments")
+            logger.error("to domain not in bijection with number of segments")
             return False
         if len(out_array) != num_nodes:
-            LOGGER.error("out domain not in bijection with number of nodes")
+            logger.error("out domain not in bijection with number of nodes")
             return False
         if len(intersection_array) != num_nodes:
-            LOGGER.error("out domain not in bijection with number of nodes")
+            logger.error("out domain not in bijection with number of nodes")
             return False
 
         # Check all out nodes are valid (to and intersection array can have invalid
@@ -481,75 +483,75 @@ class AbstractCurveNetwork():
 
         # Array size checks
         if len(self.next_array) != num_segments:
-            LOGGER.error("Inconsistent next array")
+            logger.error("Inconsistent next array")
             return False
         if len(self.prev_array) != num_segments:
-            LOGGER.error("Inconsistent prev array")
+            logger.error("Inconsistent prev array")
             return False
 
         if len(self.to_array) != num_segments:
-            LOGGER.error("Inconsistent to array")
+            logger.error("Inconsistent to array")
             return False
 
         if len(self.from_array) != num_segments:
-            LOGGER.error("Inconsistent from array")
+            logger.error("Inconsistent from array")
             return False
 
         if len(self.intersection_array) != num_nodes:
-            LOGGER.error("Inconsistent intersection array")
+            logger.error("Inconsistent intersection array")
             return False
 
         if len(self.out_array) != num_nodes:
-            LOGGER.error("Inconsistent out array")
+            logger.error("Inconsistent out array")
             return False
 
         if len(self.in_array) != num_nodes:
-            LOGGER.error("Inconsistent in array")
+            logger.error("Inconsistent in array")
             return False
 
         # Check segment topology
         for si in range(self.num_segments):
             #  Check to node
             if not self._is_valid_node_index(self.to(si)):
-                LOGGER.error("To does not have a valid endpoint for segment %s", si)
+                logger.error("To does not have a valid endpoint for segment %s", si)
                 return False
             if self.in_(self.to(si)) != si:
-                LOGGER.error("in(to(s)) is not the identity for segment %s", si)
+                logger.error("in(to(s)) is not the identity for segment %s", si)
                 return False
 
             # Check from node
             if not self._is_valid_node_index(self.from_(si)):
-                LOGGER.error("From does not have a valid endpoint for segment %s", si)
+                logger.error("From does not have a valid endpoint for segment %s", si)
                 return False
             if self.out(self.from_(si)) != si:
-                LOGGER.error("out(from(s)) is not the identity for segment %s", si)
+                logger.error("out(from(s)) is not the identity for segment %s", si)
                 return False
 
             # Check next segment is consistent if it exists
             if self._is_valid_segment_index(self.next(si)):
                 if self.prev(self.next(si)) != si:
-                    LOGGER.error(
+                    logger.error(
                         "prev(next(s)) is not the identity for nonterminal segment %s", si)
-                    LOGGER.error("next(s) is %s", self.next(si))
+                    logger.error("next(s) is %s", self.next(si))
                     return False
 
             #  Check to node is an endpoint if the next segment does not exist
             else:
                 if self._is_valid_segment_index(self.out(self.to(si))):
-                    LOGGER.error("Terminal segment %s does not have a terminal endpoint", si)
+                    logger.error("Terminal segment %s does not have a terminal endpoint", si)
                     return False
 
             # Check prev segment is consistent if it exists
             if self._is_valid_segment_index(self.prev(si)):
                 if self.next(self.prev(si)) != si:
-                    LOGGER.error(
+                    logger.error(
                         "next(prev(s)) is not the identity for noninitial segment %s", si)
                     return False
 
             # Check to node is an endpoint if the next segment does not exist
             else:
                 if self._is_valid_segment_index(self.in_(self.from_(si))):
-                    LOGGER.error("Initial segment %s does not have a initial start point", si)
+                    logger.error("Initial segment %s does not have a initial start point", si)
                     return False
 
         # Check node topology
@@ -559,7 +561,7 @@ class AbstractCurveNetwork():
             # Check the outgoing segment comes from the node if it exists
             if self._is_valid_segment_index(self.out(self.in_(ni))):
                 if self.from_(self.out(ni)) != ni:
-                    LOGGER.error(
+                    logger.error(
                         "from(out(n)) is not the identity for nonterminal node %s", ni)
                     return False
                 is_out_segment[self.out(ni)] = True
@@ -567,7 +569,7 @@ class AbstractCurveNetwork():
             # Check the incoming segment goes to the node if it exists
             if self._is_valid_segment_index(self.in_(ni)):
                 if self.to(self.in_(ni)) != ni:
-                    LOGGER.error("to(in(n)) is not the identity for non initial node %s",
+                    logger.error("to(in(n)) is not the identity for non initial node %s",
                                  ni)
                     return False
                 is_in_segment[self.in_(ni)] = True
@@ -575,17 +577,17 @@ class AbstractCurveNetwork():
             # Check the intersection is a closed order 2 loop if it exists
             if self._is_valid_node_index(self.intersection(ni)):
                 if self.intersection(self.intersection(ni)) != ni:
-                    LOGGER.error("Intersection is order 2 for intersection node %s", ni)
+                    logger.error("Intersection is order 2 for intersection node %s", ni)
                     return False
 
         # Check all segments originate from some node
         if vector_contains(is_out_segment, False):
-            LOGGER.error("Segment does not have a starting node")
+            logger.error("Segment does not have a starting node")
             return False
 
         # Check all segments go into some node
         if vector_contains(is_in_segment, False):
-            LOGGER.error("Segment does not have a terminal node")
+            logger.error("Segment does not have a terminal node")
             return False
 
         return True

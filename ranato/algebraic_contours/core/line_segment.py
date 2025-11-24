@@ -4,15 +4,19 @@ with degree 1 numerator and degree 0 denominator.
 TODO: how is the degree 0 denominator possible?
 """
 
+import logging
+
 import numpy as np
 
 from ..core.bivariate_quadratic_function import \
     formatted_bivariate_linear_mapping
-from ..core.common import LOGGER, Matrix3x2r, Vector2D, unreachable
+from ..core.common import Matrix3x2r, Vector2D, unreachable
 from ..core.conic import Conic
 from ..core.interval import Interval
 from ..core.polynomial_function import formatted_polynomial
 from ..core.rational_function import RationalFunction
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 class LineSegment(Conic):
@@ -49,7 +53,7 @@ class LineSegment(Conic):
         :return pullback_function: degree = 1, dimension = dimension
 
         """
-        LOGGER.info("Pulling back line segment by linear function %s",
+        logger.info("Pulling back line segment by linear function %s",
                     formatted_bivariate_linear_mapping(dimension, F_coeffs))
 
         # Separate the individual polynomial coefficients from the rational
@@ -62,9 +66,9 @@ class LineSegment(Conic):
         assert v_coeffs.shape == (3, 1)
         Q_coeffs = np.array([1.0, 0.0])
 
-        LOGGER.info("u function before pullback: %s",
+        logger.info("u function before pullback: %s",
                     formatted_polynomial(3, 1, u_coeffs))
-        LOGGER.info("v function before pullback: %s",
+        logger.info("v function before pullback: %s",
                     formatted_polynomial(3, 1, v_coeffs))
 
         # Combine quadratic monomial functions into a matrix
@@ -74,13 +78,13 @@ class LineSegment(Conic):
         monomial_coeffs[1, 1] = u_coeffs[1]
         monomial_coeffs[0, 2] = v_coeffs[0]
         monomial_coeffs[1, 2] = v_coeffs[1]
-        LOGGER.info("Monomial coefficient matrix:\n%s", monomial_coeffs)
+        logger.info("Monomial coefficient matrix:\n%s", monomial_coeffs)
 
         # Compute the pulled back rational function numerator
-        LOGGER.info("Linear coefficient matrix:\n%s", F_coeffs)
+        logger.info("Linear coefficient matrix:\n%s", F_coeffs)
         pullback_coeffs = monomial_coeffs * F_coeffs
         assert pullback_coeffs.shape == (2, self.m_dimension)
-        LOGGER.info("Pullback function: %s",
+        logger.info("Pullback function: %s",
                     formatted_polynomial(2, self.m_dimension, pullback_coeffs))
 
         pullback_function = RationalFunction(

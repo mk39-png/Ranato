@@ -12,7 +12,8 @@ import numpy.linalg as LA
 import numpy.testing as npt
 import numpy.typing as npty
 
-LOGGER: logging.Logger = logging.getLogger(__name__)
+logger: logging.Logger = logging.getLogger(__name__)
+
 logging.basicConfig(level=logging.DEBUG)
 logging.disable(logging.DEBUG)
 logging.disable(logging.INFO)
@@ -895,7 +896,7 @@ def is_manifold(F: MatrixXi) -> bool:
     # Checks the tuple of elements that are returned.
     # first element tells us if all edges are manifold or not.
     if not igl.is_edge_manifold(F)[0]:
-        LOGGER.error("Mesh is not edge manifold")
+        logger.error("Mesh is not edge manifold")
         return False
 
     # Check vertex manifold condition
@@ -903,7 +904,7 @@ def is_manifold(F: MatrixXi) -> bool:
     invalid_vertices: np.ndarray = np.asarray(
         igl.is_vertex_manifold(F), dtype=np.bool)
     if not invalid_vertices.any():
-        LOGGER.error("Mesh is not vertex manifold")
+        logger.error("Mesh is not vertex manifold")
         return False
 
     # Check single component
@@ -912,7 +913,7 @@ def is_manifold(F: MatrixXi) -> bool:
         igl.vertex_components(F), dtype=np.int64)
 
     if (component_ids.max() - component_ids.min()) > 0:
-        LOGGER.error("Mesh has multiple components")
+        logger.error("Mesh has multiple components")
         return False
 
     # Manifold otherwise
@@ -1104,7 +1105,7 @@ def remove_mesh_faces(V: MatrixNx3f,
     # TODO: Pylint shows error with igl not having member, but I'm sure it is fine.
     F_submesh, V_submesh, _, _ = igl.remove_unreferenced(F, V)
 
-    LOGGER.info("Final mesh has %s faces and %s vertices",
+    logger.info("Final mesh has %s faces and %s vertices",
                 F_submesh.shape[ROWS], V_submesh.shape[ROWS])
 
     return V_submesh, F_submesh
@@ -1129,7 +1130,7 @@ def remove_mesh_vertices(V: MatrixNx3f,
     of face indices that were removed
     :rtype: tuple[np.ndarray, np.ndarray, list[FaceIndex]]
     """
-    LOGGER.info("Removing %s vertices from mesh with %s faces and %s vertices",
+    logger.info("Removing %s vertices from mesh with %s faces and %s vertices",
                 len(vertices_to_remove), F.shape[ROWS], V.shape[ROWS])
 
     # Tag faces adjacent to the vertices to remove
@@ -1142,7 +1143,7 @@ def remove_mesh_vertices(V: MatrixNx3f,
             if contains_vertex(F[face_index, :], vertices_to_remove[i]):
                 faces_to_remove.append(face_index)
                 break
-    LOGGER.info("Remove %s faces", len(faces_to_remove))
+    logger.info("Remove %s faces", len(faces_to_remove))
 
     # Remove faces adjacent to cones
     V_submesh: np.ndarray

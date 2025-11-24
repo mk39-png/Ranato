@@ -2,6 +2,7 @@
 Methods to compute intersections for quadratic surfaces.
 """
 
+import logging
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -16,8 +17,8 @@ from ..contour_network.intersection_heuristics import (
     compute_bezier_bounding_box, compute_bounding_box_hash_table,
     compute_homogeneous_bezier_points_over_interval)
 from ..core.common import (FIND_INTERSECTIONS_BEZIER_CLIPPING_PRECISION,
-                           INLINE_TESTING_ENABLED_CONTOUR_NETWORK, LOGGER,
-                           Matrix5x3f, PlanarPoint1d, SpatialVector1d,
+                           INLINE_TESTING_ENABLED_CONTOUR_NETWORK, Matrix5x3f,
+                           PlanarPoint1d, SpatialVector1d,
                            compare_eigen_numpy_matrix,
                            compare_list_list_varying_lengths,
                            compare_list_list_varying_lengths_float,
@@ -29,6 +30,8 @@ from ..utils.compute_intersections_testing_utils import (
     compare_intersection_stats, compare_list_list_intersection_data_from_file)
 from ..utils.rational_function_testing_utils import \
     compare_rational_functions_from_file
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -174,7 +177,7 @@ def _compute_planar_curve_intersections_from_bounding_box(
 
     intersection_stats_ref.num_intersection_tests += 1
     t1: datetime = datetime.now()
-    LOGGER.debug("Finding intersections for %s and %s",
+    logger.debug("Finding intersections for %s and %s",
                  first_planar_curve,
                  second_planar_curve)
 
@@ -198,7 +201,7 @@ def _compute_planar_curve_intersections_from_bounding_box(
             first_bezier_control_points,
             second_bezier_control_points)
     except Exception as e:
-        LOGGER.error("Failed to find intersection points %s", e)
+        logger.error("Failed to find intersection points %s", e)
         # FIXME: raising another error to just end the program whenever theres a big failure
         # But change back to exception for the final release build
         raise ValueError(e)
@@ -221,7 +224,7 @@ def _compute_planar_curve_intersections_from_bounding_box(
 
     t2: datetime = datetime.now()
     total_time: int = (t2 - t1).microseconds
-    LOGGER.debug("Finding intersections took %s ms", total_time)
+    logger.debug("Finding intersections took %s ms", total_time)
 
 
 def compute_planar_curve_intersections(first_planar_curve: RationalFunction,
@@ -394,7 +397,7 @@ def compute_intersections(image_segments: list[RationalFunction],
                 visited[i] = True
 
                 # Iterate over image segments with lower indices
-                LOGGER.debug("Computing segments %s, %s out of %s",
+                logger.debug("Computing segments %s, %s out of %s",
                              image_segment_index,
                              i,
                              len(image_segments))
@@ -501,9 +504,9 @@ def compute_intersections(image_segments: list[RationalFunction],
 
     # Record intersection information
     intersection_call: int = intersection_stats.intersection_call
-    LOGGER.info("Number of intersection tests: %s",
+    logger.info("Number of intersection tests: %s",
                 intersection_stats.num_intersection_tests)
-    LOGGER.info("Number of nonoverlapping Bezier boxes: %s",
+    logger.info("Number of nonoverlapping Bezier boxes: %s",
                 intersection_stats.num_bezier_nonoverlaps)
 
     return (intersections,

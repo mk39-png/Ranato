@@ -2,12 +2,15 @@
 Used by optimize_spline_surface.py
 """
 
+import logging
+
 import numpy as np
 import numpy.linalg as LA
 
-from ..core.common import (LOGGER, Matrix2x2f, Matrix3x2r, Matrix12x12r,
-                           Vector1D)
+from ..core.common import Matrix2x2f, Matrix3x2r, Matrix12x12r, Vector1D
 from ..quadratic_spline_surface.PS12_patch_coeffs import PS12_patch_coeffs
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 def get_C_gl(uv: Matrix3x2r,

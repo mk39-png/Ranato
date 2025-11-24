@@ -7,13 +7,17 @@ degrees of freedom
 NOTE: a lot of the methods in this file modify by reference.
 """
 
+import logging
+
 import numpy as np
 
 from ..core.affine_manifold import (AffineManifold, EdgeManifoldChart,
                                     VertexManifoldChart)
-from ..core.common import (LOGGER, ROWS, Matrix2x3r, MatrixNx3f, MatrixNx3i,
+from ..core.common import (ROWS, Matrix2x3r, MatrixNx3f, MatrixNx3i,
                            PlanarPoint, SpatialVector1d, Vector2f,
                            find_face_vertex_index, unimplemented, unreachable)
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 class TriangleCornerData:
@@ -119,12 +123,12 @@ def generate_affine_manifold_chart_corner_data(
         assert dij.shape == (3, )
         assert dik.shape == (3, )
 
-        LOGGER.info("Vertex position: %s", pi)
-        LOGGER.info("Vertex gradient:\n%s", gradient)
-        LOGGER.info("First edge layout: %s", uj)
-        LOGGER.info("Second edge layout: %s", uk)
-        LOGGER.info("First edge derivative: %s", dij)
-        LOGGER.info("Second edge derivative: %s", dik)
+        logger.info("Vertex position: %s", pi)
+        logger.info("Vertex gradient:\n%s", gradient)
+        logger.info("First edge layout: %s", uj)
+        logger.info("Second edge layout: %s", uk)
+        logger.info("First edge derivative: %s", dij)
+        logger.info("Second edge derivative: %s", dik)
 
         # Build position data
         corner_data_ref[f][face_vertex_index] = TriangleCornerData(pi, dij, dik)
@@ -230,7 +234,7 @@ def generate_affine_manifold_midpoint_data(
             midpoint_data_ref[f_top][j_top] = TriangleMidpointData(
                 uv_top @ edge_gradients[i][j])
             assert midpoint_data_ref[f_top][j_top].normal_derivative.shape == (3, )
-            LOGGER.info("Midpoint data for corner (%s, %s) is %s = %s\n%s", f_top, j_top,
+            logger.info("Midpoint data for corner (%s, %s) is %s = %s\n%s", f_top, j_top,
                         midpoint_data_ref[f_top][j_top].normal_derivative.T,
                         uv_top,
                         edge_gradients[i][j])
@@ -249,7 +253,7 @@ def generate_affine_manifold_midpoint_data(
                 midpoint_data_ref[f_bottom][j_bottom] = TriangleMidpointData(
                     uv_bottom @ edge_gradients[i][j])
                 assert midpoint_data_ref[f_bottom][j_bottom].normal_derivative.shape == (3, )
-                LOGGER.info("Midpoint data for corner (%s, %s) is %s",
+                logger.info("Midpoint data for corner (%s, %s) is %s",
                             f_bottom,
                             j_bottom,
                             midpoint_data_ref[f_bottom][j_bottom].normal_derivative)
