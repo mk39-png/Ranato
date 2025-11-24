@@ -12,10 +12,9 @@ import bpy.types
 
 from .common import DIRECTORY_TEMP
 
+
 # TODO: Implement future version utilize vertex position, texture coordinates, and face indices
 #       of the mesh directly from Blender rather than an .obj file.
-
-
 def ops_get_objects(self, context) -> list[Any]:
     """
     Grabs Blender ID of scene mesh.
@@ -71,27 +70,32 @@ class OBJECT_OT_search_mesh_operator(bpy.types.Operator):
 
             # TODO: check if there is already an .obj in temp.
 
+            # TODO: instead of exporting to a file, since we're no longer implementing the UV
+            # unwrapper, go out and about to to simply display a list of meshes the user can
+            # select from to import into their scene and use.
+            # Also, I don't think that
+
             # TODO: the start and end frames should be dependent on the user selected start and
             #  end frames...
             # FIXME: file should be temporarily held in the addon's directory
             # https://github.com/benrugg/AI-Render/blob/main/analytics.py
-            bpy.ops.wm.obj_export(filepath=os.path.join(DIRECTORY_TEMP, "temp.obj"),
-                                  check_existing=True,
-                                  start_frame=0,
-                                  end_frame=0,
-                                  export_selected_objects=True,
-                                  forward_axis='NEGATIVE_Z',  # TODO: may need to change these
-                                  up_axis='Y',  # TODO: may need to change these
-                                  export_colors=False,
-                                  export_uv=True,
-                                  export_normals=False,
-                                  export_materials=False,
-                                  export_triangulated_mesh=False,
-                                  export_curves_as_nurbs=False,
-                                  export_object_groups=False,
-                                  export_material_groups=False,
-                                  export_vertex_groups=False,
-                                  export_smooth_groups=False)
+            # bpy.ops.wm.obj_export(filepath=os.path.join(DIRECTORY_TEMP, "temp.obj"),
+            #                       check_existing=True,
+            #                       start_frame=0,
+            #                       end_frame=0,
+            #                       export_selected_objects=True,
+            #                       forward_axis='NEGATIVE_Z',  # TODO: may need to change these
+            #                       up_axis='Y',  # TODO: may need to change these
+            #                       export_colors=False,
+            #                       export_uv=True,
+            #                       export_normals=False,
+            #                       export_materials=False,
+            #                       export_triangulated_mesh=False,
+            #                       export_curves_as_nurbs=False,
+            #                       export_object_groups=False,
+            #                       export_material_groups=False,
+            #                       export_vertex_groups=False,
+            #                       export_smooth_groups=False)
 
             # Now, write the angle file for this mesh, defaulting at 2pi
             # print(len(selected_mesh.vertices))

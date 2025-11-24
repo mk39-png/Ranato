@@ -56,14 +56,14 @@ def generate_algebraic_contours(projection_matrix: Matrix) -> None:
     #                   [0, 1, 0],
     #                   [0, 0, 1]])
     # V_transformed: MatrixNx3f = apply_camera_frame_transformation_to_vertices(V, frame)
-    print(projection_matrix)
+    # print(projection_matrix)
 
     # Preparing mesh data for use in contours calculation
     # TODO: will this work? The whole conversion of the MathUtils matrix to NumPy matrix?
     # TODO: maybe filter out non-numbers like 8.22e-16 and set to 0
     V_transformed: MatrixNx3f = apply_transformation_to_vertices(V, np.array(projection_matrix))
-    print(V_transformed)
-    print(V_transformed.shape)
+    # print(V_transformed)
+    # print(V_transformed.shape)
 
     # Generate quadratic spline
     print("Computing spline surface...")
@@ -86,10 +86,9 @@ def generate_algebraic_contours(projection_matrix: Matrix) -> None:
         patch_boundary_edges
     )
 
-    # # # Save the contours to file
-    # # logger.info("Saving contours")
-    # contour_network_file: str = "contours.svg"
-    # print(base_directory)
-    # contour_network_path: str = os.path.abspath(
-    #     f"{base_directory}\\tests\\spot_control\\{contour_network_file}")
-    # contour_network.write(contour_network_path, svg_output_mode, show_nodes)
+    # Save the contours to file
+    # logger.info("Saving contours")
+    contour_network_filename: str = "contours.svg"
+    contour_network_filepath: str = os.path.join(DIRECTORY_TEMP, f"{contour_network_filename}")
+    print(contour_network_filepath)
+    contour_network.write(contour_network_filepath, svg_output_mode, show_nodes)
