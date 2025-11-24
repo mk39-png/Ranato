@@ -10,8 +10,10 @@ from ..contour_network.contour_network import (ContourNetwork,
                                                InvisibilityParameters,
                                                _build_contour_labels)
 from ..core.affine_manifold import AffineManifold
-from ..core.apply_transformation import apply_transformation_to_vertices
-from ..core.common import (LOGGER, Matrix3x3f, MatrixNx3f,
+from ..core.apply_transformation import (
+    apply_camera_frame_transformation_to_vertices,
+    apply_transformation_to_vertices)
+from ..core.common import (Matrix3x3f, MatrixNx3f,
                            deserialize_eigen_matrix_csv_to_numpy,
                            initialize_spot_control_mesh)
 from ..quadratic_spline_surface.optimize_spline_surface import \
@@ -78,14 +80,14 @@ def test_contour_network() -> None:
     F:  np.ndarray
     FT: np.ndarray
     V, uv, F, FT = initialize_spot_control_mesh()
-    # V_transformed: MatrixNx3f = apply_camera_frame_transformation_to_vertices(V, frame)
-    projection_matrix = np.array([
-        [2.777777671813965, 0.0, 0.0, 0.0],
-        [0.0, 4.938271522521973, 0.0, 0.0],
-        [0.0, 0.0, -1.0020020008087158, -0.20020020008087158],
-        [0.0, 0.0, -1.0, 0.0]], dtype=np.float64)
+    V_transformed: MatrixNx3f = apply_camera_frame_transformation_to_vertices(V, frame)
+    # projection_matrix = np.array([
+    #     [2.777777671813965, 0.0, 0.0, 0.0],
+    #     [0.0, 4.938271522521973, 0.0, 0.0],
+    #     [0.0, 0.0, -1.0020020008087158, -0.20020020008087158],
+    #     [0.0, 0.0, -1.0, 0.0]], dtype=np.float64)
 
-    V_transformed: MatrixNx3f = apply_transformation_to_vertices(V, np.array(projection_matrix))
+    # V_transformed: MatrixNx3f = apply_transformation_to_vertices(V, np.array(projection_matrix))
 
     # Generate quadratic spline
     logger.info("Computing spline surface")
