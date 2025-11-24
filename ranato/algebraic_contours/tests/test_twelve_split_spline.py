@@ -30,11 +30,11 @@ from ..quadratic_spline_surface.twelve_split_spline import (  # generate_affine_
     generate_twelve_split_spline_patch_patch_boundaries,
     generate_twelve_split_spline_patch_patch_to_corner_map,
     generate_twelve_split_spline_patch_surface_mapping)
-from ..tests.utils_testing import initialize_twelve_split_spline_transformed
 from ..utils.generate_position_data import (
     QuadraticGradientFunction, QuadraticPositionFunction,
     generate_parametric_affine_manifold_corner_data,
     generate_parametric_affine_manifold_midpoint_data)
+from .conftest import initialize_twelve_split_spline_transformed
 
 logger: logging.Logger = logging.getLogger(__name__)
 

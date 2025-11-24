@@ -24,11 +24,10 @@ from ..tests.test_compute_rational_bezier_curve_intersections import \
     ROOT_FOLDER
 from ..utils.projected_curve_networks_utils import (SVGOutputMode,
                                                     compare_segment_labels)
-from .utils_testing import (initialize_affine_manifold,
-                            initialize_contour_network,
-                            initialize_twelve_split_spline_transformed,
-                            load_mesh_testing, obj_filepaths,
-                            projection_matrices, projection_on_vertices)
+from .conftest import (initialize_affine_manifold, initialize_contour_network,
+                       initialize_twelve_split_spline_transformed,
+                       load_mesh_testing, obj_filepaths, projection_matrices,
+                       projection_on_vertices)
 
 logger: logging.Logger = logging.getLogger(__name__)
 
