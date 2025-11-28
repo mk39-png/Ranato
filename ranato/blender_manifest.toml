@@ -9,11 +9,15 @@ type = "add-on"
 
 blender_version_min = "4.5.0"
 
-license = [
-  "SPDX:GPL-3.0-or-later",
-]
+license = ["SPDX:GPL-3.0-or-later"]
 
 platforms = ["windows-x64"]
 wheels = [
-  "./wheels/cholespy-2.1.0-cp311-cp311-win_amd64.whl"
+  "./wheels/pyalgcon-0.0.1-py3-none-any.whl",
+  "./wheels/cholespy-2.1.0-cp311-cp311-win_amd64.whl",
+  "./wheels/libigl-2.6.1-cp311-cp311-win_amd64.whl",
+  "./wheels/numpy-2.3.5-cp311-cp311-win_amd64.whl",
+  "./wheels/polyscope-2.5.0-cp311-cp311-win_amd64.whl",
+  "./wheels/scipy-1.16.3-cp311-cp311-win_amd64.whl",
+  "./wheels/svg_py-1.9.2-py3-none-any.whl",
 ]
