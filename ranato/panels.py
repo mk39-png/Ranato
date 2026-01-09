@@ -13,7 +13,7 @@ import bpy.types
 # https://github.com/Griperis/BlenderDataVis/blob/master/data_vis/operators/surface_chart.py
 
 
-class OBJECT_PT_ranato_panel(bpy.types.Panel):
+class PANEL_PT_ranato_panel(bpy.types.Panel):
     """
     Creates a Panel in the scene context of the properties editor.
     """

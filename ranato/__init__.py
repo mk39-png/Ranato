@@ -1,45 +1,43 @@
-import os
-import subprocess
-import sys
+"""
+Entry point for Blender add-on
+"""
+import bpy
 
-from .panels import OBJECT_PT_ranato_panel
+from .panels import PANEL_PT_ranato_panel
 from .pipeline import OBJECT_OT_pipeline
 from .preferences import OBJECT_OT_addon_preferences, RanatoPreferences
 from .search_mesh import OBJECT_OT_search_mesh_operator
 
-# https://blenderartists.org/t/can-i-install-pandas-or-other-modules-into-blenders-python/1375122
-# NOTE: must try and install these packages before running any one of the other modules
-# NOTE: the below only works for Windows systems
-# FIXME: utilize new wheels specification system, which requires packages be installed from pip download into the wheels/ folder.
-# FIXME: but for cholespy, user would have to build forked version and go through a separate process for that... meaning that "pip download ./cholespy --dest ./wheels --only-binary=:all: --python-version=4.5 --platform=win_amd64" would have to be ran
-#
-try:
-    import bpy
-    import cholespy
-    import igl
-    import matplotlib
-    import mpmath as mp
-except ImportError:
-    # Blender Python interpreter location
-    python_exe: str = os.path.join(sys.prefix, 'bin', 'python.exe')
+# try:
+#     import bpy
+#     import cholespy
+#     import igl
+#     import matplotlib
+#     import mpmath as mp
+#     import pyalgcon
+# except ImportError:
+#     raise Exception("Failed to import packages")
 
-    # FIXME: fix the whole install of cholespy... which is not working for some reason...
+# # Blender Python interpreter location
+# python_exe: str = os.path.join(sys.prefix, 'bin', 'python.exe')
 
-    # This is the folder that Blender automatically holds its installed addons
-    requirements_path: str = os.path.join(os.path.dirname(__file__), "requirements.txt")
+# # FIXME: fix the whole install of cholespy... which is not working for some reason...
 
-    # Pip Upgrade
-    subprocess.call([python_exe, "-m", "ensurepip"])
-    subprocess.call([python_exe, "-m", "pip", "install", "--upgrade", "pip"])
+# # This is the folder that Blender automatically holds its installed addons
+# requirements_path: str = os.path.join(os.path.dirname(__file__), "requirements.txt")
 
-    # Install Required Packages
-    subprocess.call([python_exe, "-m", "pip", "install", "-r", requirements_path])
+# # Pip Upgrade
+# subprocess.call([python_exe, "-m", "ensurepip"])
+# subprocess.call([python_exe, "-m", "pip", "install", "--upgrade", "pip"])
+
+# # Install Required Packages
+# subprocess.call([python_exe, "-m", "pip", "install", "-r", requirements_path])
 
 
 classes: list = [OBJECT_OT_search_mesh_operator,
                  OBJECT_OT_pipeline,
                  OBJECT_OT_addon_preferences,
-                 OBJECT_PT_ranato_panel,
+                 PANEL_PT_ranato_panel,
                  RanatoPreferences,]
 
 register, unregister = bpy.utils.register_classes_factory(classes)
