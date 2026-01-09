@@ -1,19 +1,21 @@
 """
-Keeps track of data throughout the addon. 
+Goes through the contour render pipeline of .obj mesh extraction, generating algebraic surface,
+generating contours, generating contour .svg
 
-Implementation inspired from 
-# https://github.com/Griperis/BlenderDataVis/blob/master/data_vis/data_manager.py 
+Implementation inspired from
+# https://github.com/Griperis/BlenderDataVis/blob/master/data_vis/data_manager.py
 """
-
-import subprocess
-from typing import Any
+import multiprocessing
+import pathlib
 
 import bpy.types
+import numpy as np
 from mathutils import Matrix
-
-from .algebraic_contours.exec.generate_algebraic_contours import \
+from pyalgcon.contour_network.contour_network import ContourNetwork
+from pyalgcon.exec.generate_algebraic_contours import \
     generate_algebraic_contours
-from .common import DIRECTORY_TEMP, FILEPATH_UV_UNWRAPPER
+
+from .common import DIRECTORY_TEMP
 
 # def call_uv_unwrapper() -> None:
 #     """
@@ -33,7 +35,72 @@ from .common import DIRECTORY_TEMP, FILEPATH_UV_UNWRAPPER
 #                    check=False)
 
 
-def get_projection_matrix(context: bpy.types.Context) -> Matrix:
+def blender_to_opengl_matrix(blender_camera_matrix: np.ndarray) -> np.ndarray:
+    """
+    Convert Blender to OpenGL-style coordinate system used by PYAC
+
+    Referenced Visuals3D's post:
+    https://github.com/facebookresearch/pytorch3d/issues/1105
+
+    :param blender_matrix: 4x4 array where +Y is facing away, +Z is upwards, and +X is right
+    :type c2w: np.ndarray
+
+    # TODO: double check coordinate system converted
+    :return: converted OpenGL matrix where +Y is up, +X is right, +Z is towards the camera 
+    :rtype: np.ndarray
+    """
+    assert blender_camera_matrix.shape == (4, 4)
+
+    # Swaps the the Y and Z rows (for original ASOC program)
+    swap_y_z = np.identity(4)
+    # swap_y_z: np.ndarray = np.array([
+    #     [1, 0, 0, 0],
+    #     [0, 0, -1, 0],
+    #     [0, -1, 0, 0],
+    #     [0, 0, 0, 1]])
+
+    theta: float = np.deg2rad(180)
+    blender_camera_matrix_swapped_y_z = swap_y_z @ blender_camera_matrix
+
+    # This camera matrix is proper and works for PYAC
+    # return np.array(((1.0000,  0.0000,  0.0000, 0.0000),
+    #                  (0.0000, -0.7071,  -0.7071, 0.0000),
+    #                  (0.0000,  -0.7071,  0.7071, 10.000),
+    #                  (0.0000,  0.0000,  0.0000, 1.0000),))
+    theta2 = np.deg2rad(180)
+    rot_y = np.array([
+        [np.cos(theta2), 0, np.sin(theta2)],
+        [0, 1, 0],
+        [-np.sin(theta2), 0, np.cos(theta2)]
+    ])
+
+    rot_x = np.array([
+        [1, 0, 0],
+        [0, np.cos(theta2), -np.sin(theta2)],
+        [0, np.sin(theta2), np.cos(theta2)]
+    ])
+
+    # Flip image rightside up (otherwise image will be upside down)
+    rot_z: np.ndarray = np.array([
+        [np.cos(theta), -np.sin(theta), 0],
+        [np.sin(theta), np.cos(theta), 0],
+        [0, 0, 1]])
+
+    # TODO: check CW and CCW rotation of that's being done
+    translation_vector: np.ndarray = blender_camera_matrix_swapped_y_z[:3, -1]  # Vector 3 elements
+    rotation_frame_matrix: np.ndarray = blender_camera_matrix_swapped_y_z[:3, :3] @ (
+        rot_y @ rot_z)
+    translation_vector = translation_vector @ rotation_frame_matrix  # Make translation local
+
+    # Assemble the extrinsic matrix (with the frame and the translation)
+    opengl_camera_matrix: np.ndarray = np.zeros(shape=(4, 4), dtype=np.float64)
+    opengl_camera_matrix[:3, :3] = rotation_frame_matrix.T
+    opengl_camera_matrix[:3, -1] = translation_vector
+    opengl_camera_matrix[3, 3] = 1  # set bottom right corner to 1 because homogeneous matrix
+    return opengl_camera_matrix
+
+
+def get_matrices(context: bpy.types.Context) -> tuple[np.ndarray, np.ndarray]:
     """
     Retrieves the projection matrix for the current scene to use with Algebraic Contours generator.
 
@@ -43,29 +110,10 @@ def get_projection_matrix(context: bpy.types.Context) -> Matrix:
     """
 
     # TODO: deal with case if camera does not exist within a scene
-
     depsgraph: bpy.types.Depsgraph = context.evaluated_depsgraph_get()
     scene: bpy.types.Scene | None = context.scene
     render: bpy.types.RenderSettings = scene.render
     camera: bpy.types.Object | None = scene.camera
-
-    print("CAMERA FRAME: \n", camera.data.view_frame(scene=scene))
-    print("CAMERA MAT WORLD: \n", camera.matrix_world)
-    print("CAMERA BASIS: \n", camera.matrix_basis)
-
-    modelview_matrix = Matrix(
-        ((3.346195029192903236e-01, 3.371676824530447491e-03,
-          -1.931632359086701556e-01, 3.634420946012050652e-02),
-         (0.000000000000000000e+00, 3.863264718173403112e-01,
-          6.743353649060895849e-03, -4.317130968153862908e-02),
-         (1.931926600865509769e-01, -5.839915566789230343e-03,
-          3.345685387482297268e-01, 1.937049982654145852e+00),
-         (0.000000000000000000e+00, 0.000000000000000000e+00,
-          0.000000000000000000e+00, 1.000000000000000000e+00)))
-
-    # camera.matrix_world = modelview_matrix
-    # modelview_matrix: Any | Matrix = camera.matrix_world.inverted()
-    print("CAMERA MODELVIEW MAT: \n", modelview_matrix)
 
     projection_matrix: Matrix = camera.calc_matrix_camera(
         depsgraph,
@@ -76,14 +124,19 @@ def get_projection_matrix(context: bpy.types.Context) -> Matrix:
     )
 
     print("PROJECTION MAT: \n", projection_matrix)
-    print("RESULT MAT: \n", projection_matrix @ modelview_matrix)
+    print("MAT WORLD: \n", camera.matrix_world)
+    resulting: np.ndarray = blender_to_opengl_matrix(np.array(camera.matrix_world))
+    print("TRANSLATE TO ASOC: \n", resulting)
 
-    return projection_matrix @ camera.matrix_world
+    # TODO: remove the return of the projection_matrix since ASOC uses a special projection transformation (i.e. project_inf_to_origin() or whatever that function was called)
+    return np.array(projection_matrix), resulting
 
+
+# Generate a PNG or whatnot and save to render layers...
 
 class OBJECT_OT_pipeline(bpy.types.Operator):
-    """ 
-    With the mesh saved to an .obj, we run the whole pipeline to calculate the 
+    """
+    With the mesh saved to an .obj, we run the whole pipeline to calculate the
     contours.
     """
     bl_idname: str = "object.pipeline"
@@ -103,7 +156,9 @@ class OBJECT_OT_pipeline(bpy.types.Operator):
 
         # Now, with the UV unwrapped mesh, we can now call the main program for
         # processing the whole mesh.
-        projection_matrix: Matrix = get_projection_matrix(context)
-        self.report({'INFO'}, "Generating algebraic contours...")
-        generate_algebraic_contours(projection_matrix)
+        projection_matrix, camera_matrix = get_matrices(context)
+        generate_algebraic_contours(camera_matrix, DIRECTORY_TEMP /
+                                    "temp_out.obj", projection_matrix)
+
+        self.report({'INFO'}, "Generated algebraic contours!")
         return {"FINISHED"}
