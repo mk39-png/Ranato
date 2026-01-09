@@ -4,6 +4,7 @@ UI layer.
 
 import math
 import os
+import pathlib
 from typing import Any
 
 import bpy
@@ -99,10 +100,15 @@ class OBJECT_OT_search_mesh_operator(bpy.types.Operator):
 
             # Now, write the angle file for this mesh, defaulting at 2pi
             # print(len(selected_mesh.vertices))
-            with open(os.path.join(DIRECTORY_TEMP, "temp_Th_hat"),
-                      "w", encoding="utf8") as f:
-                for _ in range(len(selected_mesh.vertices)):
-                    f.write(f"{(math.pi * 2.0)}\n")
+            # TODO: change and utilize pathlib
+            temp_file: pathlib.Path = pathlib.Path(DIRECTORY_TEMP, "temp_Th_hat")
+            for _ in range(len(selected_mesh.vertices)):
+                temp_file.write_text(f"{(math.pi * 2.0)}\n", encoding="utf8")
+
+            # with open(os.path.join(DIRECTORY_TEMP, "temp_Th_hat"),
+            #           "w", encoding="utf8") as f:
+            #     for _ in range(len(selected_mesh.vertices)):
+            #         f.write(f"{(math.pi * 2.0)}\n")
 
         else:
             # User mis-selected a non-mesh.
