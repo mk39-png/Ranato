@@ -9,7 +9,9 @@ default_cube/
 uv_unwrapper/
 *.blend
 *.obj
-ranato/src/
 *.ini
-temp_Th_hat
 *.blend1
+*.svg
+*.png
+*.ps1
+temp_Th_hat
