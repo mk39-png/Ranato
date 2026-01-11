@@ -44,7 +44,7 @@ class RanatoPreferences(bpy.types.AddonPreferences):
     bl_region_type: str = 'WINDOW'
     bl_context: str = "addons"
 
-    directory_path_conda: str = LocateUserCondaDirectory()
+    # directory_path_conda: str = LocateUserCondaDirectory()
 
     # TODO: find purpose of having a place to specify Blender's Python directory.
     directory_path_python: bpy.props.StringProperty(
@@ -55,12 +55,12 @@ class RanatoPreferences(bpy.types.AddonPreferences):
     )
 
     # TODO: change to support only cm_env if the user followed the original UV unwrapper paper's setup
-    file_path_conda: bpy.props.StringProperty(
-        name="Conda Executable Filepath",
-        description="Filepath for Conda executable for UV unwrapper.",
-        subtype='FILE_PATH',
-        default=os.path.join(directory_path_conda, "envs", "cm_env_original", "python.exe")
-    )
+    # file_path_conda: bpy.props.StringProperty(
+    #     name="Conda Executable Filepath",
+    #     description="Filepath for Conda executable for UV unwrapper.",
+    #     subtype='FILE_PATH',
+    #     default=os.path.join(directory_path_conda, "envs", "cm_env_original", "python.exe")
+    # )
 
     # TODO: allow user to specify "include/" folder to copy over and into Blender's Python Env
     #       to install Cholespy (because Blender's default Python ENV does not have include/ for some
