@@ -7,6 +7,8 @@ Implementation inspired from
 """
 import multiprocessing
 import pathlib
+import subprocess
+import polyscope
 
 import bpy.types
 import numpy as np
@@ -52,11 +54,35 @@ def blender_to_opengl_matrix(blender_camera_matrix: np.ndarray) -> np.ndarray:
     assert blender_camera_matrix.shape == (4, 4)
 
     # Swaps the the Y and Z rows (for original ASOC program)
-    swap_y_z = np.identity(4)
+    # swap_y_z = np.identity(4)
+
+    # MATRIX 0 TODO: might need something like -1 on the x axis as well.
+    # swap_y_z = np.array([
+    #     [1, 0, 0, 0],
+    #     [0, -1, 0, 0],
+    #     [0, 0, -1, 0],
+    #     [0, 0, 0, 1]], dtype=np.float64)
+
+    # MATRIX 1
+    swap_y_z = np.array([
+        [1, 0, 0, 0],
+        [0, -1, 0, 0],
+        [0, 0, 1, 0],
+        [0, 0, 0, 1]], dtype=np.float64)
+
+    # MATRIX 2
+    # With just this, the translation to openGL seems fine
+    # swap_y_z = np.array([
+    #     [1, 0, 0, 0],
+    #     [0, 1, 0, 0],
+    #     [0, 0, -1, 0],
+    #     [0, 0, 0, 1]], dtype=np.float64)
+
+    # NOTE: blender to opengl translation is already as fine as it is
     # swap_y_z: np.ndarray = np.array([
     #     [1, 0, 0, 0],
     #     [0, 0, -1, 0],
-    #     [0, -1, 0, 0],
+    #     [0, 1, 0, 0],
     #     [0, 0, 0, 1]])
 
     theta: float = np.deg2rad(180)
@@ -81,23 +107,45 @@ def blender_to_opengl_matrix(blender_camera_matrix: np.ndarray) -> np.ndarray:
     ])
 
     # Flip image rightside up (otherwise image will be upside down)
+    # TODO: experiment with changing ccw to cw
     rot_z: np.ndarray = np.array([
         [np.cos(theta), -np.sin(theta), 0],
         [np.sin(theta), np.cos(theta), 0],
         [0, 0, 1]])
 
     # TODO: check CW and CCW rotation of that's being done
+    # Performs rotation in world space rather than camera space.
     translation_vector: np.ndarray = blender_camera_matrix_swapped_y_z[:3, -1]  # Vector 3 elements
-    rotation_frame_matrix: np.ndarray = blender_camera_matrix_swapped_y_z[:3, :3] @ (
-        rot_y @ rot_z)
+    rotation_frame_matrix: np.ndarray = np.linalg.inv(blender_camera_matrix_swapped_y_z[:3, :3])
+    # rotation_frame_matrix = rotation_frame_matrix @ rot_y
+    rotation_frame_matrix = rotation_frame_matrix @ rot_z
+    # rotation_frame_matrix = rotation_frame_matrix @ rot_x
     translation_vector = translation_vector @ rotation_frame_matrix  # Make translation local
 
     # Assemble the extrinsic matrix (with the frame and the translation)
     opengl_camera_matrix: np.ndarray = np.zeros(shape=(4, 4), dtype=np.float64)
-    opengl_camera_matrix[:3, :3] = rotation_frame_matrix.T
+    opengl_camera_matrix[:3, :3] = np.linalg.inv(rotation_frame_matrix)  # .T
     opengl_camera_matrix[:3, -1] = translation_vector
     opengl_camera_matrix[3, 3] = 1  # set bottom right corner to 1 because homogeneous matrix
-    return opengl_camera_matrix
+
+    # LOAD INTO POLYSCOPE AND SEE
+    folder: pathlib.Path = pathlib.Path(__file__).parent
+    np.savetxt(folder / "temp" / "temp_camera_matrix.csv",
+               opengl_camera_matrix, delimiter=",", fmt="%f")
+    # HACK: running venv python directly rather than using Blender's python env
+    subprocess.run(
+        [pathlib.Path("D:\Repos\Ranato\.venv\Scripts\python.exe"),  # sys.executable,
+         str(folder / "run_polyscope.py"),
+         "--file",
+         str(folder / "temp" / "temp_out.obj"),
+         "--camera",
+         str(folder / "temp" / "temp_camera_matrix.csv")],
+        check=True,
+        # capture_output=True,
+        # text=True
+    )
+
+    return opengl_camera_matrix  # np.linalg.inv(opengl_camera_matrix)
 
 
 def get_matrices(context: bpy.types.Context) -> tuple[np.ndarray, np.ndarray]:
@@ -123,12 +171,17 @@ def get_matrices(context: bpy.types.Context) -> tuple[np.ndarray, np.ndarray]:
         scale_y=render.pixel_aspect_y,
     )
 
+    # TODO: utilize the matrix parent inverse?
+    # camera.matrix_parent_inverse
+    # projection_matrix.invert()
+
     print("PROJECTION MAT: \n", projection_matrix)
     print("MAT WORLD: \n", camera.matrix_world)
     resulting: np.ndarray = blender_to_opengl_matrix(np.array(camera.matrix_world))
     print("TRANSLATE TO ASOC: \n", resulting)
 
-    # TODO: remove the return of the projection_matrix since ASOC uses a special projection transformation (i.e. project_inf_to_origin() or whatever that function was called)
+    # TODO: remove the return of the projection_matrix since ASOC uses a special projection transformation
+    # (i.e. project_inf_to_origin() or whatever that function was called)
     return np.array(projection_matrix), resulting
 
 
