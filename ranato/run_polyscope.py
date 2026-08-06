@@ -2,11 +2,12 @@
 Simple script that is called via submodule to run Polyscope
 """
 
-import polyscope as ps
-import igl
-import pathlib
 import argparse
+import pathlib
+
+import igl
 import numpy as np
+import polyscope as ps
 
 
 def main() -> None:
@@ -24,8 +25,11 @@ def main() -> None:
     # Setup Polyscope and display mesh from a given camera matrix
     ps.init()
     ps_mesh: ps.SurfaceMesh = ps.register_surface_mesh("my mesh", V, F)
-    ps.set_up_dir("y_up")
-    ps.set_front_dir("z_front")
+    ps.set_up_dir("z_up")
+    ps.set_front_dir("y_front")
+
+    # ps.set_up_dir("y_up")
+    # ps.set_front_dir("z_front")
     # ps.set_front_dir("neg_z_front")
     ps.set_camera_view_matrix(opengl_camera_matrix)
 
