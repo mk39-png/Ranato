@@ -2,18 +2,22 @@ import bpy
 import bpy.props
 import bpy.types
 
-# https://blender.stackexchange.com/questions/202570/multi-files-to-addon
-# Setting up addon with multiple files
 
-# https://docs.blender.org/api/current/bpy.types.Panel.html
+class LIST_OT_NewItem(bpy.types.Operator):
+    """Add a new item to the list"""
+    bl_idname = "my_list.new_item"
+    bl_label = "Add new item to list"
+    bl_description = "Add vertex/angle entry to list"
 
-# Referencing below to see how Render Engine interacts with Panel
-# (and changing it all so that the panel only appears when user activates Ranato)
-# https://github.com/bnpr/Malt/blob/725f509ab25be736cb592cf1e9d5258ed4271e8a/BlenderMalt/MaltMaterial.py#L98
-# https://github.com/Griperis/BlenderDataVis/blob/master/data_vis/operators/surface_chart.py
+    def execute(self, context) -> set[str]:
+        item = context.scene.my_list.add()
+        item.vertex_index = 0
+        item.angle = 0.0
+
+        return {"FINISHED"}
 
 
-class PANEL_PT_ranato_panel(bpy.types.Panel):
+class PANEL_PT_Ranato(bpy.types.Panel):
     """
     Creates a Panel in the scene context of the properties editor.
     """
@@ -23,13 +27,6 @@ class PANEL_PT_ranato_panel(bpy.types.Panel):
     bl_region_type = 'WINDOW'
     bl_context = "render"
 
-    # FIXME: have the option for the user to have the addon execute the uv unwrapper or not
-    uv_unwrapper_toggle: bpy.props.BoolProperty(
-        name="Toggle UV Unwrapping",
-        description="Toggle for UV unwrapper process.",
-        default=False
-    )
-
     selected_mesh_name: bpy.props.StringProperty(
         name="n/a",
         default=f"n/a"
@@ -38,38 +35,77 @@ class PANEL_PT_ranato_panel(bpy.types.Panel):
     def draw(self, context) -> None:
         layout: bpy.types.UILayout | None = self.layout
         scene: bpy.types.Scene | None = context.scene
+        obj: bpy.types.Object | None = context.object
 
-        if not layout:
+        # TODO: instead of storing this all like so...
+        # Store it within a separate class that DOES NOT MODIFY the scene and add unnecessary attributes to it.
+        # Makes everything a LOT clearer
+        # if obj is not None:
+        #     if not hasattr(obj, "my_list"):
+        #         obj.my_list = bpy.props.CollectionProperty(type=VertexAngleItem)
+        #     if not hasattr(obj, "list_index"):
+        #         obj.list_index = bpy.props.IntProperty(name="Index for my_list", default=0)
+
+        if layout is None:
             assert ("Layout should not be None when drawing!")
 
         # TODO: implement ability to render multiple frames
-        layout.label(text="Frames Render")
+        # layout.label(text="Frames Render")
         row: bpy.types.UILayout = layout.row(align=True)
-        row.prop(scene, "frame_start")
-        row.prop(scene, "frame_end")
 
-        # TODO: Implement toggle to UV unwrap using specialized algorithm since we do not
-        #       want to unwrap every time we call the contour generator.
+        # sub_row = row.menu_pie()
+        # sub_row.label(text="Frame rendering not implemented")
+        # sub_row.prop(scene, "frame_start")
+        # sub_row.prop(scene, "frame_end")
 
         # https://docs.blender.org/api/current/bpy.types.Operator.html#enum-search-popup
         # Invoke search popup for user to select mesh
-        layout.label(text="Select Mesh")
+        # layout.label(text="Export Mesh")
         row: bpy.types.UILayout = layout.row(align=True)
         # row.prop(self, "uv_unwrapper_toggle")
-        row.operator("object.search_mesh_operator", text="Select Mesh", icon="COLLAPSEMENU")
-        row.operator("object.pipeline", text="Generate Contours", icon="OUTLINER_DATA_VOLUME")
 
-        # layout.operator("")
+        # TODO: change name to tat of the mesh
+        row.operator(operator="object.search_mesh_operator",
+                     text="Select Mesh", icon="COLLAPSEMENU")
+
+        row = layout.row()
+        row.prop(data=context.scene, property="target", emboss=True)
+        # row.prop(context.scene, "target", context.scene,
+        #  "objects", text="Select Object")
+        print(bpy.types.Scene.target)
+
         layout.separator()
+        layout.label(text="UV Unwrapper")
 
-        # TODO: include a big button to generate occluding contours.
-        #
+        # TODO: need to get parametrizations fo rthis!
+        row: bpy.types.UILayout = layout.row(align=True)
+        # TODO: put all the settings associated with uv unwrapping...
+        sub_row: bpy.types.UILayout = row.column_flow()
+        sub_row = row.box()
+        row = layout.row()
+        row.template_list("RANATO_UL_ItemList", "ranato_list",
+                          scene, "my_list",
+                          scene, "list_index")
+        row = layout.row()
+        row.operator("my_list.new_item", text="NEW")
 
-        # Big render button
+        sub_row.operator(operator="object.uv_unwrap",
+                         text="Generate Unwrapping", icon="UV")
+
+        # --- Big render button ---
+        layout.separator()
         layout.label(text="Render")
         row = layout.row()
-        row.active = False
-
-        # This operator should call an operator like "algebraic contours" or something.
-        row.operator("render.render")
+        # TODO: set active if UV unwrapping is detected for the correct mesh...
+        # row.active = False
+        # row.operator("render.render")
+        row.operator("object.pipeline", text="Generate Contours", icon="LINCURVE")
         row.scale_y = 2.0
+
+        # --- Vertex Angles Specifier ---
+
+        # if scene.list_index >= 0 and scene.my_list:
+        #     item = scene.my_list[scene.list_index]
+        #     row = layout.row()
+        #     row.prop(item, "index")
+        #     row.prop(item, "value")

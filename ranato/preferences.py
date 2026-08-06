@@ -7,11 +7,14 @@ https://github.com/blender/blender/blob/a35ce252c7f007daa8b9a4520f7aca8067313501
 """
 
 import os
+import pathlib
 import sys
 
 import bpy
 import bpy.props
 import bpy.types
+
+from .common import ADDON_ID
 
 
 def LocateUserCondaDirectory() -> str:
@@ -39,47 +42,60 @@ class RanatoPreferences(bpy.types.AddonPreferences):
     Panel to appear in Blender's addon preferences page.
     """
     bl_label: str = "Ranato Preferences"
-    bl_idname: str = __package__
+    bl_idname: str = ADDON_ID
     bl_space_type: str = 'PREFERENCES'
     bl_region_type: str = 'WINDOW'
     bl_context: str = "addons"
 
-    # directory_path_conda: str = LocateUserCondaDirectory()
+    DIRECTORY_BASE_ADDON: pathlib.Path = pathlib.Path(__file__).parent
+    DIRECTORY_CONDA: str = LocateUserCondaDirectory()
 
-    # TODO: find purpose of having a place to specify Blender's Python directory.
-    directory_path_python: bpy.props.StringProperty(
+    directory_temp: bpy.props.StringProperty(
+        name="Script Temporary Directory",
+        description="Temporary directory for script/executable I/O.",
+        subtype='DIR_PATH',
+        default=os.path.join(DIRECTORY_BASE_ADDON, "__temp__")
+    )
+
+    directory_python: bpy.props.StringProperty(
         name="Blender Python Environment Directory",
         description="Directory for Blender's Python environment.",
         subtype='DIR_PATH',
         default=f"{sys.prefix}"
     )
+    filepath_conda: bpy.props.StringProperty(
+        name="Conda Executable Filepath",
+        description="Filepath for Conda executable for UV unwrapper.",
+        subtype='FILE_PATH',
+        default=os.path.join(DIRECTORY_CONDA, "envs", "cm_env", "python.exe")
+    )
 
-    # TODO: change to support only cm_env if the user followed the original UV unwrapper paper's setup
-    # file_path_conda: bpy.props.StringProperty(
-    #     name="Conda Executable Filepath",
-    #     description="Filepath for Conda executable for UV unwrapper.",
-    #     subtype='FILE_PATH',
-    #     default=os.path.join(directory_path_conda, "envs", "cm_env_original", "python.exe")
-    # )
+    # 3 different directories for 3 different uv unwrappers
+    # TODO: OK, really do make a UV unwrapper class because some of these (i.e. the CETM)
+    #       actually does Python calls
+    filepath_uv_unwrap_campen: bpy.props.StringProperty(
+        name="Campen et al. 2021 UV Unwrapper Directory",
+        description="Directory for Campen et al 2021 UV unwrapper.",
+        subtype='FILE_PATH',
+        # HACK: hardcoding script dir
+        default=r"D:/Repos/ConformalIdealDelaunay/py/Release/script_conformal.py"
+    )
 
-    # TODO: allow user to specify "include/" folder to copy over and into Blender's Python Env
-    #       to install Cholespy (because Blender's default Python ENV does not have include/ for some
-    # reason)
-    # XXX: this is for the legacy version of adding dependencies.
-    # Newer versions of Ranato should support wheels.
-    # FIXME: have place for wheels for Blender's new way of handling dependencies.
-    directory_path_include: bpy.props.StringProperty(
-        name="Python Environment Include Directory",
-        description="include/ directory needed for installation of Cholespy via pip.",
-        subtype='DIR_PATH',
-        default=os.path.join(sys.prefix, "include")
+    filepath_uv_unwrap_ceps: bpy.props.StringProperty(
+        name="CEPS UV Unwrapper Directory",
+        description="Directory for CEPS UV unwrapper.",
+        subtype='FILE_PATH',
+        # HACK: hardcoding exe dir
+        default=r"D:\Repos\CEPS\build\bin\Release/parameterize.exe"
     )
 
     def draw(self, context: bpy.types.Context) -> None:
         layout: bpy.types.UILayout = self.layout
-        layout.prop(self, "directory_path_python")
-        layout.prop(self, "file_path_conda")
-        layout.prop(self, "directory_path_include")
+        layout.prop(self, "directory_python")
+        layout.prop(self, "directory_temp")
+        layout.prop(self, "filepath_conda")
+        layout.prop(self, "filepath_uv_unwrap_campen")
+        layout.prop(self, "filepath_uv_unwrap_ceps")
 
 
 class OBJECT_OT_addon_preferences(bpy.types.Operator):
@@ -95,10 +111,10 @@ class OBJECT_OT_addon_preferences(bpy.types.Operator):
         Executes the operator.
         Grabs from the context preferences and the addon's preferences.
         """
-        addon_prefs: bpy.types.AddonPreferences | None = context.preferences.addons[__package__]
+        addon_prefs: bpy.types.AddonPreferences | None = context.preferences.addons[ADDON_ID]
 
         if addon_prefs is None:
-            print(f"Could not identify the addon preferences for {__package__}")
+            print(f"Could not identify the addon preferences for {ADDON_ID}")
             return {'ERROR'}
 
         self.report({'INFO'}, "Successful addon retrieval")

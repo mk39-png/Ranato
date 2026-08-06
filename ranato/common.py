@@ -3,19 +3,6 @@ Global common.py to store state and information that is global to the Ranato add
 (e.g. filepaths)
 
 """
-import pathlib
-import sys
 
-# Addon paths
-DIRECTORY_BASE_ADDON: pathlib.Path = pathlib.Path(__file__).parent
-DIRECTORY_TEMP: pathlib.Path = DIRECTORY_BASE_ADDON / "temp"
-
-# UV unwrapper paths
-DIRECTORY_UV_UNWRAPPER: pathlib.Path = DIRECTORY_BASE_ADDON / "uv_unwrapper"
-FILEPATH_UV_UNWRAPPER: pathlib.Path = DIRECTORY_UV_UNWRAPPER / "script_conformal.py"
-
-# Algebraic contours paths
-DIRECTORY_ALGEBRAIC_CONTOURS: pathlib.Path = DIRECTORY_BASE_ADDON / "algebraic_contours"
-
-# Misc paths
-DIRECTORY_BLENDER_PYTHON_ENV: str = sys.prefix
+# NOTE: this is goind to be bl_ext.vscode_development.ranato as long as common.py is in root directory of ranato/
+ADDON_ID: str = __package__

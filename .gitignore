@@ -7,6 +7,7 @@ cholespy/
 spot_control/
 default_cube/
 uv_unwrapper/
+__temp__/
 *.blend
 *.obj
 *.ini
