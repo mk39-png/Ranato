@@ -49,6 +49,10 @@ class RanatoPreferences(bpy.types.AddonPreferences):
 
     DIRECTORY_BASE_ADDON: pathlib.Path = pathlib.Path(__file__).parent
     DIRECTORY_CONDA: str = LocateUserCondaDirectory()
+    FILEPATH_CAMPEN: pathlib.Path = DIRECTORY_BASE_ADDON / \
+        "bin" / "ConformalIdealDelaunay" / "script_conformal.py"
+    FILEPATH_CEPS: pathlib.Path = DIRECTORY_BASE_ADDON / "bin" / "CEPS" / "parameterize.exe"
+    FILEPATH_MOVING_CONES: pathlib.Path = DIRECTORY_BASE_ADDON / "bin" / "MovingCones" / "ConeGenes.exe"
 
     directory_temp: bpy.props.StringProperty(
         name="Script Temporary Directory",
@@ -63,6 +67,7 @@ class RanatoPreferences(bpy.types.AddonPreferences):
         subtype='DIR_PATH',
         default=f"{sys.prefix}"
     )
+
     filepath_conda: bpy.props.StringProperty(
         name="Conda Executable Filepath",
         description="Filepath for Conda executable for UV unwrapper.",
@@ -70,37 +75,47 @@ class RanatoPreferences(bpy.types.AddonPreferences):
         default=os.path.join(DIRECTORY_CONDA, "envs", "cm_env", "python.exe")
     )
 
-    # 3 different directories for 3 different uv unwrappers
     # TODO: OK, really do make a UV unwrapper class because some of these (i.e. the CETM)
     #       actually does Python calls
     filepath_uv_unwrap_campen: bpy.props.StringProperty(
-        name="Campen et al. 2021 UV Unwrapper Directory",
-        description="Directory for Campen et al 2021 UV unwrapper.",
+        name="Campen et al. 2021 UV Unwrapper Filepath",
+        description="Directory for Campen et al 2021 UV unwrapper (aka mesh parametrization).",
         subtype='FILE_PATH',
-        # HACK: hardcoding script dir
-        default=r"D:/Repos/ConformalIdealDelaunay/py/Release/script_conformal.py"
+        default=FILEPATH_CAMPEN.as_posix()
     )
 
     filepath_uv_unwrap_ceps: bpy.props.StringProperty(
-        name="CEPS UV Unwrapper Directory",
-        description="Directory for CEPS UV unwrapper.",
+        name="CEPS UV Unwrapper Filepath",
+        description="Directory for CEPS UV unwrapper (aka mesh parametrization).",
         subtype='FILE_PATH',
-        # HACK: hardcoding exe dir
-        default=r"D:\Repos\CEPS\build\bin\Release/parameterize.exe"
+        default=FILEPATH_CEPS.as_posix()
+    )
+
+    filepath_moving_cones: bpy.props.StringProperty(
+        name="Moving Cones Filepath",
+        description="Filepath for cone vertices executable.",
+        subtype='FILE_PATH',
+        default=FILEPATH_MOVING_CONES.as_posix()
     )
 
     def draw(self, context: bpy.types.Context) -> None:
+        """ Establishes Blender properties so that this data is held within Blender itself... roughly speaking.
+        """
         layout: bpy.types.UILayout = self.layout
         layout.prop(self, "directory_python")
         layout.prop(self, "directory_temp")
         layout.prop(self, "filepath_conda")
         layout.prop(self, "filepath_uv_unwrap_campen")
         layout.prop(self, "filepath_uv_unwrap_ceps")
+        layout.prop(self, "filepath_moving_cones")
 
 
 class OBJECT_OT_addon_preferences(bpy.types.Operator):
     """
     Display example preferences
+
+    # See example:
+    https://projects.blender.org/blender/blender/src/commit/1f60fcfed7decaee1859432d751326b830124812/doc/python_api/examples/bpy.types.AddonPreferences.1.py
     """
     bl_idname: str = "object.addon_preferences"
     bl_label: str = "Ranato add-on Preferences"
