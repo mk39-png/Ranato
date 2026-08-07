@@ -14,6 +14,8 @@ from mathutils import Matrix
 from pyalgcon.pipelines.generate_algebraic_contours import \
     generate_algebraic_contours
 
+from ..common import ADDON_ID, DEBUG
+
 
 def blender_to_opengl_matrix(blender_camera_matrix: np.ndarray) -> np.ndarray:
     """
@@ -33,22 +35,28 @@ def blender_to_opengl_matrix(blender_camera_matrix: np.ndarray) -> np.ndarray:
     opengl_camera_matrix = blender_camera_matrix
 
     # LOAD INTO POLYSCOPE AND SEE
-    folder: pathlib.Path = pathlib.Path(__file__).parent
-    np.savetxt(folder / "temp" / "temp_camera_matrix.csv",
+    # folder: pathlib.Path = pathlib.Path(__file__).parent
+    # print("FOLDER", folder)
+    directory_temp: pathlib.Path = pathlib.Path(
+        bpy.context.preferences.addons[ADDON_ID].preferences.directory_temp)
+    np.savetxt(directory_temp / "temp_camera_matrix.csv",
                opengl_camera_matrix, delimiter=",", fmt="%f")
+    # np.savetxt(folder / "temp" / "temp_camera_matrix.csv",
+    #    opengl_camera_matrix, delimiter=",", fmt="%f")
 
-    # HACK: running venv python directly rather than using Blender's python env
-    subprocess.run(
-        [pathlib.Path(r"D:\Repos\Ranato\.venv\Scripts\python.exe"),  # sys.executable,
-         str(folder / "run_polyscope.py"),
-         "--file",
-         str(folder / "temp" / "temp.obj"),
-         "--camera",
-         str(folder / "temp" / "temp_camera_matrix.csv")],
-        check=True,
-        # capture_output=True,
-        # text=True
-    )
+    if DEBUG:
+        # HACK: running venv python directly rather than using Blender's python env
+        subprocess.run(
+            [pathlib.Path(r"D:\Repos\Ranato\.venv\Scripts\python.exe"),  # sys.executable,
+             str(folder / "run_polyscope.py"),
+             "--file",
+             str(folder / "temp" / "temp.obj"),
+             "--camera",
+             str(folder / "temp" / "temp_camera_matrix.csv")],
+            check=True,
+            # capture_output=True,
+            # text=True
+        )
 
     return opengl_camera_matrix
 
@@ -84,10 +92,7 @@ def get_matrices(context: bpy.types.Context) -> np.ndarray:
     return camera_matrix_pyac
 
 
-# Generate a PNG or whatnot and save to render layers...
-
-# TODO: this is not the pipeline... it's morle like generation of contours
-# The pipeline should really be the OVERALL steps of uv unwrapping, specifying cone vertices, etc
+# TODO: rename class since generate_contours is not the only part of the pipeline...
 class OBJECT_OT_pipeline(bpy.types.Operator):
     """
     With the mesh saved to an .obj, we run the whole pipeline to calculate the
@@ -104,11 +109,21 @@ class OBJECT_OT_pipeline(bpy.types.Operator):
 
         # Now, with the UV unwrapped mesh, we can now call the main program for
         # processing the whole mesh.
-        camera_matrix = get_matrices(context)
+
+        # TODO: to generate contours, the previous steps of the pipeline MUST be complete.
+        # As in...
+        # * Export OBJ mesh
+        # * Gathered UV unwrapping
+        # * Set parameters for UV unwrapping
+        # * Set parameters for algebraic contours
+        # After all of that, we are able to proceed with generating algebraic contours.
+
+        camera_matrix: np.ndarray = get_matrices(context)
         directory_temp: pathlib.Path = pathlib.Path(
-            bpy.context.preferences.addons[__package__].preferences.directory_temp)
+            bpy.context.preferences.addons[ADDON_ID].preferences.directory_temp)
         generate_algebraic_contours(camera_matrix, directory_temp /
                                     "temp_out.obj")
 
-        self.report({'INFO'}, message="Generated algebraic contours!")
+        # TODO: Generate a PNG or whatnot and save to render layers...
+        self.report({'INFO'}, message="Successfully generated algebraic contours!")
         return {"FINISHED"}
