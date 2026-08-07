@@ -119,6 +119,14 @@ class OBJECT_OT_pipeline(bpy.types.Operator):
         # After all of that, we are able to proceed with generating algebraic contours.
 
         camera_matrix: np.ndarray = get_matrices(context)
+
+        # TEMP FOR DEBUGGING
+        camera_matrix = np.array([
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 0, 1, 5],
+            [0, 0, 0, 1]], dtype=float
+        )
         directory_temp: pathlib.Path = pathlib.Path(
             bpy.context.preferences.addons[ADDON_ID].preferences.directory_temp)
         generate_algebraic_contours(camera_matrix, directory_temp /

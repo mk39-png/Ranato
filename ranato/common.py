@@ -10,5 +10,5 @@ DEBUG: bool = False
 
 
 # TODO: target filenames for now...
-INPUT_OBJ_FILENAME = "temp_in.obj"
+INPUT_OBJ_FILENAME = "temp.obj"
 OUTPUT_OBJ_FILENAME = "temp_out.obj"

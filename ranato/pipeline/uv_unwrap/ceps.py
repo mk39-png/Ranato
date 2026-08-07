@@ -49,9 +49,7 @@ class CEPSStrategy(UVUnwrapStrategy):
         """
         """
 
-    def draw(self, layout, settings):
-        print()
-
     def execute(self, context, settings):
         """_summary_
         """
+        raise NotImplementedError("CEPS not yet implemented!")

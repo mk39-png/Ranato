@@ -1,6 +1,8 @@
 import bpy.props
 import bpy.types
 
+# TODO: give option to load in vertex angles via file...
+
 
 class VertexAngleItem(bpy.types.PropertyGroup):
     """ 

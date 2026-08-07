@@ -16,7 +16,7 @@ from typing import Any
 import bpy.props
 import bpy.types
 
-from ...common import ADDON_ID
+from ...common import ADDON_ID, INPUT_OBJ_FILENAME
 from .uv_unwrap_strategy import UVUnwrapStrategy
 
 
@@ -116,6 +116,8 @@ class CampenStrategy(UVUnwrapStrategy):
         """
         subprocess.run(args, check=False)
 
+    # TODO: have something that converts bool to arguments and whatnot...
+
     def execute(self, context, settings):
         """
         # TODO: refactor so that function is universal for any UV unwrapper
@@ -144,23 +146,31 @@ class CampenStrategy(UVUnwrapStrategy):
         # TODO: have a check to make sure that file_path_uv_unwrapper preference has been checked.
         print(directory_temp)
         print(dir(settings))
+        print(dir(settings.campen))
+        print(settings.campen.prop_do_reduction)
+        print(settings.bff)
         # TODO: define UV unwrapper filepath in one of the preferences addon menu boxes...
+
+        # TODO: fix below method to ONLY grab numpy array of indices and their values
+        self._retrieve_vertex_angles(context)
 
         # TODO: have a way to save the parameters/settings, especially with a mesh and its user-inputted cone vertices.
         # TODO: also for CEPS, need a way to track its parameters as well
 
         # TODO: allow user to specify parameters into this... by writing down whatever in the panel box
         # TODO: have fields in Ranato that allows user to specify these args...
-        # self._call_uv_unwrapper([filepath_conda,
-        #                          file_path_uv_unwrapper,
-        #                          "--input", directory_temp,
-        #                          "--fname", "temp.obj",
-        #                          "--max_itr", "500",
-        #                          "--output", directory_temp,
-        #                          "--no_round_Th_hat",
-        #                          "--error_log",
-        #                          "--output_type", "param",
-        #                          "--output_format", "obj"
-        #                          ])
+        self._call_uv_unwrapper([filepath_conda,
+                                 file_path_uv_unwrapper,
+                                 "--input", directory_temp,
+                                 "--fname", INPUT_OBJ_FILENAME,
+                                 "--max_itr", "500",
+                                #  TODO: include some yes or no if T or F for some fields
+                                 #  "--max_itr" if settings.campen.prop_do_reduction else "",
+                                 "--output", directory_temp,
+                                 "--no_round_Th_hat",
+                                 "--error_log",
+                                 "--output_type", "param",
+                                 "--output_format", "obj"
+                                 ])
 
         # TODO: perform verification on whether OBJ output is VALID!!!

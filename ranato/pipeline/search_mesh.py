@@ -12,7 +12,7 @@ import bpy.types
 import numpy as np
 
 # TODO: fix relative import
-from ..common import ADDON_ID
+from ..common import ADDON_ID, INPUT_OBJ_FILENAME
 
 
 # TODO: Implement future version utilize vertex position, texture coordinates, and face indices
@@ -46,7 +46,7 @@ class OBJECT_OT_Export_Mesh(bpy.types.Operator):
     def poll(cls, context: bpy.types.Context) -> bool:
         """ Checks if we can export a mesh (can only do so once mesh is selected).
         """
-        return hasattr(context.scene, "target")
+        return hasattr(context.scene, "target_mesh")
 
     # https://docs.blender.org/api/current/bpy.types.Depsgraph.html
     def execute(self, context: bpy.types.Context) -> set:
@@ -63,7 +63,7 @@ class OBJECT_OT_Export_Mesh(bpy.types.Operator):
         # Retrieve the mesh object
         #
         # Based off user selection, retrieve reference to Blender object
-        selected_object: bpy.types.Object = context.scene.target
+        selected_object: bpy.types.Object = context.scene.target_mesh
 
         #
         # Error handling when user selects a non-mesh
@@ -74,7 +74,7 @@ class OBJECT_OT_Export_Mesh(bpy.types.Operator):
             # HACK: call operator to select mesh so that blender can utilize the
             # "export_selected_objects" flag to only export the desired mesh
             # bpy.data.objects[selected_object.name].select_set(state=True)
-            bpy.context.scene.target.select_set(state=True)
+            bpy.context.scene.target_mesh.select_set(state=True)
 
             # TODO: check if there is already an .obj in temp.
             # FIXME: file should be temporarily held in the addon's directory
@@ -135,8 +135,8 @@ class OBJECT_OT_search_mesh_operator(bpy.types.Operator):
         #
         # Based off user selection, retrieve reference to Blender object
         selected_object: bpy.types.Object = bpy.context.scene.objects[self.user_search]
-        # selected_object = bpy.context.scene.target
-        print("ME", selected_object)
+        # selected_object = bpy.context.scene.target_mesh
+        # print("ME", selected_object)
         # print("ME", selected_object2)
 
         #
@@ -148,15 +148,14 @@ class OBJECT_OT_search_mesh_operator(bpy.types.Operator):
             # "export_selected_objects" flag to only export the desired mesh
             bpy.data.objects[selected_object.name].select_set(state=True)
             print("LOOK HERE", selected_object.data.vertices)
-            print()
-            # bpy.context.scene.target.select_set(state=True)
+            # bpy.context.scene.target_mesh.select_set(state=True)
             # TODO: check if there is already an .obj in temp.
 
             # TODO: the start and end frames should be dependent on the user selected start and
             #  end frames...
             # FIXME: file should be temporarily held in the addon's directory
             # https://github.com/benrugg/AI-Render/blob/main/analytics.py
-            bpy.ops.wm.obj_export(filepath=os.path.join(directory_temp, "temp.obj"),
+            bpy.ops.wm.obj_export(filepath=os.path.join(directory_temp, INPUT_OBJ_FILENAME),
                                   check_existing=True,
                                   start_frame=0,
                                   end_frame=0,
@@ -173,36 +172,6 @@ class OBJECT_OT_search_mesh_operator(bpy.types.Operator):
                                   export_material_groups=False,
                                   export_vertex_groups=False,
                                   export_smooth_groups=False)
-
-            #
-            # PREPARING FOR UV UNWRAPPING
-            #
-            # After running the executable for locating cone indices, be sure to save where they are.
-            # Construct an array of size matching number of vertices
-            vertex_angles: np.ndarray = np.full(shape=(len(selected_object.data.vertices)),
-                                                fill_value=(np.pi * 2.0))
-
-            # Now, get location of cone vertex angles (all the rows in the 0th column)
-            cone_vertex_indices: np.ndarray = np.loadtxt(
-                directory_temp / "temp-cones.txt", dtype=int)[:, 0]
-
-            # NOTE: it seems that we may not need this?
-            # At least testing with the bob duck mesh, using 2pi for the vertices worked just fine.
-            # And it seems like a single island for the UV unwrapping is preferred to work fine.
-            # Then, save the location of the cones into vertex_angles per Capouellez et al. 2023
-            # vertex_angles[cone_vertex_indices] = np.pi    # * 3.0  # * random.random()
-
-            # Finally, save to file...
-            temp_file: pathlib.Path = pathlib.Path(directory_temp, "temp_Th_hat")
-            np.savetxt(fname=temp_file, X=vertex_angles, newline="\n")
-
-            # # TODO: move this functionality over to uv unwrap where it's more closely related.
-            # # Now, write the angle file for this mesh, defaulting at 2pi
-            # with open(temp_file, "w", encoding="utf8") as file:
-            #     for _ in range(len(selected_object.data.vertices)):
-            #         file.write(f"{(math.pi * 2.0)}\n")
-            #         # file.write(f"{(math.pi * 1.0)}\n")
-
         else:
             # User mis-selected a non-mesh.
             self.report({'ERROR'}, "Improper selection (select a mesh): " + self.user_search)

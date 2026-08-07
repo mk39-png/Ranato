@@ -34,9 +34,10 @@ class RANATO_PT_mesh_export(bpy.types.Panel):
         #  text = "Search Mesh", icon = "COLLAPSEMENU")
 
         row = layout.row()
-        row.prop(data=context.scene, property="target", emboss=True)
+        row.prop(data=context.scene, property="target_mesh", emboss=True)
         row = layout.row()
-        row.enabled = hasattr(context.scene, "target") and context.scene.target is not None
+        row.enabled = hasattr(
+            context.scene, "target_mesh") and context.scene.target_mesh is not None
         row.operator(operator="object.export_mesh_operator",
                      text="Export Mesh", icon="COLLAPSEMENU")
 
@@ -68,16 +69,14 @@ class RANATO_PT_vertex_angles(bpy.types.Panel):
         # TODO: below is shared by all UV unwrapping algorithms (if applicable)
         # layout.use_property_split = True
         # layout.use_property_decorate = False
+
         # --- Vertex Angles Specifier ---
         row = layout.row()
         row.label(text="Default Vertex Angle (radians):")
-        # TODO: have box to specify default vertex angle in radians
+        layout.prop(data=context.scene, property="vertex_angle_default", emboss=True)
         row = layout.row()
-        row.label(text="Cone Vertices (input into box below)")
+        row.label(text="Cone Vertices (overrides vertex angles of inputted vertices)")
         layout.label(text="Applicable to Campen et al. 2021 and CEPS algorithms.")
-        # TODO: option to specify default vertices
-        # TODO: option to select algorithm for finding cones...
-        # Which also means that I need a class of some sort to generalize script calls...
 
         row = layout.row()
         row.template_list("RANATO_UL_ItemList", "ranato_list",
@@ -117,7 +116,7 @@ class RANATO_PT_uv_unwrap(bpy.types.Panel):
         row: bpy.types.UILayout = layout.row()
 
         # Retrieve what UV unwrapper we have right now!
-        settings = context.scene.uv_unwrap_settings
+        settings = scene.uv_unwrap_settings
         # print(settings)
 
         # HACK: assume campen strategy for now
