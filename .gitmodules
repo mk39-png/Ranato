@@ -1,0 +1,15 @@
+[submodule "external/CEPS"]
+	path = external/CEPS
+	url = https://github.com/MarkGillespie/CEPS.git
+[submodule "external/confmap"]
+	path = external/confmap
+	url = https://github.com/russelmann/confmap.git
+[submodule "external/ConformalIdealDelaunay"]
+	path = external/ConformalIdealDelaunay
+	url = https://github.com/mk39-png/ConformalIdealDelaunay.git
+[submodule "external/py-algebraic-contours"]
+	path = external/py-algebraic-contours
+	url = https://github.com/mk39-png/py-algebraic-contours.git
+[submodule "external/MovingCones"]
+	path = external/MovingCones
+	url = https://github.com/USTC-GCL-F/MovingCones.git
