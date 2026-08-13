@@ -18,30 +18,30 @@ import bpy.types
 
 from ...common import ADDON_ID, INPUT_OBJ_FILENAME
 from .uv_unwrap_strategy import UVUnwrapStrategy
+from ..vertex_angles import retrieveVertexAngles
 
 
 # TODO: find a way to combine settings with the strategy via strong coupling...
 class CampenSettings(bpy.types.PropertyGroup):
-    """ Holds what it needs to hold...
+    """ 
+    Concrete class holding properties associated with Campen et al. 2021's script arguments. Stores said arguments inside the .blend file itself in Blender's RNA data system.
 
-    Args:
-        bpy (_type_): _description_
+    Which is to say that this class is exposed to/accessed by UVUnwrapperSettings()
 
-    Raises:
-        NotImplementedError: _description_
+    NOTE: attributes (also called properties if referring to Blender's version of the same data) must be named with the "prop_" prefix as many of the draw() and execute() scripts associated with UVUnwrapStrategy utilize getattr() and dir() for retrieving property values from settings.
 
-    Returns:
-        _type_: _description_
+    Attributes:
+        prop_use_mpf (BoolProperty): multiprecision enabling
+        prop_do_reduction
+        prop_prec
+        prop_max_itr
+        prop_energy_cond
+        prop_no_round_Th_hat
+        prop_no_lm_reset
+        prop_eps
+        prop_lambda0
+        prop_bound_norm_thres
     """
-
-    # TODO: the 3 fields below should NOT be accessible by the end user
-    # and should be handled automatically by the add-on
-    # input_folder: bpy.props.StringProperty(
-    # )
-    # filename: bpy.props.StringProperty(
-    # )
-    # output_Folder: bpy.props.StringProperty(
-    # )
 
     # NOTE: descriptions from original script arguments
     # https://github.com/mk39-png/ConformalIdealDelaunay/blob/master/py/script_conformal.py
@@ -67,7 +67,6 @@ class CampenSettings(bpy.types.PropertyGroup):
         min=0
     )
 
-    # TODO: some of these arguments are optional... so have checkmark to enable them or not
     prop_energy_cond: bpy.props.BoolProperty(
         name="Energy Condition",
         description="True for enable energy computation for line-search",
@@ -108,6 +107,22 @@ class CampenSettings(bpy.types.PropertyGroup):
 
 class CampenStrategy(UVUnwrapStrategy):
     _id = "campen"
+
+    # TODO: why don't I just have function calls below? That way, it's a lot easier...
+    # By that, I mean holt the reference to the attributes...
+    # _key = {
+    #     "prop_use_mpf": "use_mpf",
+    #     "prop_do_reduction": "do_reduction",
+    #     "prop_prec": "prec",
+    #     "prop_max_itr": "max_itr",
+    #     "prop_energy_cond": "energy_cond",
+    #     "prop_no_round_Th_hat": "no_round_Th_hat",
+    #     "prop_no_lm_reset": "no_lm_reset",
+    #     "prop_eps": "eps",
+    #     "prop_lambda0": "lambda0",
+    #     "prop_bound_norm_thres": "bound_norm_thres",
+    # }
+
     bl_idname = "CAMPEN"
     bl_label = "Campen et al. 2021"
 
@@ -125,14 +140,10 @@ class CampenStrategy(UVUnwrapStrategy):
 
         Calls the uv_unwrapper algorithm with specified commands.
         Also calls to activate the Conda environment if that has not been done already.
-
         Args:
             context (_type_): _description_
             settings (_type_): _description_
         """
-
-        # TODO: need to retrieve values from settings to pass as arguments into the UV unwrapper
-
         # Call sys subprocess to execute python script in another file.
         filepath_conda: str = bpy.context.preferences.addons[
             ADDON_ID].preferences.filepath_conda
@@ -142,35 +153,43 @@ class CampenStrategy(UVUnwrapStrategy):
             ADDON_ID].preferences.directory_temp
 
         # TODO: retrieve values from Vertex Angles section...
-
         # TODO: have a check to make sure that file_path_uv_unwrapper preference has been checked.
-        print(directory_temp)
-        print(dir(settings))
-        print(dir(settings.campen))
-        print(settings.campen.prop_do_reduction)
-        print(settings.bff)
-        # TODO: define UV unwrapper filepath in one of the preferences addon menu boxes...
+        # TODO: is there a better way of doing this?
+        # print(directory_temp)
+        # print(dir(settings))
+        properties: list[str] = [
+            name for name in dir(settings.campen) if name.startswith("prop")
+        ]
+
+        # Now with the name of our args (converted from Blender property name to script argument names), we can find their value to pass into the script
+        user_args: list[str] = []
+        for property in properties:
+            arg = property.replace("prop_", "")
+            user_arg = self._process_property(arg, getattr(settings.campen, property))
+            user_args.extend(user_arg)
+
+        print("properties:", properties)
+        print("user_args:", user_args)
 
         # TODO: fix below method to ONLY grab numpy array of indices and their values
+        retrieveVertexAngles(context.scene.vertex_angles)
         self._retrieve_vertex_angles(context)
 
         # TODO: have a way to save the parameters/settings, especially with a mesh and its user-inputted cone vertices.
         # TODO: also for CEPS, need a way to track its parameters as well
 
         # TODO: allow user to specify parameters into this... by writing down whatever in the panel box
-        # TODO: have fields in Ranato that allows user to specify these args...
-        self._call_uv_unwrapper([filepath_conda,
-                                 file_path_uv_unwrapper,
-                                 "--input", directory_temp,
-                                 "--fname", INPUT_OBJ_FILENAME,
-                                 "--max_itr", "500",
-                                #  TODO: include some yes or no if T or F for some fields
-                                 #  "--max_itr" if settings.campen.prop_do_reduction else "",
-                                 "--output", directory_temp,
-                                 "--no_round_Th_hat",
-                                 "--error_log",
-                                 "--output_type", "param",
-                                 "--output_format", "obj"
-                                 ])
-
+        script_args = [
+            filepath_conda,
+            file_path_uv_unwrapper,
+            "--input", directory_temp,
+            "--fname", INPUT_OBJ_FILENAME,
+            "--output", directory_temp,
+            "--output_type", "param",
+            "--output_format", "obj",
+            "--error_log"
+        ]
+        script_args.extend(user_args)
+        print(script_args)
+        self._call_uv_unwrapper(script_args)
         # TODO: perform verification on whether OBJ output is VALID!!!

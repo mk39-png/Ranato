@@ -34,6 +34,8 @@ class CETMStrategy(UVUnwrapStrategy):
         filepath_output: str = (directory_temp / OUTPUT_OBJ_FILENAME).as_posix()
 
         vertices, faces = read_obj(filepath_input)
+
+        # TODO: allow spot for inputting boundary vertices for non-topological spheres
         conformal_map = CETM(vertices, faces)
         uv_unwrapping_image: TriangleMesh = conformal_map.layout()
 

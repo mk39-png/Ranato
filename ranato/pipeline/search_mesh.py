@@ -35,7 +35,7 @@ def ops_get_objects(self, context) -> list[Any]:
     return enum
 
 
-class OBJECT_OT_Export_Mesh(bpy.types.Operator):
+class RANATO_OT_Export_Mesh(bpy.types.Operator):
     """
     Exports selected mesh as .obj file to temporary directory
     """
@@ -107,7 +107,7 @@ class OBJECT_OT_Export_Mesh(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class OBJECT_OT_search_mesh_operator(bpy.types.Operator):
+class RANATO_OT_search_mesh_operator(bpy.types.Operator):
     """
     Brings up UI panel for searching for a particular mesh. 
     Then, returns the string key for the particular mesh. 

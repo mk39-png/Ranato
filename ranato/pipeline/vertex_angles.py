@@ -1,11 +1,30 @@
 import bpy.props
 import bpy.types
-
 # TODO: give option to load in vertex angles via file...
+
+import numpy as np
+
+
+def retrieveVertexAngles(vertex_angles: bpy.types.bpy_prop_collection):
+    """_summary_
+
+    Args:
+        vertex_angles (bpy.types.bpy_prop_collection): _description_
+
+    Returns:
+        _type_: _description_
+    """
+    # Why is this needed? Well, to retrieve values from Blender rather than accessing Blender data directly...
+    print(
+        np.fromiter((vertex.index for vertex in vertex_angles), dtype=int)
+    )
+    print(
+        np.fromiter((vertex.angle for vertex in vertex_angles), dtype=float)
+    )
 
 
 class VertexAngleItem(bpy.types.PropertyGroup):
-    """ 
+    """
     Custom data class to hold vertices and their assigned angles
 
     Useful sources below:
@@ -15,8 +34,8 @@ class VertexAngleItem(bpy.types.PropertyGroup):
     """
 
     # Properties to hold onto the data first.
-    vertex_index: bpy.props.IntProperty(
-        name='vertex_index',  # TODO: rename to Vertex Index
+    index: bpy.props.IntProperty(
+        name='Vertex Index',
         description="Selected vertex index",
         default=0,
         min=0
@@ -32,15 +51,14 @@ class VertexAngleItem(bpy.types.PropertyGroup):
     # Which, the best way is to just not specify the subtyle to not
     # deal with such a headache.
     angle: bpy.props.FloatProperty(
-        name="vertex_angle",  # TODO: rename to Vertex Angle
+        name="Vertex Angle",  # TODO: rename to Vertex Angle
         description="Specified angle constraint for selected vertex",
         default=0.0,
-        # subtype="ANGLE"
     )
 
 
 class RANATO_UL_ItemList(bpy.types.UIList):
-    """ UIList subclass. But is more concerned with the data stored in each property rather than 
+    """ UIList subclass. But is more concerned with the data stored in each property rather than
     how it is displayed.
     # TODO: this ultimately depends on WHAT strategy is being used...
     """
@@ -58,7 +76,7 @@ class RANATO_UL_ItemList(bpy.types.UIList):
             item (_type_): current drawn item of the collection
             icon (_type_): "computed" icon for the item (as an integer since some objects like materials or textures have custom icons ID that are not available as enum items)
             active_data (_type_): RNA object containing the active property for the collection (i.e. integer active item of the collection)
-            active_propname (_type_): name of the active property 
+            active_propname (_type_): name of the active property
             index (_type_): index of the current item in the collection
         """
         custom_icon = "OBJECT_DATAMODE"
@@ -68,14 +86,14 @@ class RANATO_UL_ItemList(bpy.types.UIList):
             row = layout.row()
             split = row.split(factor=0.01)
             split.row().label(text="", icon="DECORATE")
-            split.row().prop(item, "vertex_index", text="Index", emboss=False)
+            split.row().prop(item, "index", text="Index", emboss=False)
             split.row().prop(item, "angle", text="Angle", emboss=False)
 
-            # layout.prop(item, "vertex_index", text="Vertex Index", emboss=False)
+            # layout.prop(item, "index", text="Vertex Index", emboss=False)
             # layout.prop(item, "angle", text="Vertex Angle", emboss=False)
         elif self.layout_type in {"GRID"}:
             layout.alignment = "CENTER"
-            layout.label(text=f"{item.vertex_index}", icon=custom_icon)
+            layout.label(text=f"{item.index}", icon=custom_icon)
 
 
 class LIST_OT_AddItem(bpy.types.Operator):
@@ -88,7 +106,7 @@ class LIST_OT_AddItem(bpy.types.Operator):
         item = context.scene.vertex_angles.add()
 
         # TODO: need to increment based on the index so far...
-        item.vertex_index = 0
+        item.index = 0
         item.angle = 0.0
 
         return {"FINISHED"}
@@ -116,7 +134,10 @@ class LIST_OT_RemoveItem(bpy.types.Operator):
         index = context.scene.list_index
 
         vertex_angles.remove(index)
-        context.scene.list_index = min(max(0, index-1), len(vertex_angles) - 1)
+        context.scene.list_index = min(
+            max(0, index-1),
+            len(vertex_angles) - 1
+        )
 
         return {"FINISHED"}
 

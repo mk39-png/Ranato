@@ -64,7 +64,7 @@ class RANATO_OT_uv_unwrap(Operator):
         # --- Select the strategy from a list of strategies or something... ---
         # obj = context.active_object
         settings: PointerProperty = context.scene.uv_unwrap_settings
-        strategy: CampenStrategy | CEPSStrategy | CETMSettings | BFFStrategy = STRATEGIES[
+        strategy: CampenStrategy | CEPSStrategy | CETMStrategy | BFFStrategy = STRATEGIES[
             settings.method]
         self.report({"INFO"}, f"Using {settings.method} UV unwrapping")
         strategy.execute(context, settings)

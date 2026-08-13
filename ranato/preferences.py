@@ -110,7 +110,7 @@ class RanatoPreferences(bpy.types.AddonPreferences):
         layout.prop(self, "filepath_moving_cones")
 
 
-class OBJECT_OT_addon_preferences(bpy.types.Operator):
+class RANATO_OT_addon_preferences(bpy.types.Operator):
     """
     Display example preferences
 

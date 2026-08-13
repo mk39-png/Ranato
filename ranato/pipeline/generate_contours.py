@@ -93,7 +93,7 @@ def get_matrices(context: bpy.types.Context) -> np.ndarray:
 
 
 # TODO: rename class since generate_contours is not the only part of the pipeline...
-class OBJECT_OT_pipeline(bpy.types.Operator):
+class RANATO_OT_pipeline(bpy.types.Operator):
     """
     With the mesh saved to an .obj, we run the whole pipeline to calculate the
     contours.

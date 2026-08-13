@@ -10,9 +10,9 @@ import bpy.utils
 from .panels import (RANATO_PT_generate_contours, RANATO_PT_main,
                      RANATO_PT_mesh_export, RANATO_PT_uv_unwrap,
                      RANATO_PT_vertex_angles)
-from .pipeline.generate_contours import OBJECT_OT_pipeline
-from .pipeline.search_mesh import (OBJECT_OT_Export_Mesh,
-                                   OBJECT_OT_search_mesh_operator)
+from .pipeline.generate_contours import RANATO_OT_pipeline
+from .pipeline.search_mesh import (RANATO_OT_Export_Mesh,
+                                   RANATO_OT_search_mesh_operator)
 from .pipeline.uv_unwrap.bff import BFFSettings
 from .pipeline.uv_unwrap.campen import CampenSettings
 from .pipeline.uv_unwrap.ceps import CEPSSettings
@@ -22,17 +22,17 @@ from .pipeline.uv_unwrap.uv_unwrap_main import (RANATO_OT_uv_unwrap,
 from .pipeline.vertex_angles import (LIST_OT_AddItem, LIST_OT_RemoveItem,
                                      LIST_OT_SortItem, RANATO_UL_ItemList,
                                      VertexAngleItem)
-from .preferences import OBJECT_OT_addon_preferences, RanatoPreferences
+from .preferences import RANATO_OT_addon_preferences, RanatoPreferences
 
 classes: list = [
     # NOTE: must register preferences first so that the other classes
     # can reference it
     RanatoPreferences,  # TODO: rename so clear it's blender thing
-    OBJECT_OT_search_mesh_operator,
-    OBJECT_OT_pipeline,
-    OBJECT_OT_addon_preferences,
+    RANATO_OT_search_mesh_operator,
+    RANATO_OT_pipeline,
+    RANATO_OT_addon_preferences,
     RANATO_OT_uv_unwrap,
-    OBJECT_OT_Export_Mesh,
+    RANATO_OT_Export_Mesh,
 
     RANATO_PT_main,
     RANATO_PT_mesh_export,

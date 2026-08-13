@@ -88,7 +88,7 @@ class RANATO_PT_vertex_angles(bpy.types.Panel):
         col.operator("vertex_angles.sort_item", icon="COLLAPSEMENU", text="")
         row = layout.row()
 
-        # print(scene.vertex_angles[0].vertex_index)
+        # print(scene.vertex_angles[0].index)
         # print(scene.vertex_angles[0].angle)
         # TODO: have option to specify default angle for vertices...
         # TODO: option to specify default scale for vertices...
@@ -96,7 +96,7 @@ class RANATO_PT_vertex_angles(bpy.types.Panel):
         if scene.list_index >= 0 and scene.vertex_angles:
             item = scene.vertex_angles[scene.list_index]
             row = layout.row()
-            row.prop(item, "vertex_index")
+            row.prop(item, "index")
             row.prop(item, "angle")
 
 
@@ -104,7 +104,7 @@ class RANATO_PT_uv_unwrap(bpy.types.Panel):
     """ Calls UV unwrapper
     """
     bl_label = "UV Unwrap (Mesh Parametrization)"
-    bl_idname = "panel.ranato_uv_unwrap"
+    bl_idname = "RANATO_PT_uv_unwrap"
     bl_space_type = 'PROPERTIES'
     bl_region_type = 'WINDOW'
     bl_context = "render"
@@ -119,7 +119,8 @@ class RANATO_PT_uv_unwrap(bpy.types.Panel):
         settings = scene.uv_unwrap_settings
         # print(settings)
 
-        # HACK: assume campen strategy for now
+        # TODO: have button to reset arguments for chosen UV unwrapping method
+
         strategy: CampenStrategy | CEPSStrategy | CETMSettings | BFFStrategy = STRATEGIES[
             settings.method]
         # print(strategy)
@@ -140,7 +141,7 @@ class RANATO_PT_generate_contours(bpy.types.Panel):
     """ Generates algebraic contours
     """
     bl_label = "Generate Contours"
-    bl_idname = "panel.ranato_generator_contours"
+    bl_idname = "RANATO_PT_generate_contours"
     bl_space_type = 'PROPERTIES'
     bl_region_type = 'WINDOW'
     bl_context = "render"
