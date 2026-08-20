@@ -1,55 +1,40 @@
-from bpy.props import BoolProperty, IntProperty
-from bpy.types import PropertyGroup
 
+import pathlib
+
+import bpy
+from bpy.types import AddonPreferences
+
+from ...common import ADDON_ID, INPUT_OBJ_FILENAME, OUTPUT_OBJ_FILENAME
 from .uv_unwrap_strategy import UVUnwrapStrategy
-
-
-class CEPSSettings(PropertyGroup):
-    """
-    Settings for CEPS algorithm
-    """
-    # curvatures file
-    # scale factors file
-    # TODO: may be worth implementing MPZ as another cone_mesh algorithm...
-    # For identifying cones and whatnot... making that modular and expandable
-    # ffield... from MPZ style crossfield
-
-    # NOTE: descriptions from original repo
-    # https://github.com/MarkGillespie/CEPS
-    prop_greedyConesMax: IntProperty(
-        name="Greedy Cones Maximum",
-        description="Maximum allowed log scale factor when placing cones (lower value = lower distortion in final parameterization, default value=5)",
-        default=5,
-        min=1
-    )
-    prop_useExactCones: BoolProperty(
-        name="Use Exact Cones",
-        description="Do not lump together nearby cones in the ffield input, if any. Cones prescribed via --curvatures or --scaleFactors are never lumped",
-        default=False
-    )
-    prop_noFreeBoundary: BoolProperty(
-        name="No Free Boundary",
-        description="Do not impose minimal-area-distortion boundary conditions (useful, e.g. if prescribing polygonal boundary conditions i.e. specifying angles at vertices)",
-        default=False
-    )
-    prop_viz: BoolProperty(
-        # TODO: fix name making it more clear what this is doing
-        name="Enable Polyscope GUI (external popup)",
-        description="",
-        default=False
-    )
 
 
 class CEPSStrategy(UVUnwrapStrategy):
     _id = "ceps"
-    bl_idname = "CEPS"  # TODO: rename ID name
+    bl_idname = "CEPS"  # TODO: rename ID name?
     bl_label = "CEPS"
 
-    def _call_uv_unwrapper(self):
-        """
-        """
+    def execute(self, context, settings) -> None:
+        # NOTE: this calls an EXE, which is perfect for us!
 
-    def execute(self, context, settings):
-        """_summary_
-        """
-        raise NotImplementedError("CEPS not yet implemented!")
+        # TODO: make helper function that retreives preference?????
+        preferences: AddonPreferences | None = bpy.context.preferences.addons[
+            ADDON_ID].preferences
+        filepath_uv_unwrap_ceps: str = preferences.filepath_uv_unwrap_ceps
+        directory_temp: pathlib.Path = pathlib.Path(preferences.directory_temp)
+        mesh_filepath: str = (directory_temp / INPUT_OBJ_FILENAME).as_posix()
+
+        # TODO: implement the curvatures retrieval for CEPs
+        # retrieve_cone_vertices(context.scene.vertex_angles)
+        # self._retrieve_vertex_angles(context)
+
+        script_args: list[str] = [
+            filepath_uv_unwrap_ceps,  # script filepath
+            mesh_filepath,  # target mesh
+            f"--outputLinearTextureFilename={directory_temp / OUTPUT_OBJ_FILENAME}",
+            f"--outputLogFilename={directory_temp / 'ceps.log'}"
+        ]
+
+        user_args: list[str] = self._process_properties(settings, ceps_format=True)
+        script_args.extend(user_args)
+
+        self._call_uv_unwrapper(script_args)

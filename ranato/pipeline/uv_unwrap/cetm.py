@@ -1,26 +1,18 @@
 import pathlib
 
 import bpy
-from bpy.types import PropertyGroup
+from bpy.types import UILayout
 from confmap.confmap import CETM
 from confmap.io_utils import read_obj, write_obj
 from confmap.mesh_utils import TriangleMesh
 
 from ...common import ADDON_ID, INPUT_OBJ_FILENAME, OUTPUT_OBJ_FILENAME
+from .uv_unwrap_settings import UVUnwrapperSelection
 from .uv_unwrap_strategy import UVUnwrapStrategy
-
-
-class CETMSettings(PropertyGroup):
-    """
-    Settings for CETM conformal mapping method (if there are any settings in the future)
-    """
 
 
 class CETMStrategy(UVUnwrapStrategy):
     """ Implementation of CETM UV Unwrapping strategy.
-
-    Args:
-        UVUnwrapStrategy (_type_): _description_
     """
     _id = "cetm"  # used for accessing attributes list and whatnot
     bl_idname = "CETM"  # TODO: rename to something more descriptive, like strategy.cetm... maybe
@@ -41,6 +33,9 @@ class CETMStrategy(UVUnwrapStrategy):
 
         write_obj(filepath_output,
                   conformal_map.vertices, conformal_map.faces, uv_unwrapping_image.vertices, uv_unwrapping_image.faces)
+
+    def draw(self, layout: UILayout, settings: UVUnwrapperSelection) -> None:
+        layout.label(text="No adjustable settings exist for CETM algorithm")
 
     def execute(self, context, settings) -> None:
         """ Calls helper function for UV unwrapping and performs validation if needed.

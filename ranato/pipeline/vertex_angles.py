@@ -1,11 +1,12 @@
 import bpy.props
 import bpy.types
+import numpy as np
+from bpy_extras.io_utils import ImportHelper
+
 # TODO: give option to load in vertex angles via file...
 
-import numpy as np
 
-
-def retrieveVertexAngles(vertex_angles: bpy.types.bpy_prop_collection):
+def retrieve_cone_vertex_angles(vertex_angles: bpy.types.bpy_prop_collection_idprop, ceps_format: bool = False):
     """_summary_
 
     Args:
@@ -14,13 +15,9 @@ def retrieveVertexAngles(vertex_angles: bpy.types.bpy_prop_collection):
     Returns:
         _type_: _description_
     """
-    # Why is this needed? Well, to retrieve values from Blender rather than accessing Blender data directly...
-    print(
-        np.fromiter((vertex.index for vertex in vertex_angles), dtype=int)
-    )
-    print(
-        np.fromiter((vertex.angle for vertex in vertex_angles), dtype=float)
-    )
+    indices = np.fromiter((vertex.index for vertex in vertex_angles), dtype=int)
+    angles = np.fromiter((vertex.angle for vertex in vertex_angles), dtype=float)
+    return (indices, angles)
 
 
 class VertexAngleItem(bpy.types.PropertyGroup):
@@ -51,7 +48,7 @@ class VertexAngleItem(bpy.types.PropertyGroup):
     # Which, the best way is to just not specify the subtyle to not
     # deal with such a headache.
     angle: bpy.props.FloatProperty(
-        name="Vertex Angle",  # TODO: rename to Vertex Angle
+        name="Vertex Angle",
         description="Specified angle constraint for selected vertex",
         default=0.0,
     )
@@ -63,7 +60,7 @@ class RANATO_UL_ItemList(bpy.types.UIList):
     # TODO: this ultimately depends on WHAT strategy is being used...
     """
 
-    def draw_item(self, _context, layout, _data, item, icon, _active_data, _active_propname, index) -> None:
+    def draw_item(self, context, layout, data, item, icon, _active_data, _active_propname, index) -> None:
         """ Draws each item in the list.
 
         More context about this function in the following:
@@ -88,9 +85,6 @@ class RANATO_UL_ItemList(bpy.types.UIList):
             split.row().label(text="", icon="DECORATE")
             split.row().prop(item, "index", text="Index", emboss=False)
             split.row().prop(item, "angle", text="Angle", emboss=False)
-
-            # layout.prop(item, "index", text="Vertex Index", emboss=False)
-            # layout.prop(item, "angle", text="Vertex Angle", emboss=False)
         elif self.layout_type in {"GRID"}:
             layout.alignment = "CENTER"
             layout.label(text=f"{item.index}", icon=custom_icon)
@@ -103,7 +97,12 @@ class LIST_OT_AddItem(bpy.types.Operator):
     bl_description = "Add vertex/angle entry to list"
 
     def execute(self, context) -> set[str]:
-        item = context.scene.vertex_angles.add()
+        # NOTE: .add() is inherited from bpy.props.CollectionProperty
+        item: VertexAngleItem = context.scene.vertex_angles.add()
+        print(item)
+        print(type(item))
+        # TODO: ensure no duplicates...
+        # And also add with default cone vertex angle
 
         # TODO: need to increment based on the index so far...
         item.index = 0
@@ -142,27 +141,69 @@ class LIST_OT_RemoveItem(bpy.types.Operator):
         return {"FINISHED"}
 
 
-class LIST_OT_SortItem(bpy.types.Operator):
+class LIST_OT_Import(bpy.types.Operator, ImportHelper):
     """
-    Add a new item to the list
+    Imports vertex angles from file.
 
     Source:
-    https://sinestesia.co/blog/tutorials/using-uilists-in-blender/
+    https://sinestesia.co/blog/tutorials/using-blenders-filebrowser-with-python/
+    https://blender.stackexchange.com/questions/42654/ui-how-to-add-a-file-browser-to-a-panel
     """
-    bl_idname = "vertex_angles.sort_item"
-    bl_label = "Move new item in list"
-    bl_description = "Move vertex/angle entry in list"
+    bl_idname = "vertex_angles.import"
+    bl_label = "Import"
+    bl_description = "Import formatted .txt of vertex angles"
 
-    @classmethod
-    def poll(cls, context):
-        # TODO: find out why this is needed
-        return context.scene.vertex_angles
+    filepath = bpy.props.StringProperty(subtype="FILE_PATH")
+    filter_glob = bpy.props.StringProperty(default='*.jpg;*.jpeg;*.png;*.tif;*.tiff;*.bmp',
+                                           options={'HIDDEN'})
+
+    @staticmethod
+    def _import(filepath: str) -> np.ndarray:
+        """
+        Helper method reading from selected filepath
+        """
+
+        # Which is to say that it uses NumPy to read in the filepath
+        # NOTE: just make it all float type then cast the left-most col to int...
+        # TODO: might be better to have dtype as "object" instead of float so that we're preserving the mixed datatype in the file rather than having to cast float to int.
+        index_angles = np.loadtxt(filepath, dtype=float, delimiter=" ")
+
+        if index_angles.ndim == 2 and index_angles.shape[1] == 2:
+            # TODO: check if this is correct....
+            return index_angles
+        elif index_angles.ndim == 1:
+            indices: np.ndarray = np.arange(index_angles.shape[0], dtype=float)
+            return np.column_stack((indices, index_angles))
+        else:
+            raise ValueError("Index angles file not 1D or 2D")
+        # Perform some adjustments...
+        # If vertex angles are not explicitly specified, then go ahead and do that.
+
+    # def draw(self, context) -> None:
+    #     layout: bpy.types.UILayout | None = self.layout
+    #     scene: bpy.types.Scene | None = context.scene
+    #     # layout.label(text="TODO: have button to restore to default parameters", icon="EXPORT")
 
     def execute(self, context) -> set[str]:
-        vertex_angles = context.scene.vertex_angles
-        index = context.scene.list_index
+        """ Executed after invoking import. 
+        Which is to say that after the user selects a .txt of vertex angles, then this 
+        performs the internal logic.
 
-        if index > 0:
-            vertex_angles.move(index, index - 1)
-        # vertex_angles.move(0, 1)
+        Args:
+            context (_type_): TODO
+
+        Returns:
+            set[str]: TODO
+        """
+
+        # Now that we have the filepath from ImportHelper
+        vertex_angles: bpy.types.CollectionProperty = context.scene.vertex_angles
+        indices_angles: np.ndarray = self._import(self.filepath)
+        vertex_angles.clear()
+
+        for index, angle in indices_angles:
+            item: VertexAngleItem = vertex_angles.add()
+            item.index = int(index)
+            item.angle = angle
+
         return {"FINISHED"}

@@ -47,18 +47,18 @@ class RanatoPreferences(bpy.types.AddonPreferences):
     bl_region_type: str = 'WINDOW'
     bl_context: str = "addons"
 
-    DIRECTORY_BASE_ADDON: pathlib.Path = pathlib.Path(__file__).parent
-    DIRECTORY_CONDA: str = LocateUserCondaDirectory()
-    FILEPATH_CAMPEN: pathlib.Path = DIRECTORY_BASE_ADDON / \
+    _DIRECTORY_BASE_ADDON: pathlib.Path = pathlib.Path(__file__).parent
+    _DIRECTORY_CONDA: str = LocateUserCondaDirectory()
+    _FILEPATH_CAMPEN: pathlib.Path = _DIRECTORY_BASE_ADDON / \
         "bin" / "ConformalIdealDelaunay" / "script_conformal.py"
-    FILEPATH_CEPS: pathlib.Path = DIRECTORY_BASE_ADDON / "bin" / "CEPS" / "parameterize.exe"
-    FILEPATH_MOVING_CONES: pathlib.Path = DIRECTORY_BASE_ADDON / "bin" / "MovingCones" / "ConeGenes.exe"
+    _FILEPATH_CEPS: pathlib.Path = _DIRECTORY_BASE_ADDON / "bin" / "CEPS" / "parameterize.exe"
+    _FILEPATH_MOVING_CONES: pathlib.Path = _DIRECTORY_BASE_ADDON / "bin" / "MovingCones" / "ConeGenes.exe"
 
     directory_temp: bpy.props.StringProperty(
         name="Script Temporary Directory",
         description="Temporary directory for script/executable I/O.",
         subtype='DIR_PATH',
-        default=os.path.join(DIRECTORY_BASE_ADDON, "__temp__")
+        default=os.path.join(_DIRECTORY_BASE_ADDON, "__temp__")
     )
 
     directory_python: bpy.props.StringProperty(
@@ -72,7 +72,7 @@ class RanatoPreferences(bpy.types.AddonPreferences):
         name="Conda Executable Filepath",
         description="Filepath for Conda executable for UV unwrapper.",
         subtype='FILE_PATH',
-        default=os.path.join(DIRECTORY_CONDA, "envs", "cm_env", "python.exe")
+        default=os.path.join(_DIRECTORY_CONDA, "envs", "cm_env", "python.exe")
     )
 
     # TODO: OK, really do make a UV unwrapper class because some of these (i.e. the CETM)
@@ -81,21 +81,21 @@ class RanatoPreferences(bpy.types.AddonPreferences):
         name="Campen et al. 2021 UV Unwrapper Filepath",
         description="Directory for Campen et al 2021 UV unwrapper (aka mesh parametrization).",
         subtype='FILE_PATH',
-        default=FILEPATH_CAMPEN.as_posix()
+        default=_FILEPATH_CAMPEN.as_posix()
     )
 
     filepath_uv_unwrap_ceps: bpy.props.StringProperty(
         name="CEPS UV Unwrapper Filepath",
         description="Directory for CEPS UV unwrapper (aka mesh parametrization).",
         subtype='FILE_PATH',
-        default=FILEPATH_CEPS.as_posix()
+        default=_FILEPATH_CEPS.as_posix()
     )
 
     filepath_moving_cones: bpy.props.StringProperty(
         name="Moving Cones Filepath",
         description="Filepath for cone vertices executable.",
         subtype='FILE_PATH',
-        default=FILEPATH_MOVING_CONES.as_posix()
+        default=_FILEPATH_MOVING_CONES.as_posix()
     )
 
     def draw(self, context: bpy.types.Context) -> None:

@@ -7,20 +7,19 @@ import bpy.props
 import bpy.types
 import bpy.utils
 
-from .panels import (RANATO_PT_generate_contours, RANATO_PT_main,
-                     RANATO_PT_mesh_export, RANATO_PT_uv_unwrap,
-                     RANATO_PT_vertex_angles)
+from .panels import (RANATO_MT_ExportAngles, RANATO_PT_generate_contours,
+                     RANATO_PT_main, RANATO_PT_mesh_export,
+                     RANATO_PT_uv_unwrap, RANATO_PT_vertex_angles)
+from .pipeline.export_mesh import RANATO_OT_Export_Mesh
 from .pipeline.generate_contours import RANATO_OT_pipeline
-from .pipeline.search_mesh import (RANATO_OT_Export_Mesh,
-                                   RANATO_OT_search_mesh_operator)
-from .pipeline.uv_unwrap.bff import BFFSettings
-from .pipeline.uv_unwrap.campen import CampenSettings
-from .pipeline.uv_unwrap.ceps import CEPSSettings
-from .pipeline.uv_unwrap.cetm import CETMSettings
-from .pipeline.uv_unwrap.uv_unwrap_main import (RANATO_OT_uv_unwrap,
-                                                UVUnwrapperSettings)
-from .pipeline.vertex_angles import (LIST_OT_AddItem, LIST_OT_RemoveItem,
-                                     LIST_OT_SortItem, RANATO_UL_ItemList,
+from .pipeline.search_mesh import RANATO_OT_search_mesh_operator
+from .pipeline.uv_unwrap.uv_unwrap_main import RANATO_OT_uv_unwrap
+from .pipeline.uv_unwrap.uv_unwrap_settings import (BFFSettings,
+                                                    CampenSettings,
+                                                    CEPSSettings, CETMSettings,
+                                                    UVUnwrapperSelection)
+from .pipeline.vertex_angles import (LIST_OT_AddItem, LIST_OT_Import,
+                                     LIST_OT_RemoveItem, RANATO_UL_ItemList,
                                      VertexAngleItem)
 from .preferences import RANATO_OT_addon_preferences, RanatoPreferences
 
@@ -34,6 +33,8 @@ classes: list = [
     RANATO_OT_uv_unwrap,
     RANATO_OT_Export_Mesh,
 
+    RANATO_MT_ExportAngles,
+
     RANATO_PT_main,
     RANATO_PT_mesh_export,
     RANATO_PT_vertex_angles,
@@ -43,14 +44,14 @@ classes: list = [
     RANATO_UL_ItemList,
     LIST_OT_AddItem,
     LIST_OT_RemoveItem,
-    LIST_OT_SortItem,
+    LIST_OT_Import,
 
     # UV Unwrapping
     CampenSettings,  # TODO: rename so clear that it's Blender associated stuff
     CEPSSettings,  # TODO: rename so clear that it's Blender associated stuff
     CETMSettings,  # TODO: rename so clear that it's Blender associated stuff
     BFFSettings,  # TODO: rename so clear that it's Blender associated stuff
-    UVUnwrapperSettings,  # TODO: rename so clear it's blender thing
+    UVUnwrapperSelection,  # TODO: rename so clear it's blender thing
     RANATO_PT_uv_unwrap,
 
     # Contour Generation
@@ -68,7 +69,7 @@ def register() -> None:
     bpy.types.Scene.list_index = bpy.props.IntProperty(name="Index for vertex_angles", default=0)
     bpy.types.Scene.target_mesh = bpy.props.PointerProperty(
         name="Select Mesh", type=bpy.types.Object)
-    bpy.types.Scene.uv_unwrap_settings = bpy.props.PointerProperty(type=UVUnwrapperSettings)
+    bpy.types.Scene.uv_unwrap_settings = bpy.props.PointerProperty(type=UVUnwrapperSelection)
 
 
 def unregister() -> None:

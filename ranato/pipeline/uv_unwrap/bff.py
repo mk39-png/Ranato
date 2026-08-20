@@ -1,19 +1,14 @@
 import pathlib
 
 import bpy
-from bpy.types import PropertyGroup
+from bpy.types import UILayout
 from confmap.confmap import BFF
 from confmap.io_utils import read_obj, write_obj
 from confmap.mesh_utils import TriangleMesh
 
 from ...common import ADDON_ID, INPUT_OBJ_FILENAME, OUTPUT_OBJ_FILENAME
+from .uv_unwrap_settings import UVUnwrapperSelection
 from .uv_unwrap_strategy import UVUnwrapStrategy
-
-
-class BFFSettings(PropertyGroup):
-    """
-    Settings for BFF conformal mapping method (if there are any settings in the future)
-    """
 
 
 class BFFStrategy(UVUnwrapStrategy):
@@ -39,11 +34,8 @@ class BFFStrategy(UVUnwrapStrategy):
         write_obj(filepath_output,
                   conformal_map.vertices, conformal_map.faces, uv_unwrapping_image.vertices, uv_unwrapping_image.faces)
 
-    def execute(self, context, settings) -> None:
-        """ Calls helper function for UV unwrapping and performs validation if needed.
+    def draw(self, layout: UILayout, settings: UVUnwrapperSelection) -> None:
+        layout.label(text="No adjustable settings exist for BFF algorithm")
 
-        Args:
-            context (_type_): _description_
-            settings (_type_): _description_
-        """
+    def execute(self, context, settings) -> None:
         self._call_uv_unwrapper()

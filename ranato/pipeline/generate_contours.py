@@ -129,6 +129,16 @@ class RANATO_OT_pipeline(bpy.types.Operator):
         )
         directory_temp: pathlib.Path = pathlib.Path(
             bpy.context.preferences.addons[ADDON_ID].preferences.directory_temp)
+
+        # TODO: define arguments...
+        # --log_level
+        # --invisibility_method
+        # --svg_mode
+        # --weight
+        # --trim
+        # --pad
+        # --show_nodes
+        # --num_subdivisions <-- should just be 1
         generate_algebraic_contours(camera_matrix, directory_temp /
                                     "temp_out.obj")
 
