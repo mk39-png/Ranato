@@ -17,6 +17,16 @@ from pyalgcon.pipelines.generate_algebraic_contours import \
 from ..common import ADDON_ID, DEBUG
 
 
+def opengl_to_pyac_matrix(opengl_camera_matrix_ref: np.ndarray) -> np.ndarray:
+    """ 
+    Converts OpenGL-style coordinate system to that used by PYAC.
+    """
+    # FIXME: potentially incorrect mirroring
+    opengl_camera_matrix_ref[0] *= -1
+    opengl_camera_matrix_ref[2] *= -1
+    return np.copy(opengl_camera_matrix_ref)
+
+
 def blender_to_opengl_matrix(blender_camera_matrix: np.ndarray) -> np.ndarray:
     """
     Convert Blender to OpenGL-style coordinate system used by PYAC
@@ -61,26 +71,6 @@ def blender_to_opengl_matrix(blender_camera_matrix: np.ndarray) -> np.ndarray:
     # NOTE: adding 0.0 to avoid negative 0s
     opengl_camera_matrix = opengl_camera_matrix.round(5) + 0.0
 
-    # LOAD INTO POLYSCOPE AND SEE
-    directory_temp: pathlib.Path = pathlib.Path(
-        bpy.context.preferences.addons[ADDON_ID].preferences.directory_temp)
-    np.savetxt(directory_temp / "temp_camera_matrix.csv",
-               opengl_camera_matrix, delimiter=",", fmt="%f")
-
-    if DEBUG:
-        # HACK: running venv python directly rather than using Blender's python env
-        subprocess.run(
-            [pathlib.Path(r"D:\Repos\Ranato\.venv\Scripts\python.exe"),  # sys.executable,
-             (pathlib.Path(__file__).parent.parent / "run_polyscope.py").as_posix(),
-             "--file",
-             (pathlib.Path(__file__).parent.parent / "__temp__" / "temp_out.obj").as_posix(),
-             "--camera",
-             (pathlib.Path(__file__).parent.parent / "__temp__" / "temp_camera_matrix.csv")],
-            check=True,
-            # capture_output=True,
-            # text=True
-        )
-
     return opengl_camera_matrix
 
 
@@ -106,15 +96,36 @@ def get_matrices(context: bpy.types.Context) -> np.ndarray:
         scale_y=render.pixel_aspect_y,
     )
 
-    print("PROJECTION MAT: \n", projection_matrix)
-    print("MAT WORLD: \n", camera.matrix_world)
+    print("Blender PROJECTION MATRIX: \n", projection_matrix)
+    print("Blender WORLD MATRIX: \n", camera.matrix_world)
 
     # TODO: move camera conversion somewhere else?
     # get_matrices() should only have the sole purpose of retrieving the current camera.
-    camera_matrix_pyac: np.ndarray = blender_to_opengl_matrix(
+    opengl_camera_matrix: np.ndarray = blender_to_opengl_matrix(
         np.array(camera.matrix_world))
+    pyac_camera_matrix: np.ndarray = opengl_to_pyac_matrix(opengl_camera_matrix)
 
-    return camera_matrix_pyac
+    if DEBUG:
+        directory_temp: pathlib.Path = pathlib.Path(
+            bpy.context.preferences.addons[ADDON_ID].preferences.directory_temp)
+        np.savetxt(directory_temp / "temp_camera_matrix.csv",
+                   opengl_camera_matrix, delimiter=",", fmt="%f")
+
+    if DEBUG:
+        # HACK: running venv python directly rather than using Blender's python env
+        subprocess.run(
+            [pathlib.Path(r"D:\Repos\Ranato\.venv\Scripts\python.exe"),  # sys.executable,
+             (pathlib.Path(__file__).parent.parent / "run_polyscope.py").as_posix(),
+             "--file",
+             (pathlib.Path(__file__).parent.parent / "__temp__" / "temp_out.obj").as_posix(),
+             "--camera",
+             (pathlib.Path(__file__).parent.parent / "__temp__" / "temp_camera_matrix.csv")],
+            check=True,
+            # capture_output=True,
+            # text=True
+        )
+
+    return pyac_camera_matrix
 
 
 # TODO: rename class since generate_contours is not the only part of the pipeline...
@@ -144,6 +155,7 @@ class RANATO_OT_pipeline(bpy.types.Operator):
         # After all of that, we are able to proceed with generating algebraic contours.
 
         camera_matrix: np.ndarray = get_matrices(context)
+
         directory_temp: pathlib.Path = pathlib.Path(
             bpy.context.preferences.addons[ADDON_ID].preferences.directory_temp)
 
