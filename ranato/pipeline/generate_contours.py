@@ -28,31 +28,54 @@ def blender_to_opengl_matrix(blender_camera_matrix: np.ndarray) -> np.ndarray:
     :type c2w: np.ndarray
 
     # TODO: double check coordinate system converted
-    :return: converted OpenGL matrix where +Y is up, +X is right, +Z is towards the camera 
+    :return: converted OpenGL matrix where +Y is up, +X is right, +Z is towards the camera
     :rtype: np.ndarray
     """
     assert blender_camera_matrix.shape == (4, 4)
     opengl_camera_matrix = blender_camera_matrix
 
+    deg180 = np.deg2rad(180)
+    rot_z = np.array([
+        [np.cos(deg180), -np.sin(deg180), 0],
+        [np.sin(deg180), np.cos(deg180), 0],
+        [0, 0, 1]])
+
+    c2w = np.copy(opengl_camera_matrix)
+    swap_y_z = np.array([
+        [1, 0, 0, 0],
+        [0, 0, -1, 0],
+        [0, 1, 0, 0],
+        [0, 0, 0, 1]])
+
+    c2w = swap_y_z @ c2w
+    t = c2w[:3, -1]  # Extract translation of the camera
+    r = c2w[:3, :3]  @ rot_z  # Extract rotation matrix of the camera
+    t = t @ r  # Make rotation local
+
+    opengl_camera_matrix = np.identity(4)
+    opengl_camera_matrix[:3, :3] = r.T
+    opengl_camera_matrix[:3, 3] = t
+    opengl_camera_matrix[2] *= -1
+
+    # NOTE: rounding to avoid close-to-zero floats
+    # NOTE: adding 0.0 to avoid negative 0s
+    opengl_camera_matrix = opengl_camera_matrix.round(5) + 0.0
+
     # LOAD INTO POLYSCOPE AND SEE
-    # folder: pathlib.Path = pathlib.Path(__file__).parent
-    # print("FOLDER", folder)
     directory_temp: pathlib.Path = pathlib.Path(
         bpy.context.preferences.addons[ADDON_ID].preferences.directory_temp)
     np.savetxt(directory_temp / "temp_camera_matrix.csv",
                opengl_camera_matrix, delimiter=",", fmt="%f")
-    # np.savetxt(folder / "temp" / "temp_camera_matrix.csv",
-    #    opengl_camera_matrix, delimiter=",", fmt="%f")
 
     if DEBUG:
         # HACK: running venv python directly rather than using Blender's python env
         subprocess.run(
             [pathlib.Path(r"D:\Repos\Ranato\.venv\Scripts\python.exe"),  # sys.executable,
-             str(folder / "run_polyscope.py"),
+             (pathlib.Path(__file__).parent.parent / "run_polyscope.py").as_posix(),
              "--file",
-             str(folder / "temp" / "temp.obj"),
+             (pathlib.Path(__file__).parent.parent / "__temp__" / "temp_out.obj").as_posix(),
              "--camera",
-             str(folder / "temp" / "temp_camera_matrix.csv")],
+             (pathlib.Path(__file__).parent.parent / "__temp__" / "temp_camera_matrix.csv")],
             check=True,
             # capture_output=True,
             # text=True
@@ -85,9 +108,11 @@ def get_matrices(context: bpy.types.Context) -> np.ndarray:
 
     print("PROJECTION MAT: \n", projection_matrix)
     print("MAT WORLD: \n", camera.matrix_world)
+
+    # TODO: move camera conversion somewhere else?
+    # get_matrices() should only have the sole purpose of retrieving the current camera.
     camera_matrix_pyac: np.ndarray = blender_to_opengl_matrix(
         np.array(camera.matrix_world))
-    print("TRANSLATE TO ASOC: \n", camera_matrix_pyac)
 
     return camera_matrix_pyac
 
@@ -119,14 +144,6 @@ class RANATO_OT_pipeline(bpy.types.Operator):
         # After all of that, we are able to proceed with generating algebraic contours.
 
         camera_matrix: np.ndarray = get_matrices(context)
-
-        # TEMP FOR DEBUGGING
-        camera_matrix = np.array([
-            [1, 0, 0, 0],
-            [0, 1, 0, 0],
-            [0, 0, 1, 5],
-            [0, 0, 0, 1]], dtype=float
-        )
         directory_temp: pathlib.Path = pathlib.Path(
             bpy.context.preferences.addons[ADDON_ID].preferences.directory_temp)
 
@@ -139,6 +156,8 @@ class RANATO_OT_pipeline(bpy.types.Operator):
         # --pad
         # --show_nodes
         # --num_subdivisions <-- should just be 1
+        # TODO: somehow set assertions to false... or something?
+        # NOTE: if generate_algebraic_contours is taking a LONG time for small meshes, it is likely that the camera is wrong.
         generate_algebraic_contours(camera_matrix, directory_temp /
                                     "temp_out.obj")
 
