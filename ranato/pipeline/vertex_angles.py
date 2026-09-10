@@ -1,13 +1,16 @@
+import pathlib
+
 import bpy.props
 import bpy.types
 import numpy as np
-from bpy_extras.io_utils import ImportHelper
+from bpy_extras.io_utils import ExportHelper, ImportHelper
 
-# TODO: give option to load in vertex angles via file...
+from ..common import ADDON_ID
 
 
-def retrieve_cone_vertex_angles(vertex_angles: bpy.types.bpy_prop_collection_idprop, ceps_format: bool = False):
-    """_summary_
+def retrieve_cone_vertex_angles(vertex_angles: bpy.types.bpy_prop_collection_idprop,
+                                ceps_format: bool = False):
+    """ Retrieves ALL indices and vertices from vertex angles object
 
     Args:
         vertex_angles (bpy.types.bpy_prop_collection): _description_
@@ -18,6 +21,57 @@ def retrieve_cone_vertex_angles(vertex_angles: bpy.types.bpy_prop_collection_idp
     indices = np.fromiter((vertex.index for vertex in vertex_angles), dtype=int)
     angles = np.fromiter((vertex.angle for vertex in vertex_angles), dtype=float)
     return (indices, angles)
+
+
+def retrieve_vertex_angles(context: bpy.types.Context):
+    """ Retrieves vertex angles for each index of selected mesh based on
+    default vertex angle and specified cone vertices.
+
+    Args:
+        context (Context): _description_
+    """
+    # NOTE: need selected mesh so that we know how many vertex angles to make (i.e. need the number of vertices of the mesh)
+    if context.scene.target_mesh is None:
+        raise ValueError("No mesh has been selected! Please select a mesh to process")
+
+    #
+    # PREPARING FOR UV UNWRAPPING
+    #
+    selected_object: bpy.types.Object = context.scene.target_mesh
+
+    # After running the executable for locating cone indices, be sure to save where they are.
+    # Construct an array of size matching number of vertices
+    vertex_angles: np.ndarray = np.full(shape=(len(selected_object.data.vertices)),
+                                        fill_value=context.scene.vertex_angle_default)
+
+    # At least testing with the bob duck mesh, using 2pi for the vertices worked just fine.
+    # And it seems like a single island for the UV unwrapping is preferred to work fine.
+    # Then, save the location of the cones into vertex_angles per Capouellez et al. 2023
+    indices, angles = retrieve_cone_vertex_angles(
+        context.scene.vertex_angles)
+    vertex_angles[indices] = angles
+
+    return vertex_angles
+
+
+def save_vertex_angles(filepath: str | pathlib.Path, vertex_angles: np.ndarray) -> None:
+    """ 
+    Given NumPy array of vertex angles, save to filepath
+    """
+    # Ensures that we have all the QOL that pathlib.Path provides
+    if filepath is not pathlib.Path:
+        filepath = pathlib.Path(filepath)
+
+    # Checks to see that parent exists
+    if not filepath.parent.exists():
+        raise OSError(f"Directory {filepath.parent} does not exist for {filepath.name}")
+
+    # Makes sure that vertex angles is in the correct format
+    if vertex_angles.ndim != 1:
+        raise ValueError(
+            f"Vertex angles is not 1D array! Instead is {vertex_angles.ndim}-dimensional array")
+
+    np.savetxt(fname=filepath, X=vertex_angles, newline="\n")
 
 
 class VertexAngleItem(bpy.types.PropertyGroup):
@@ -98,15 +152,16 @@ class LIST_OT_AddItem(bpy.types.Operator):
 
     def execute(self, context) -> set[str]:
         # NOTE: .add() is inherited from bpy.props.CollectionProperty
-        item: VertexAngleItem = context.scene.vertex_angles.add()
+        vertex_angles: bpy.props.CollectionProperty = context.scene.vertex_angles
+        item: VertexAngleItem = vertex_angles.add()
         print(item)
         print(type(item))
         # TODO: ensure no duplicates...
         # And also add with default cone vertex angle
 
         # TODO: need to increment based on the index so far...
-        item.index = 0
-        item.angle = 0.0
+        item.index = len(vertex_angles) - 1
+        item.angle = context.scene.cone_angle_default
 
         return {"FINISHED"}
 
@@ -152,10 +207,14 @@ class LIST_OT_Import(bpy.types.Operator, ImportHelper):
     bl_idname = "vertex_angles.import"
     bl_label = "Import"
     bl_description = "Import formatted .txt of vertex angles"
+    directory: bpy.props.StringProperty(subtype='DIR_PATH', options={'SKIP_SAVE', 'HIDDEN'})
 
-    filepath = bpy.props.StringProperty(subtype="FILE_PATH")
-    filter_glob = bpy.props.StringProperty(default='*.jpg;*.jpeg;*.png;*.tif;*.tiff;*.bmp',
-                                           options={'HIDDEN'})
+    # FIXME: below are not properly filtering files (should only be either _Th_hat or .txt options)
+    bl_file_extensions: str = "_Th_hat"
+    filename_ext: str = "_Th_hat"
+    filter_glob = bpy.props.StringProperty(default="*_Th_hat;*.txt", options={'HIDDEN'})
+    one_indexed: bpy.props.BoolProperty(name="1-index to 0-index", default=True,
+                                        description="Converts selected cones/vertex angle file from 1-indexed to 0-indexed format")
 
     @staticmethod
     def _import(filepath: str) -> np.ndarray:
@@ -168,9 +227,11 @@ class LIST_OT_Import(bpy.types.Operator, ImportHelper):
         # TODO: might be better to have dtype as "object" instead of float so that we're preserving the mixed datatype in the file rather than having to cast float to int.
         index_angles = np.loadtxt(filepath, dtype=float, delimiter=" ")
 
+        # File from CEPS, which has vertices with explicitly-labeled indices
         if index_angles.ndim == 2 and index_angles.shape[1] == 2:
             # TODO: check if this is correct....
             return index_angles
+        # File from Campen et al. 2021, which does not have a column specifying indices with angles (is implicitly inferred)
         elif index_angles.ndim == 1:
             indices: np.ndarray = np.arange(index_angles.shape[0], dtype=float)
             return np.column_stack((indices, index_angles))
@@ -179,12 +240,54 @@ class LIST_OT_Import(bpy.types.Operator, ImportHelper):
         # Perform some adjustments...
         # If vertex angles are not explicitly specified, then go ahead and do that.
 
-    # def draw(self, context) -> None:
-    #     layout: bpy.types.UILayout | None = self.layout
-    #     scene: bpy.types.Scene | None = context.scene
-    #     # layout.label(text="TODO: have button to restore to default parameters", icon="EXPORT")
-
     def execute(self, context) -> set[str]:
+        """ Executed after invoking import. 
+        Which is to say that after the user selects a .txt of vertex angles, then this 
+        performs the internal logic.
+        """
+        # Now that we have the filepath from ImportHelper
+        vertex_angles: bpy.types.CollectionProperty = context.scene.vertex_angles
+        indices_angles: np.ndarray = self._import(self.filepath)
+        vertex_angles.clear()
+
+        # Because the MovingCones locator has 1-indexed vertex indices, have option to adapt for
+        # Campen algorithm
+        for index, angle in indices_angles:
+            item: VertexAngleItem = vertex_angles.add()
+            item.index = int(index)
+
+            if self.one_indexed:
+                item.index -= 1
+                assert item.index >= 0
+
+            item.angle = angle
+
+        return {"FINISHED"}
+
+    def invoke(self, context, event):
+        """ Sets default folder upon calling this operator to __temp__ folder.
+        https://docs.blender.org/api/current/bpy.types.FileHandler.html
+        """
+        # Need to set directory in case user changes the directory in preferences
+        preferences: bpy.types.AddonPreferences | None = bpy.context.preferences.addons[
+            ADDON_ID].preferences
+        self.directory = preferences.directory_temp
+        return self.invoke_popup(context)
+
+
+class LIST_OT_Export(bpy.types.Operator, ExportHelper):
+    """
+    Exports vertex angles to file.
+    NOTE: assuming Campen et al 2021-format of vertex angles
+    Meaning, file is named [.obj name]_Th_hat and has implicit vertex indicies
+    """
+    bl_idname = "vertex_angles.export"
+    bl_label = "Export vertex angles"
+    bl_description = "Export formatted .txt of vertex angles"
+    filename_ext: str = "_Th_hat"
+    filepath = bpy.props.StringProperty(subtype="FILE_PATH")
+
+    def execute(self, context):
         """ Executed after invoking import. 
         Which is to say that after the user selects a .txt of vertex angles, then this 
         performs the internal logic.
@@ -195,15 +298,40 @@ class LIST_OT_Import(bpy.types.Operator, ImportHelper):
         Returns:
             set[str]: TODO
         """
+        # TODO: need to process through the list of vertex angles...
+        # Inherit from Campen
+        filepath = pathlib.Path(self.filepath)
+        save_vertex_angles(context,
+                           directory_temp=filepath.parent.as_posix(),
+                           temp_filename=filepath.name)
 
-        # Now that we have the filepath from ImportHelper
-        vertex_angles: bpy.types.CollectionProperty = context.scene.vertex_angles
-        indices_angles: np.ndarray = self._import(self.filepath)
-        vertex_angles.clear()
+        return {"FINISHED"}
 
-        for index, angle in indices_angles:
-            item: VertexAngleItem = vertex_angles.add()
-            item.index = int(index)
-            item.angle = angle
+
+class LIST_OT_Clear(bpy.types.Operator):
+    """Clears list of cone angles"""
+    bl_idname = "vertex_angles.clear"
+    bl_label = ""
+    bl_description = ""
+
+    def execute(self, context) -> set[str]:
+        # NOTE: .add() is inherited from bpy.props.CollectionProperty
+        context.scene.vertex_angles.clear()
+
+        return {"FINISHED"}
+
+
+class LIST_OT_Apply(bpy.types.Operator):
+    """Apply list of cone angles"""
+    bl_idname = "vertex_angles.apply"
+    bl_label = ""
+    bl_description = "Apply default cone vertex angle to list of cone vertices"
+
+    def execute(self, context) -> set[str]:
+        # NOTE: .add() is inherited from bpy.props.CollectionProperty
+        vertex_angles = context.scene.vertex_angles
+        cone_angle_default = context.scene.cone_angle_default
+        for vertex in vertex_angles:
+            vertex.angle = cone_angle_default
 
         return {"FINISHED"}
