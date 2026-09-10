@@ -37,6 +37,21 @@ def LocateUserCondaDirectory() -> str:
                   "Please specify Conda directory in your system environment path variables.")
 
 
+def retrieve_preference(context: bpy.types.Context) -> bpy.types.AddonPreferences:
+    """ Wrapper retrieving preferences from Blender context.
+
+    :param context: Blender context object
+    :type context: bpy.types.Context
+    :return: preferences for the add-on
+    :rtype: bpy.types.AddonPreferences
+    """
+    preferences: bpy.types.AddonPreferences | None = context.preferences.addons[ADDON_ID].preferences
+    if preferences is None:
+        raise ValueError("Preferences not found!")
+
+    return preferences
+
+
 class RanatoPreferences(bpy.types.AddonPreferences):
     """
     Panel to appear in Blender's addon preferences page.
