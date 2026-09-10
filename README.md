@@ -1,4 +1,4 @@
-# Ranato 
+# Ranato (aka Python Algebraic Contours Blender Add-on)
 
 Blender add-on showcasing a practical application of PYAC for technical artists.
 
