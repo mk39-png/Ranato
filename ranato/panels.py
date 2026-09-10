@@ -161,6 +161,52 @@ class RANATO_PT_generate_contours(bpy.types.Panel):
         row.scale_y = 2.0
 
 
+class _RANATO_PT_contour_settings_template(bpy.types.Panel):
+    """ Parent class for contours settings to reduce redundant code 
+    """
+    bl_label: str = ""
+    bl_idname: str = ""
+    bl_space_type = 'PROPERTIES'
+    bl_region_type = 'WINDOW'
+    bl_context = "render"
+    bl_parent_id = "RANATO_PT_generate_contours"
+
+    _setting_name: str = ""
+
+    def draw(self, context) -> None:
+        layout: bpy.types.UILayout | None = self.layout
+        scene: bpy.types.Scene | None = context.scene
+        row: bpy.types.UILayout = layout.row()
+        layout.use_property_split = True
+        layout.use_property_decorate = False
+
+        settings = getattr(scene, self._setting_name)
+
+        properties: list[str] = [
+            name for name in dir(settings) if name.startswith("prop")
+        ]
+        for proper in properties:
+            layout.prop(data=settings, property=proper)
+
+
+class RANATO_PT_optimization_settings(_RANATO_PT_contour_settings_template):
+    bl_label = "Optimization Settings"
+    bl_idname = "RANATO_PT_optimization_settings"
+    _setting_name = "optimization_settings"
+
+
+class RANATO_PT_invisibility_settings(_RANATO_PT_contour_settings_template):
+    bl_label = "Invisibility Settings"
+    bl_idname = "RANATO_PT_invisibility_settings"
+    _setting_name = "invisibility_settings"
+
+
+class RANATO_PT_intersection_settings(_RANATO_PT_contour_settings_template):
+    bl_label = "Intersection Settings"
+    bl_idname = "RANATO_PT_intersection_settings"
+    _setting_name = "intersection_settings"
+
+
 class RANATO_PT_main(bpy.types.Panel):
     """
     Creates a Panel in the scene context of the properties editor.
