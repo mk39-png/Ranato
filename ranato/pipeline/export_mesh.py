@@ -63,7 +63,7 @@ class RANATO_OT_Export_Mesh(bpy.types.Operator):
                                   forward_axis='NEGATIVE_Z',  # TODO: may need to change these
                                   up_axis='Y',  # TODO: may need to change these
                                   export_colors=False,
-                                  export_uv=False,  # FIXME: note to NOT export UVs or else CETM will complain
+                                  export_uv=False,  # NOTE: do NOT export UVs or else CETM will complain
                                   export_normals=False,
                                   export_materials=False,
                                   export_triangulated_mesh=True,
@@ -72,6 +72,14 @@ class RANATO_OT_Export_Mesh(bpy.types.Operator):
                                   export_material_groups=False,
                                   export_vertex_groups=False,
                                   export_smooth_groups=False)
+
+            # TODO: move this to mesh import when calculated UV unwrapping is done
+            # Popup new screen
+            # bpy.ops.screen.userpref_show('INVOKE_DEFAULT')
+            # new_window = bpy.context.window_manager.windows[-1]
+            # popup_area = new_window.screen.areas[0]
+            # popup_area.type = 'IMAGE_EDITOR'
+            # popup_area.ui_type = 'UV'
         else:
             # User mis-selected a non-mesh.
             self.report(
