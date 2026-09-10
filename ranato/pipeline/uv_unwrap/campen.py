@@ -10,10 +10,14 @@
 # https://github.com/Griperis/BlenderDataVis/blob/master/data_vis/operators/surface_chart.py
 
 
+import pathlib
+
 import bpy
+import numpy as np
 from bpy.types import AddonPreferences
 
 from ...common import ADDON_ID, INPUT_OBJ_FILENAME
+from ..vertex_angles import retrieve_vertex_angles, save_vertex_angles
 from .uv_unwrap_strategy import UVUnwrapStrategy
 
 
@@ -36,10 +40,12 @@ class CampenStrategy(UVUnwrapStrategy):
         filepath_conda: str = preferences.filepath_conda
         file_path_uv_unwrapper: str = preferences.filepath_uv_unwrap_campen
         directory_temp: str = preferences.directory_temp
+        filepath: pathlib.Path = pathlib.Path(directory_temp, "temp_Th_hat")
 
-        self._retrieve_vertex_angles(context)
+        # Writing to disk
+        vertex_angles: np.ndarray = retrieve_vertex_angles(context)
+        save_vertex_angles(filepath, vertex_angles)
 
-        # TODO: allow user to specify parameters into this... by writing down whatever in the panel box
         script_args: list[str] = [
             filepath_conda,
             file_path_uv_unwrapper,

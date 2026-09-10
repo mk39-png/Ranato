@@ -41,55 +41,30 @@ class UVUnwrapStrategy(ABC):
         """
         subprocess.run(args, check=False)
 
-        # process: subprocess.Popen[str] = subprocess.Popen(args,
-        #                                                   stdout=subprocess.PIPE,
-        #                                                   text=True)
-        # process.communicate()
-        # TODO: handle process asynchronously
+        process: subprocess.Popen[str] = subprocess.Popen(args,
+                                                          stdout=subprocess.PIPE,
+                                                          text=True)
 
-    def _retrieve_vertex_angles(self, context: Context) -> None:
-        """ Retrieves vertex angles for each index of selected mesh based on
-        default vertex angle and specified cone vertices.
-
-        Args:
-            context (Context): _description_
-        """
-        # NOTE: need selected mesh so that we know how many vertex angles to make (i.e. need the number of vertices of the mesh)
-        if context.scene.target_mesh is None:
-            raise ValueError("No mesh has been selected! Please select a mesh to process")
-
+        # TODO: have process timer to occassionally ping this process!
+        # As in, call the below function on a timer... every couple of seconds or so.
         #
-        # PREPARING FOR UV UNWRAPPING
-        #
-        selected_object: Object = context.scene.target_mesh
-        directory_temp: str = bpy.context.preferences.addons[ADDON_ID].preferences.directory_temp
+        process.poll()
 
-        # After running the executable for locating cone indices, be sure to save where they are.
-        # Construct an array of size matching number of vertices
-        vertex_angles: np.ndarray = np.full(shape=(len(selected_object.data.vertices)),
-                                            fill_value=context.scene.vertex_angle_default)
+        # TODO: when the process is done, then
 
-        # At least testing with the bob duck mesh, using 2pi for the vertices worked just fine.
-        # And it seems like a single island for the UV unwrapping is preferred to work fine.
-        # Then, save the location of the cones into vertex_angles per Capouellez et al. 2023
-        indices, angles = retrieve_cone_vertex_angles(context.scene.vertex_angles)
-        vertex_angles[indices] = angles
-
-        temp_file: pathlib.Path = pathlib.Path(directory_temp, "temp_Th_hat")
-        np.savetxt(fname=temp_file, X=vertex_angles, newline="\n")
-
-    # TODO: fix return type of empty tuple
-    def _process_single_property(self, arg: str, val: bool | int | float) -> tuple[str, str] | tuple[str] | tuple:
+    def _process_single_property(self, arg: str, val: bool | int | float
+                                 ) -> tuple[str, str] | tuple[str] | tuple[()]:
         """ Process list of properties and their values for input into arguments list.
         Works for Campen et al. 2021 and (todo) CEPS, both of which rely on C++-style argument handling.
 
-        Args:
-            arg (str): argument name we're processing
-            val (bool | int | float): value of property to turn into argument for script
-            # DEPRECATED properties (PropertyGroup): _description_
 
-        Returns:
-            list[str]: _description_
+        :param arg: argument name we're processing
+        :type arg: str
+        :param val: value of property to turn into argument for script
+        :type val: (bool | int | float)
+
+        :return: (--key, value) if int/float val or (--key) if boolean val
+        :rtype: tuple[str, str] | tuple[str] | tuple[()] 
         """
         # NOTE: need strict type comparisons here rather than isinstance() since apparently "bool" is a subclass of "int" in Python
         if type(val) is int:
@@ -106,11 +81,7 @@ class UVUnwrapStrategy(ABC):
         """ Takes a UV unwrapping property group (i.e. settings.campen, settings.ceps) and converts
         values of its properties into script arguments
 
-        Args:
-            properties (list[str]): Blender properties and their accompanying values
-
-        Returns:
-            list[str]: list of arguments and their accompanying values if applicable
+        :return list[str]: list of arguments and their accompanying values if applicable
         """
         uv_setting: CampenSettings | CEPSSettings | BFFSettings | CETMSettings = getattr(
             settings, self._id)
