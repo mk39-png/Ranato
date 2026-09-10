@@ -148,15 +148,8 @@ class RANATO_PT_generate_contours(bpy.types.Panel):
         layout: bpy.types.UILayout | None = self.layout
         scene: bpy.types.Scene | None = context.scene
         row: bpy.types.UILayout = layout.row()
-
-        # TODO: give options to select the following:
-        # invisibility method
-        # svg_mode
-        # weight
-        # trim
-        # pad
-        # show nodes
-
+        row.prop(data=scene, property="svg_output_mode")
+        row: bpy.types.UILayout = layout.row()
         row.operator("object.pipeline", text="Generate Contours", icon="LINCURVE")
         row.scale_y = 2.0
 
