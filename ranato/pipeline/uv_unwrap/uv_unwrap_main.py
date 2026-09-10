@@ -2,6 +2,8 @@
 UI layer.
 """
 
+import pathlib
+
 import bpy
 import bpy.types
 
@@ -20,10 +22,20 @@ STRATEGIES: dict[str, CampenStrategy | CEPSStrategy | CETMStrategy | BFFStrategy
 }
 
 
+def validate_uv_unwrapping(filepath: pathlib.Path) -> bool:
+    """ Checks to see if UV unwrapping .obj output is empty or not.
+
+    :param filepath: path pointing to .obj file
+    :type filepath: pathlib.Path
+    :return: true if valid (not empty), else false
+    :rtype: bool
+    """
+    return filepath.stat().st_size != 0
+
+
 class RANATO_OT_uv_unwrap(bpy.types.Operator):
     """
-    Brings up UI panel for searching for a particular mesh. 
-    Then, returns the string key for the particular mesh. 
+    Calls UV unwrapper script.
 
     For context:
     https://blender.stackexchange.com/questions/19416/what-do-operator-methods-do-poll-invoke-execute-draw-modal
