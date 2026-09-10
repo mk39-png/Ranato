@@ -63,10 +63,14 @@ def register() -> None:
     for cls in classes:
         bpy.utils.register_class(cls)
 
+    # TODO: for these below, make getter functions????
     bpy.types.Scene.vertex_angles = bpy.props.CollectionProperty(type=VertexAngleItem)
     bpy.types.Scene.vertex_angle_default = bpy.props.FloatProperty(
-        name="Angle (radians)", default=math.pi * 2.0)
-    bpy.types.Scene.list_index = bpy.props.IntProperty(name="Index for vertex_angles", default=0)
+        name="Default Vertex Angle (radians)", default=math.pi * 2.0)
+    bpy.types.Scene.cone_angle_default = bpy.props.FloatProperty(
+        name="Default Cone Angle (radians)", default=6.0)
+    bpy.types.Scene.list_index = bpy.props.IntProperty(
+        name="Index for vertex_angles", default=0)
     bpy.types.Scene.target_mesh = bpy.props.PointerProperty(
         name="Select Mesh", type=bpy.types.Object)
     bpy.types.Scene.uv_unwrap_settings = bpy.props.PointerProperty(type=UVUnwrapperSelection)
@@ -75,6 +79,7 @@ def register() -> None:
 def unregister() -> None:
     del bpy.types.Scene.vertex_angles
     del bpy.types.Scene.vertex_angle_default
+    del bpy.types.Scene.cone_angle_default
     del bpy.types.Scene.list_index   # TODO: rename to active_index or something
     del bpy.types.Scene.target_mesh
     del bpy.types.Scene.uv_unwrap_settings
