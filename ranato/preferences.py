@@ -17,7 +17,7 @@ import bpy.types
 from .common import ADDON_ID
 
 
-def LocateUserCondaDirectory() -> str:
+def locate_user_conda_directory() -> str:
     """
     Used to find the location of the user's Conda directory via the user's system environment 
     variables.
@@ -63,7 +63,7 @@ class RanatoPreferences(bpy.types.AddonPreferences):
     bl_context: str = "addons"
 
     _DIRECTORY_BASE_ADDON: pathlib.Path = pathlib.Path(__file__).parent
-    _DIRECTORY_CONDA: str = LocateUserCondaDirectory()
+    _DIRECTORY_CONDA: str = locate_user_conda_directory()
     _FILEPATH_CAMPEN: pathlib.Path = _DIRECTORY_BASE_ADDON / \
         "bin" / "ConformalIdealDelaunay" / "script_conformal.py"
     _FILEPATH_CEPS: pathlib.Path = _DIRECTORY_BASE_ADDON / "bin" / "CEPS" / "parameterize.exe"
