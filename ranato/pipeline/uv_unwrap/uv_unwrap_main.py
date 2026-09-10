@@ -50,6 +50,14 @@ class RANATO_OT_uv_unwrap(bpy.types.Operator):
 
         # TODO: if the UV unwrapping is actually finished, check the output file to see that it's not empty.
 
+        # TODO: have option to import UV unwrapping into Blender + swap to UV unwrapping view to
+        # see UV unwrapping visualized!
+        # bpy.ops.screen.userpref_show('INVOKE_DEFAULT')
+        # new_window = bpy.context.window_manager.windows[-1]
+        # popup_area = new_window.screen.areas[0]
+        # popup_area.type = 'IMAGE_EDITOR'
+        # popup_area.ui_type = 'UV'
+
         # TODO: need to perform checks to see if the UV unwrapping is... well, valid!
         # CEPS is quite finicky with its UV unwrappings from what I've seen...
         # Sometimes CAMPEN UV unwrapping outputs nothing or a blank file, so be sure to check for that

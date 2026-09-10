@@ -73,13 +73,6 @@ class RANATO_OT_Export_Mesh(bpy.types.Operator):
                                   export_vertex_groups=False,
                                   export_smooth_groups=False)
 
-            # TODO: move this to mesh import when calculated UV unwrapping is done
-            # Popup new screen
-            # bpy.ops.screen.userpref_show('INVOKE_DEFAULT')
-            # new_window = bpy.context.window_manager.windows[-1]
-            # popup_area = new_window.screen.areas[0]
-            # popup_area.type = 'IMAGE_EDITOR'
-            # popup_area.ui_type = 'UV'
         else:
             # User mis-selected a non-mesh.
             self.report(
