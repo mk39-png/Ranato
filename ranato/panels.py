@@ -61,32 +61,39 @@ class RANATO_PT_vertex_angles(bpy.types.Panel):
         # https://projects.blender.org/blender/blender/src/commit/2d8a95775148e00e07d8aca587ec5faecbe44c24/scripts/startup/bl_ui/properties_view_layer.py
 
         # --- Vertex Angles Specifier ---
-        row: bpy.types.UILayout = layout.row(align=True)
-        row.label(text="Default Vertex Angle (radians):")
-        layout.prop(data=context.scene, property="vertex_angle_default", emboss=True)
-        row = layout.row()
-        row.label(text="Cone Vertices (overrides vertex angles of inputted vertices)")
+        layout.use_property_split = True
+        layout.use_property_decorate = False
+        layout.prop(data=context.scene, property="vertex_angle_default")
 
-        layout.label(text="Applicable to Campen et al. 2021 algorithm.")
+        # --- Cone Angles Specifier ---
+        box: bpy.types.UILayout = layout.box()
+        box.prop(data=context.scene, property="locate_cones_distortion")
+        box.operator(operator="ranato.locate_cones",
+                     text="Locate Cone Vertices", icon="CONE")
+        box.label(text="Cone Vertices (overrides default vertex angle)")
+        box.prop(data=context.scene, property="cone_angle_default")
+        box.label(text="NOTE: only applicable to Campen et al. 2021 algorithm.")
+        box_row: bpy.types.UILayout = box.row(align=True)
+        box_row.template_list("RANATO_UL_ItemList", "ranato_list",
+                              scene, "vertex_angles",
+                              scene, "list_index")
+        box_col: bpy.types.UILayout = box_row.column()
+        box_col.operator("vertex_angles.add_item",
+                         icon="ADD", text="")
+        box_col.operator("vertex_angles.remove_item",
+                         icon="REMOVE", text="")
+        box_col.operator("vertex_angles.import", icon="IMPORT", text="")
+        box_col.operator("vertex_angles.export", icon="EXPORT", text="")
+        box_col.operator("vertex_angles.clear", icon="TRASH", text="")
+        box_col.operator("vertex_angles.apply", icon="X", text="")
 
-        row = layout.row()
-        row.template_list("RANATO_UL_ItemList", "ranato_list",
-                          scene, "vertex_angles",
-                          scene, "list_index")
-        col: bpy.types.UILayout = row.column()
-        col.operator("vertex_angles.add_item",
-                     icon="ADD", text="")
-        col.operator("vertex_angles.remove_item",
-                     icon="REMOVE", text="")
-        col.operator("vertex_angles.import", icon="IMPORT", text="")
+        # TODO: have button to toggle system console
 
-        row = layout.row()
-
-        if scene.list_index >= 0 and scene.vertex_angles:
-            item = scene.vertex_angles[scene.list_index]
-            row = layout.row()
-            row.prop(item, "index")
-            row.prop(item, "angle")
+        # if scene.list_index >= 0 and scene.vertex_angles:
+        #     item = scene.vertex_angles[scene.list_index]
+        #     row = layout.row()
+        #     row.prop(item, "index")
+        #     row.prop(item, "angle")
 
 
 class RANATO_PT_uv_unwrap(bpy.types.Panel):

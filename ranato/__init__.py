@@ -12,15 +12,17 @@ from .panels import (RANATO_MT_ExportAngles, RANATO_PT_generate_contours,
                      RANATO_PT_uv_unwrap, RANATO_PT_vertex_angles)
 from .pipeline.export_mesh import RANATO_OT_Export_Mesh
 from .pipeline.generate_contours import RANATO_OT_pipeline
+from .pipeline.locate_cones import RANATO_OT_locate_cones
 from .pipeline.search_mesh import RANATO_OT_search_mesh_operator
 from .pipeline.uv_unwrap.uv_unwrap_main import RANATO_OT_uv_unwrap
 from .pipeline.uv_unwrap.uv_unwrap_settings import (BFFSettings,
                                                     CampenSettings,
                                                     CEPSSettings, CETMSettings,
                                                     UVUnwrapperSelection)
-from .pipeline.vertex_angles import (LIST_OT_AddItem, LIST_OT_Import,
-                                     LIST_OT_RemoveItem, RANATO_UL_ItemList,
-                                     VertexAngleItem)
+from .pipeline.vertex_angles import (LIST_OT_AddItem, LIST_OT_Apply,
+                                     LIST_OT_Clear, LIST_OT_Export,
+                                     LIST_OT_Import, LIST_OT_RemoveItem,
+                                     RANATO_UL_ItemList, VertexAngleItem)
 from .preferences import RANATO_OT_addon_preferences, RanatoPreferences
 
 classes: list = [
@@ -38,6 +40,7 @@ classes: list = [
     RANATO_PT_main,
     RANATO_PT_mesh_export,
     RANATO_PT_vertex_angles,
+    RANATO_OT_locate_cones,
 
     # Lists
     VertexAngleItem,  # TODO: rename
@@ -45,6 +48,10 @@ classes: list = [
     LIST_OT_AddItem,
     LIST_OT_RemoveItem,
     LIST_OT_Import,
+    LIST_OT_Export,
+    LIST_OT_Clear,
+    LIST_OT_Apply,
+
 
     # UV Unwrapping
     CampenSettings,  # TODO: rename so clear that it's Blender associated stuff
@@ -74,6 +81,8 @@ def register() -> None:
     bpy.types.Scene.target_mesh = bpy.props.PointerProperty(
         name="Select Mesh", type=bpy.types.Object)
     bpy.types.Scene.uv_unwrap_settings = bpy.props.PointerProperty(type=UVUnwrapperSelection)
+    bpy.types.Scene.locate_cones_distortion = bpy.props.FloatProperty(
+        name="Distortion", default=0.2)
 
 
 def unregister() -> None:
@@ -83,6 +92,8 @@ def unregister() -> None:
     del bpy.types.Scene.list_index   # TODO: rename to active_index or something
     del bpy.types.Scene.target_mesh
     del bpy.types.Scene.uv_unwrap_settings
+    del bpy.types.Scene.locate_cones_distortion
+
 
     for cls in reversed(classes):
         # TODO: unregister reversed?
