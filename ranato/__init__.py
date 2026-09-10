@@ -83,6 +83,25 @@ def register() -> None:
     bpy.types.Scene.uv_unwrap_settings = bpy.props.PointerProperty(type=UVUnwrapperSelection)
     bpy.types.Scene.locate_cones_distortion = bpy.props.FloatProperty(
         name="Distortion", default=0.2)
+    bpy.types.Scene.optimization_settings = bpy.props.PointerProperty(type=OptimizationSettings)
+    bpy.types.Scene.intersection_settings = bpy.props.PointerProperty(type=IntersectionSettings)
+    bpy.types.Scene.invisibility_settings = bpy.props.PointerProperty(type=InvisibilitySettings)
+    bpy.types.Scene.svg_output_mode = bpy.props.EnumProperty(
+        name="SVG Output Mode",
+        items=[("1", "UNIFORM_SEGMENTS",           "All contours in uniform color"),
+               ("2", "UNIFORM_VISIBLE_SEGMENTS",   "Visible contours in uniform color"),
+               ("3", "CONTRAST_INVISIBLE_SEGMENTS", "Visible and invisible segments in a different color"),
+               ("4", "RANDOM_CHAINS",         "Chains in random colors"),
+               ("5", "UNIFORM_CHAINS",        "Chains in uniform color"),
+               ("6", "UNIFORM_VISIBLE_CHAINS", "Visible chains in uniform color"),
+               ("7", "UNIFORM_VISIBLE_CURVES", "Visible curves with no breaks at special points"),
+               ("8", "UNIFORM_CLOSED_CURVES", "All closed curves with no breaks at special points"),
+               ("9", "UNIFORM_SIMPLIFIED_VISIBLE_CURVES",
+                "All visible closed curves with simplification"),
+               ],
+        default="2",
+        description="Method for computing quantitative visibility"
+    )
 
 
 def unregister() -> None:
@@ -93,11 +112,11 @@ def unregister() -> None:
     del bpy.types.Scene.target_mesh
     del bpy.types.Scene.uv_unwrap_settings
     del bpy.types.Scene.locate_cones_distortion
-
+    del bpy.types.Scene.optimization_settings
+    del bpy.types.Scene.intersection_settings
+    del bpy.types.Scene.invisibility_settings
+    del bpy.types.Scene.svg_output_mode
 
     for cls in reversed(classes):
         # TODO: unregister reversed?
         bpy.utils.unregister_class(cls)
-
-
-# register, unregister = bpy.utils.register_classes_factory(classes)
