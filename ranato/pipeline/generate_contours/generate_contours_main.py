@@ -11,10 +11,17 @@ import subprocess
 import bpy.types
 import numpy as np
 from mathutils import Matrix
+from pyalgcon.contour_network.compute_intersections import \
+    IntersectionParameters
+from pyalgcon.contour_network.contour_network import (InvisibilityMethod,
+                                                      InvisibilityParameters)
 from pyalgcon.pipelines.generate_algebraic_contours import \
     generate_algebraic_contours
+from pyalgcon.quadratic_spline_surface.optimize_spline_surface import \
+    OptimizationParameters
+from pyalgcon.utils.projected_curve_networks_utils import SVGOutputMode
 
-from ..common import ADDON_ID, DEBUG
+from ...common import ADDON_ID, DEBUG
 
 
 def opengl_to_pyac_matrix(opengl_camera_matrix_ref: np.ndarray) -> np.ndarray:
@@ -128,7 +135,6 @@ def get_matrices(context: bpy.types.Context) -> np.ndarray:
     return pyac_camera_matrix
 
 
-# TODO: rename class since generate_contours is not the only part of the pipeline...
 class RANATO_OT_pipeline(bpy.types.Operator):
     """
     With the mesh saved to an .obj, we run the whole pipeline to calculate the
@@ -155,20 +161,11 @@ class RANATO_OT_pipeline(bpy.types.Operator):
         # After all of that, we are able to proceed with generating algebraic contours.
 
         camera_matrix: np.ndarray = get_matrices(context)
-
         directory_temp: pathlib.Path = pathlib.Path(
             bpy.context.preferences.addons[ADDON_ID].preferences.directory_temp)
 
         # TODO: define arguments...
-        # --log_level
-        # --invisibility_method
-        # --svg_mode
-        # --weight
-        # --trim
-        # --pad
-        # --show_nodes
-        # --num_subdivisions <-- should just be 1
-        # TODO: somehow set assertions to false... or something?
+        # TODO: somehow set assertions to false.
         # NOTE: if generate_algebraic_contours is taking a LONG time for small meshes, it is likely that the camera is wrong.
         generate_algebraic_contours(camera_matrix, directory_temp /
                                     "temp_out.obj")

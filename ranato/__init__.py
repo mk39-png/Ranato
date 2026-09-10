@@ -8,10 +8,15 @@ import bpy.types
 import bpy.utils
 
 from .panels import (RANATO_MT_ExportAngles, RANATO_PT_generate_contours,
-                     RANATO_PT_main, RANATO_PT_mesh_export,
+                     RANATO_PT_intersection_settings,
+                     RANATO_PT_invisibility_settings, RANATO_PT_main,
+                     RANATO_PT_mesh_export, RANATO_PT_optimization_settings,
                      RANATO_PT_uv_unwrap, RANATO_PT_vertex_angles)
 from .pipeline.export_mesh import RANATO_OT_Export_Mesh
-from .pipeline.generate_contours import RANATO_OT_pipeline
+from .pipeline.generate_contours.generate_contours_main import \
+    RANATO_OT_pipeline
+from .pipeline.generate_contours.generate_contours_settings import (
+    IntersectionSettings, InvisibilitySettings, OptimizationSettings)
 from .pipeline.locate_cones import RANATO_OT_locate_cones
 from .pipeline.search_mesh import RANATO_OT_search_mesh_operator
 from .pipeline.uv_unwrap.uv_unwrap_main import RANATO_OT_uv_unwrap
@@ -63,6 +68,13 @@ classes: list = [
 
     # Contour Generation
     RANATO_PT_generate_contours,
+    RANATO_PT_optimization_settings,
+    RANATO_PT_intersection_settings,
+    RANATO_PT_invisibility_settings,
+    # TODO: have subpanels here as well.
+    OptimizationSettings,
+    IntersectionSettings,
+    InvisibilitySettings
 ]
 
 
